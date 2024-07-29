@@ -127,6 +127,10 @@ class Utils(commands.Cog):
                             value="")
         await ctx.reply(embed=embed)
 
+    @commands.hybrid_command(name='source', aliases=['sources', 'src'], description="Mã nguồn")
+    async def source_command(self, ctx: commands.Context):
+        await ctx.reply("https://github.com/Th4nhZ/FurinaBot")
+
     @commands.hybrid_command(name='help',
                              description="Hiển thị các lệnh của bot/xem chi tiết một lệnh nào đó.")
     async def help(self, ctx: commands.Context, command_name: Optional[str] = None):

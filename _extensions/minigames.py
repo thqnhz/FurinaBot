@@ -181,6 +181,7 @@ class TicTacToe(discord.ui.View):
 
 
 class Minigames(commands.Cog):
+    """Các Minigame bạn có thể chơi"""
     def __init__(self, bot: commands.Bot):
         self.bot: commands.Bot = bot
 
