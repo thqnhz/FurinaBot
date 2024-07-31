@@ -1,5 +1,3 @@
-from typing_extensions import Self
-
 import discord
 from discord import Embed, ButtonStyle
 from discord.ext import commands
@@ -36,14 +34,16 @@ class RockPaperScissorButton(discord.ui.Button):
         if view.move == 0:
             view.player_one = interaction.user
             view.embed.add_field(name="Người chơi 1", value=interaction.user.mention)
+            view.move += 1
+            await interaction.response.edit_message(embed=view.embed, view=view)
+            view.moves.append(self.converter())
         else:
             if interaction.user == view.player_one:
                 return await interaction.response.send_message("Không thể chơi với chính mình", ephemeral=True)
             view.player_two = interaction.user
             view.embed.add_field(name="Người chơi 2", value=interaction.user.mention, inline=False)
-        await interaction.response.edit_message(embed=view.embed, view=view)
-        view.moves.append(self.converter())
-        if view.move == 1:
+            await interaction.response.edit_message(embed=view.embed, view=view)
+            view.moves.append(self.converter())
             for child in view.children:
                 child.disabled = True
             view.stop()
@@ -53,7 +53,6 @@ class RockPaperScissorButton(discord.ui.Button):
             else:
                 view.embed.description = f"### {winner.mention} Thắng!"
             await interaction.edit_original_response(embed=view.embed, view=view)
-        view.move += 1
 
 
 class RockPaperScissor(discord.ui.View):
@@ -89,40 +88,62 @@ class TicTacToeButton(discord.ui.Button['TicTacToe']):
         assert self.view is not None
         view: TicTacToe = self.view
         state = view.board[self.y][self.x]
-        embed: Embed = Embed()
         if state in (view.X, view.O):
             return
 
         if view.current_player == view.X:
+            if interaction.user == view.player_two:
+                return await interaction.response.send_message("Chưa đến lượt của bạn",
+                                                               ephemeral=True)
+            if view.player_one is None:
+                view.player_one = interaction.user
+                view.embed.add_field(name="Người chơi 1", value=view.player_one.mention)
+            else:
+                if interaction.user != view.player_one:
+                    return await interaction.response.send_message("Bạn không nằm trong trò chơi này",
+                                                                   ephemeral=True)
             self.style = ButtonStyle.danger
             self.label = 'X'
             self.disabled = True
             view.board[self.y][self.x] = view.X
             view.current_player = view.O
-            embed.set_author(name="Lượt của O")
+            view.embed.set_author(name="Lượt của O")
         else:
+            if interaction.user == view.player_one:
+                return await interaction.response.send_message("Chưa đến lượt của bạn",
+                                                               ephemeral=True)
+            if view.player_two is None:
+                view.player_two = interaction.user
+                view.embed.add_field(name="Người chơi 2", value=view.player_two.mention)
+            else:
+                if interaction.user != view.player_two:
+                    return await interaction.response.send_message("Bạn không nằm trong trò chơi này",
+                                                                   ephemeral=True)
             self.style = ButtonStyle.success
             self.label = 'O'
             self.disabled = True
             view.board[self.y][self.x] = view.O
             view.current_player = view.X
-            embed.set_author(name="Lượt của X")
+            view.embed.set_author(name="Lượt của X")
 
         winner = view.check_board_winner()
         if winner is not None:
             if winner == view.X:
-                embed.set_author(name="X THẮNG!")
+                view.embed.set_author(name="")
+                view.embed.description = f"### {view.player_one.mention} Thắng!"
             elif winner == view.O:
-                embed.set_author(name="O THẮNG!")
+                view.embed.set_author(name="")
+                view.embed.description = f"### {view.player_two.mention} Thắng!"
             else:
-                embed.set_author(name="HÒA!")
+                view.embed.set_author(name="")
+                view.embed.description = f"### Hòa!"
 
             for child in view.children:
                 child.disabled = True
 
             view.stop()
 
-        await interaction.response.edit_message(embed=embed, view=view)
+        await interaction.response.edit_message(embed=view.embed, view=view)
 
 
 class TicTacToe(discord.ui.View):
@@ -139,12 +160,16 @@ class TicTacToe(discord.ui.View):
             [0, 0, 0],
             [0, 0, 0],
         ]
+        self.player_one: discord.User | None = None
+        self.player_two: discord.User | None = None
+        self.embed: Embed = Embed().set_author(name="Tic Tac Toe")
 
         for x in range(3):
             for y in range(3):
                 self.add_item(TicTacToeButton(x, y))
 
     def check_board_winner(self):
+        # Check đường thẳng (ngang)
         for across in self.board:
             value = sum(across)
             if value == 3:
@@ -152,7 +177,7 @@ class TicTacToe(discord.ui.View):
             elif value == -3:
                 return self.X
 
-        # Check đường thẳng
+        # Check đường thẳng (dọc)
         for line in range(3):
             value = self.board[0][line] + self.board[1][line] + self.board[2][line]
             if value == 3:
@@ -185,14 +210,10 @@ class Minigames(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot: commands.Bot = bot
 
-    async def cog_check(self, ctx: commands.Context) -> bool:
-        return True
-        # TODO: Thêm check để lệnh chỉ được thực hiện ở kênh bot-commands
-
     @commands.hybrid_command(name='tictactoe', aliases=['ttt', 'xo'], description="XO minigame")
     async def tic_tac_toe(self, ctx: commands.Context):
-        embed: Embed = Embed().set_author(name="X đi trước")
-        await ctx.reply(embed=embed, view=TicTacToe())
+        view: TicTacToe = TicTacToe()
+        await ctx.reply(embed=view.embed, view=view)
 
     @commands.hybrid_command(name='rockpaperscissor', aliases=['keobuabao'], description="Kéo Búa Bao minigame")
     async def keo_bua_bao(self, ctx: commands.Context):
