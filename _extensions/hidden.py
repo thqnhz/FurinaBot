@@ -1,4 +1,3 @@
-import os.path
 import subprocess
 
 import discord
@@ -8,6 +7,22 @@ from typing import Literal, Optional
 
 from settings import *
 from _classes.embeds import *
+
+
+class SendEmbedView(discord.ui.View):
+    def __init__(self, embed: Embed, channel: discord.TextChannel = None):
+        super().__init__(timeout=None)
+        self.channel = channel
+        self.embed = embed
+
+    @discord.ui.button(label="Gửi", emoji="💭")
+    async def send_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        await interaction.delete_original_response()
+        if self.channel:
+            await self.channel.send(embed=self.embed)
+        else:
+            await interaction.channel.send(embed=self.embed)
 
 
 class Hidden(commands.Cog):
@@ -91,7 +106,7 @@ class Hidden(commands.Cog):
                          author: Optional[str] = None,
                          thumbnail: Optional[discord.Attachment] = None,
                          image: Optional[discord.Attachment] = None,
-                         channel_id: Optional[str] = None,
+                         channel: Optional[discord.TextChannel] = None,
                          footer: Optional[str] = None,
                          field1: Optional[str] = None,
                          field1_value: Optional[str] = None,
@@ -119,9 +134,9 @@ class Hidden(commands.Cog):
         thumbnail
             Ảnh thu nhỏ cho embed (File).
         image
-            Ảnh to của embed(File).
-        channel_id
-            ID của kênh cần gửi embed vào, bỏ trống = kênh hiện tại
+            Ảnh to của embed (File).
+        channel
+            Kênh cần gửi embed vào
         footer
             Chân embed.
         field1
@@ -138,7 +153,9 @@ class Hidden(commands.Cog):
             Giá trị field thứ ba của embed
         """
 
-        embed = Embed(title=title, description=desc.replace("\\n", "\n"), color=Color.blue() if color else None,
+        embed = Embed(title=title,
+                      description=desc.replace("\\n", "\n") if desc else None,
+                      color=Color.blue() if color else None,
                       url=url)
         if author:
             embed.set_author(name=author)
@@ -159,17 +176,7 @@ class Hidden(commands.Cog):
             embed.add_field(name=field2, value=field2_value if field2_value else "", inline=False)
         if field3:
             embed.add_field(name=field3, value=field3_value if field3_value else "", inline=False)
-        view = discord.ui.View()
-        button = discord.ui.Button(label="Gửi", style=discord.ButtonStyle.secondary, emoji='💭')
-      
-        async def button_callback(i: discord.Interaction):
-            target_channel = self.bot.get_channel(int(channel_id)) if channel_id else i.channel
-            await target_channel.send(embed=embed)
-            button.disabled = True
-            await i.response.edit_message(view=view)
-          
-        button.callback = button_callback
-        view.add_item(button)
+        view: SendEmbedView = SendEmbedView(embed, channel)
         await interaction.response.send_message(embed=embed, ephemeral=True, view=view)
 
 
