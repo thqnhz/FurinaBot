@@ -15,10 +15,6 @@ from settings import *
 from helper import *
 
 
-class SearchView(discord.ui.View):
-    pass
-
-
 class QueueView(discord.ui.View):
     def __init__(self, embeds: list[Embed]):
         super().__init__(timeout=180)
