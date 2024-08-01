@@ -10,15 +10,13 @@ class RockPaperScissorButton(discord.ui.Button):
         if number == 0:
             self.label = 'Búa'
             self.emoji = '\u270a'
-            self.style = ButtonStyle.secondary
         elif number == 1:
             self.label = 'Bao'
             self.emoji = '\u270b'
-            self.style = ButtonStyle.secondary
         else:
             self.label = 'Kéo'
             self.emoji = '\u270c'
-            self.style = ButtonStyle.secondary
+        self.style = ButtonStyle.secondary
 
     def converter(self) -> int:
         if self.label == "Búa":
@@ -65,6 +63,7 @@ class RockPaperScissor(discord.ui.View):
         for i in range(3):
             self.add_item(RockPaperScissorButton(i))
         self.embed: Embed = Embed().set_author(name="Kéo Búa Bao")
+        self.embed_timeout: Embed = self.embed.set_footer(text="Đã Timeout")
 
     def check_winner(self) -> discord.User | int:
         # Check Hòa
@@ -76,6 +75,12 @@ class RockPaperScissor(discord.ui.View):
             # Check player two thắng
             return self.player_two
         return self.player_one
+
+    async def on_timeout(self) -> None:
+        for child in self.children:
+            child.disabled = True
+
+        await self.message.edit(embed=self.embed_timeout, view=self)
 
 
 class TicTacToeButton(discord.ui.Button['TicTacToe']):
@@ -128,14 +133,12 @@ class TicTacToeButton(discord.ui.Button['TicTacToe']):
 
         winner = view.check_board_winner()
         if winner is not None:
+            view.embed.set_author(name="")
             if winner == view.X:
-                view.embed.set_author(name="")
                 view.embed.description = f"### {view.player_one.mention} Thắng!"
             elif winner == view.O:
-                view.embed.set_author(name="")
                 view.embed.description = f"### {view.player_two.mention} Thắng!"
             else:
-                view.embed.set_author(name="")
                 view.embed.description = f"### Hòa!"
 
             for child in view.children:
@@ -163,6 +166,7 @@ class TicTacToe(discord.ui.View):
         self.player_one: discord.User | None = None
         self.player_two: discord.User | None = None
         self.embed: Embed = Embed().set_author(name="Tic Tac Toe")
+        self.embed_timeout: Embed = self.embed.set_footer(text="Đã Timeout")
 
         for x in range(3):
             for y in range(3):
@@ -204,6 +208,12 @@ class TicTacToe(discord.ui.View):
 
         return None
 
+    async def on_timeout(self) -> None:
+        for child in self.children:
+            child.disabled = True
+
+        await self.message.edit(embed=self.embed_timeout, view=self)
+
 
 class Minigames(commands.Cog):
     """Các Minigame bạn có thể chơi"""
@@ -213,13 +223,12 @@ class Minigames(commands.Cog):
     @commands.hybrid_command(name='tictactoe', aliases=['ttt', 'xo'], description="XO minigame")
     async def tic_tac_toe(self, ctx: commands.Context):
         view: TicTacToe = TicTacToe()
-        await ctx.reply(embed=view.embed, view=view)
+        view.message = await ctx.reply(embed=view.embed, view=view)
 
     @commands.hybrid_command(name='rockpaperscissor', aliases=['keobuabao'], description="Kéo Búa Bao minigame")
     async def keo_bua_bao(self, ctx: commands.Context):
-        embed: Embed = Embed().set_author(name="Kéo Búa Bao")
-        view: discord.ui.View = RockPaperScissor()
-        view.message = await ctx.reply(embed=embed, view=view)
+        view: RockPaperScissor = RockPaperScissor()
+        view.message = await ctx.reply(embed=view.embed, view=view)
 
 
 async def setup(bot: commands.Bot):
