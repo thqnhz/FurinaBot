@@ -63,7 +63,6 @@ class RockPaperScissor(discord.ui.View):
         for i in range(3):
             self.add_item(RockPaperScissorButton(i))
         self.embed: Embed = Embed().set_author(name="Kéo Búa Bao")
-        self.embed_timeout: Embed = self.embed.set_footer(text="Đã Timeout")
 
     def check_winner(self) -> discord.User | int:
         # Check Hòa
@@ -80,7 +79,8 @@ class RockPaperScissor(discord.ui.View):
         for child in self.children:
             child.disabled = True
 
-        await self.message.edit(embed=self.embed_timeout, view=self)
+        self.embed.set_footer(text="Đã Timeout")
+        await self.message.edit(embed=self.embed, view=self)
 
 
 class TicTacToeButton(discord.ui.Button['TicTacToe']):
@@ -156,7 +156,7 @@ class TicTacToe(discord.ui.View):
     Tie: int = 2
 
     def __init__(self):
-        super().__init__()
+        super().__init__(timeout=300)
         self.current_player = self.X
         self.board = [
             [0, 0, 0],
@@ -166,7 +166,6 @@ class TicTacToe(discord.ui.View):
         self.player_one: discord.User | None = None
         self.player_two: discord.User | None = None
         self.embed: Embed = Embed().set_author(name="Tic Tac Toe")
-        self.embed_timeout: Embed = self.embed.set_footer(text="Đã Timeout")
 
         for x in range(3):
             for y in range(3):
@@ -212,7 +211,8 @@ class TicTacToe(discord.ui.View):
         for child in self.children:
             child.disabled = True
 
-        await self.message.edit(embed=self.embed_timeout, view=self)
+        self.embed.set_footer(text="Đã Timeout")
+        await self.message.edit(embed=self.embed, view=self)
 
 
 class Minigames(commands.Cog):
