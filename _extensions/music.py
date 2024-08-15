@@ -5,7 +5,7 @@ from discord.ui import Button
 from discord import Message
 from typing import Type, cast
 from wavelink import (Player, Playable, Playlist, TrackSource, Node, Pool, TrackStartEventPayload,
-                      TrackEndEventPayload, NodeStatus, AutoPlayMode)
+                      TrackEndEventPayload, TrackExceptionEventPayload, NodeStatus, AutoPlayMode)
 
 # Custom subclasses
 from _classes.embeds import *
@@ -140,6 +140,18 @@ class Music(commands.Cog):
         embed: Embed = PlayerEmbed(track=player.current)
         view = PlayerView(vc=player)
         await update_player_embed(embed=embed, msg=self.player_message, channel=self.player_channel, view=view)
+
+    @commands.Cog.listener()
+    async def on_wavelink_track_exception(self, payload: TrackExceptionEventPayload):
+        player: Player = payload.player
+        track: Playable = player.current
+        embed: Embed = ErrorEmbed(f"Có lỗi xuất hiện khi đang phát {track.title}\n"
+                                  f"Chi tiết lỗi:\n"
+                                  f"```\n"
+                                  f"{payload.exception}\n"
+                                  f"```")
+        channel = self.bot.get_channel(MUSIC_CHANNEL)
+        await channel.send(embed=embed)
 
     @commands.hybrid_group(name='play', aliases=['p'], description="Phát một bài hát")
     async def play_command(self, ctx: commands.Context, *, query: str):
