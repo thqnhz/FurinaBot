@@ -165,7 +165,7 @@ class Music(commands.Cog):
         query: str
             Tên bài hát hoặc link dẫn đến bài hát
         """
-        await self._play_music(ctx, query, TrackSource.YouTube)
+        await self._play_music(ctx, query, TrackSource.YouTubeMusic)
 
     @play_command.command(name='youtube', aliases=['yt'], description="Phát một bài hát từ YouTube")
     async def play_youtube(self, ctx: commands.Context, *, query: str):
@@ -179,7 +179,7 @@ class Music(commands.Cog):
         query: str
             Tên bài hát hoặc link dẫn đến bài hát
         """
-        await self._play_music(ctx, query, TrackSource.YouTube)
+        await self._play_music(ctx, query)
 
     @play_command.command(name='youtubemusic', aliases=['ytm'], description="Phát một bài hát từ YouTube Music")
     async def play_youtube_music(self, ctx: commands.Context, *, query: str):
@@ -319,7 +319,7 @@ class Music(commands.Cog):
         """
         await ctx.defer()
         msg = await ctx.reply(embed=FooterEmbed(description=f"**Đang tìm kiếm:** `{query}`"))
-        tracks_yt: wavelink.Search = await Playable.search(query, source=TrackSource.YouTube)
+        tracks_yt: wavelink.Search = await Playable.search(query, source=TrackSource.YouTubeMusic)
         tracks_sc = await Playable.search(query, source=TrackSource.SoundCloud)
 
         tracks = tracks_yt[:5] + tracks_sc[:5]
@@ -351,7 +351,7 @@ class Music(commands.Cog):
             embed = Embed(title=f"Kết quả tìm kiếm cho `{query}`")
             yt = get_track_list(tracks_yt[:5])
             sc = get_track_list(tracks_sc[:5])
-            embed.add_field(name="YouTube", value=yt)
+            embed.add_field(name="YouTube Music", value=yt)
             embed.add_field(name="SoundCloud", value=sc)
             embed.set_footer(text="Vui lòng chọn bài hát.")
             view.message = await msg.edit(embed=embed, view=view)
