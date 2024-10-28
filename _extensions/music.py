@@ -194,10 +194,10 @@ async def add_to_queue(ctx: commands.Context | discord.Interaction, data: Playli
     msg: Message
     if isinstance(ctx, discord.Interaction):
         interaction = ctx
-        await interaction.edit_original_response(embed=LoadingEmbed())
+        await interaction.edit_original_response(embed=LoadingEmbed(), view=None)
         msg = await interaction.original_response()
     else:
-        msg = await ctx.reply(embed=LoadingEmbed())
+        msg = await ctx.reply(embed=LoadingEmbed(), view=None)
     player: Player = await ensure_voice_connection(ctx)
 
     # Kiểm tra xem bot có đang ở trong StageChannel không để có thể request to speak
