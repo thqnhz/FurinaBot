@@ -279,6 +279,17 @@ class SelectTrack(ui.Select):
         await add_to_queue(interaction, self.tracks[int(self.values[0])])
 
 
+class PlayerEmbed(FooterEmbed):
+    """
+    Embed cập nhật mỗi khi bài hát mới được phát.
+    """
+    def __init__(self, track: Playable):
+        super().__init__(title=f"Đang phát: **{track}**")
+        self.url = track.uri or None
+        self.set_author(name=track.author, icon_url=PLAYING_GIF)
+        self.set_thumbnail(url=track.artwork)
+        
+
 class QueueView(ui.View):
     def __init__(self, embeds: list[Embed]):
         super().__init__(timeout=180)
@@ -315,11 +326,14 @@ class Music(commands.Cog):
     """Lệnh liên quan đến việc chơi nhạc."""
     def __init__(self, bot: commands.Bot):
         self.bot: commands.Bot = bot
-        self.music_channel = self.bot.get_channel(MUSIC_CHANNEL)
+        self.music_channel: discord.TextChannel
 
     async def cog_load(self) -> None:
         node = Node(uri=LAVA_URI, password=LAVA_PW, heartbeat=5.0, retries=1)
         await Pool.connect(client=self.bot, nodes=[node])
+        self.music_channel = self.bot.get_channel(MUSIC_CHANNEL)
+        if not self.music_channel:
+            self.music_channel = await self.bot.fetch_channel(MUSIC_CHANNEL)
 
     async def cog_unload(self) -> None:
         await Pool.close()

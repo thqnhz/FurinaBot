@@ -49,21 +49,6 @@ class LoadingEmbed(FooterEmbed):
         self.set_author(name=author_name, icon_url=LOADING_GIF)
 
 
-class PlayerEmbed(FooterEmbed):
-    """
-    Embed cập nhật mỗi khi bài hát mới được phát.
-    """
-    def __init__(self, track):
-        super().__init__(
-            title=f"Đang phát: **{track}**",
-            description="Bạn có thể sử dụng các nút bên dưới để thực hiện nhanh các lệnh.",
-        )
-        self.url = track.uri or None
-        self.set_author(name=track.author, icon_url=PLAYING_GIF)
-        if hasattr(track, "thumb"):
-            self.set_thumbnail(url=track.thumb)
-
-
 class AvatarEmbed(FooterEmbed):
     """
     Embed có Footer và avatar người sử dụng lệnh (nếu có).
