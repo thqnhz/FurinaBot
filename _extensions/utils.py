@@ -1,9 +1,10 @@
 import platform
 import discord
-import os
 import random
 import psutil
 import wavelink
+import aiohttp
+import typing
 from discord.ext import commands
 from discord import app_commands
 from datetime import datetime, timedelta
@@ -81,6 +82,29 @@ class DonateSelect(Select):
             embed.title = "Banking"
             embed.description = f"||{BANKING}||"
         await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+class PaginatedView(TimeoutView):
+    def __init__(self, embeds: list):
+        super().__init__(timeout=300)
+        self.embeds: list[Embed] = embeds
+        self.page: int = 0
+        if len(self.embeds) == 1:
+            self.right_button.disabled = True
+
+    @discord.ui.button(emoji="\U00002b05", disabled=True)
+    async def left_button(self, interaction: discord.Interaction, button: discord.Button):
+        self.page -= 1
+        button.disabled = True if self.page == 0 else False
+        self.right_button.disabled = False
+        await interaction.response.edit_message(embed=self.embeds[self.page], view=self)
+
+    @discord.ui.button(emoji="\U000027a1")
+    async def right_button(self, interaction: discord.Interaction, button: discord.Button):
+        self.page += 1 if self.page <= len(self.embeds) - 1 else self.page
+        button.disabled = True if self.page == len(self.embeds) - 1 else False
+        self.left_button.disabled = False
+        await interaction.response.edit_message(embed=self.embeds[self.page], view=self)
 
 
 class Utils(commands.Cog):
@@ -337,7 +361,6 @@ class Utils(commands.Cog):
     @commands.command(name='random',
                       aliases=['rand'],
                       description="Random số ngẫu nhiên.")
-    @app_commands.describe(number="Số lần random")
     async def random(self, ctx: commands.Context, number: Optional[int] = 1) -> None:
         embed = discord.Embed()
         if number == 1:
@@ -369,7 +392,6 @@ class Utils(commands.Cog):
     @commands.command(name='dice',
                       aliases=['roll'],
                       description="Tung xúc xắc.")
-    @app_commands.describe(number="Số lần roll")
     async def dice(self, ctx: commands.Context, number: Optional[int] = 1) -> None:
         embed = discord.Embed()
         if number == 1:
@@ -389,7 +411,6 @@ class Utils(commands.Cog):
     @commands.command(name='flip',
                       aliases=['coin', 'coinflip'],
                       description="Tung đồng xu.")
-    @app_commands.describe(number="Số lần tung")
     async def flip(self, ctx: commands.Context, number: Optional[int] = 1) -> None:
         embed = discord.Embed()
         if number == 1:
@@ -407,6 +428,72 @@ class Utils(commands.Cog):
         embed.title = f"Mặt hiện tại của đồng xu là: {rand_flip}"
         await ctx.send(embed=embed)
         await ctx.message.delete()
+
+    @staticmethod
+    async def dictionary_call(word: str) -> PaginatedView:
+        """
+        Tạo API call đến dictionaryapi
+
+        Parameters
+        -----------
+        word: str
+            Từ cần tra từ điển.
+
+        Returns
+        -----------
+        FooterEmbed
+            Embed để phản hồi về người dùng
+        """
+        embeds: list[Embed] = []
+        async with aiohttp.ClientSession() as cs:
+            async with cs.get(f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}") as response:
+                if response.status == 404:
+                    embed = FooterEmbed(
+                        title=word.capitalize(),
+                        description="No definitions found. API call returned 404."
+                    )
+                    return embed
+                data: list[dict] = eval(await response.text())
+
+        embed = FooterEmbed(title=word.capitalize())
+
+        for d in data:
+            phonetics = d['phonetic'] if 'phonetic' in d \
+                else ", ".join([p['text'] for p in d['phonetics'] if 'text' in p])
+            # Phiên âm
+            embed.description = f"Phiên âm (Pronunciation): `{phonetics}`"
+
+            # Định nghĩa
+            for meaning in d['meanings']:
+                embed.title += f" ({meaning['partOfSpeech']})"
+                if meaning['synonyms']:
+                    embed.add_field(
+                        name="Từ đồng nghĩa (Synonyms):",
+                        value=', '.join(meaning['synonyms'])
+                    )
+                if meaning['antonyms']:
+                    embed.add_field(
+                        name="Từ trái nghĩa (Antonyms):",
+                        value=', '.join(meaning['antonyms'])
+                    )
+                embed.add_field(
+                    name="Định nghĩa (Definition)",
+                    value="\n".join(definition['definition'] for definition in meaning['definitions']),
+                    inline=False
+                )
+                embeds.append(embed)
+                embed = FooterEmbed(
+                    title=word.capitalize(),
+                    description=f"Phiên âm (Pronunciation): `{phonetics}`"
+                )
+        return PaginatedView(embeds)
+
+    @commands.command(name='dictionary',
+                      aliases=['dict'],
+                      description="Tra từ điển một từ.")
+    async def dict_command(self, ctx: commands.Context, word: str, *_):
+        view = await self.dictionary_call(word)
+        view.message = await ctx.reply(embed=view.embeds[0], view=view)
 
 
 async def setup(bot):

@@ -1,7 +1,5 @@
 import os
 import time
-
-import wavelink
 from colorama import Back, Fore, Style
 from dotenv import load_dotenv
 
@@ -45,9 +43,6 @@ LAVA_BACKUP = os.getenv("LAVA_BACKUP")
 LAVA_PW = os.getenv("LAVA_PW")
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
-
-bookers = {}
-skippers = []
 
 # Utils Cog
 MOMO = os.getenv("MOMO")

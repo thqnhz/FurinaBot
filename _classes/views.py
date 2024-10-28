@@ -6,7 +6,6 @@ from discord.ui import View, Button, Modal, Select
 
 from _classes.buttons import *
 import settings
-from settings import bookers
 
 
 class TimeoutView(View):
@@ -88,34 +87,27 @@ class PlayerView(View):
         await interaction.response.defer(ephemeral=True)
         for role in interaction.user.roles:
             if role.name == "DJ":
-                del bookers[self.vc.current.title]
                 await self.vc.seek(self.vc.current.length)
                 return
 
-        if interaction.user.id == bookers[self.vc.current.title]:
-            del bookers[self.vc.current.title]
+        needed = len(self.vc.channel.members) // 2
+        if len(settings.skippers) >= needed:
             await self.vc.seek(self.vc.current.length)
+            settings.skippers = []  # Đặt lại biến skippers về danh sách rỗng
             return
+        elif interaction.user.id in settings.skippers:
+            await interaction.followup.send(
+                embed=ErrorEmbed(f"Bạn đã vote skip rồi. Cần thêm {needed - len(settings.skippers)} vote để skip."),
+                ephemeral=True
+            )
         else:
-            needed = len(self.vc.channel.members) // 2
-            if len(settings.skippers) >= needed:
-                del bookers[self.vc.current.title]
-                await self.vc.seek(self.vc.current.length)
-                settings.skippers = []  # Đặt lại biến skippers về danh sách rỗng
-                return
-            elif interaction.user.id in settings.skippers:
-                await interaction.followup.send(
-                    embed=ErrorEmbed(f"Bạn đã vote skip rồi. Cần thêm {needed - len(settings.skippers)} vote để skip."),
-                    ephemeral=True
-                )
-            else:
-                settings.skippers.append(interaction.user.id)
-                await interaction.followup.send(
-                    embed=discord.Embed(
-                        title=f"Đã vote skip thành công! Cần thêm {needed - len(settings.skippers)} vote để skip."
-                    ),
-                    ephemeral=True
-                )
+            settings.skippers.append(interaction.user.id)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title=f"Đã vote skip thành công! Cần thêm {needed - len(settings.skippers)} vote để skip."
+                ),
+                ephemeral=True
+            )
 
     @discord.ui.button(emoji="<:queue:1222558678796730469>", custom_id="player:queue")
     async def queue_button(self, interaction: discord.Interaction, b: discord.ui.Button):

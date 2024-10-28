@@ -1,21 +1,20 @@
 import os
 import discord
-import time
 import platform
 
 from discord import Color, Intents, Activity, ActivityType, Message
 from discord.ext import commands
-from discord.ext.commands import Bot, when_mentioned_or, Context, errors
-from discord.ext.commands._types import BotT
+from discord.ext.commands import Bot, when_mentioned_or, errors
 
 # Custom subclasses
+from _extensions.music import update_activity
+from _extensions.utils import HelpSelect
 from _classes.embeds import *
 from _classes.views import *
 from settings import *
-from helper import *
 
 class Furina(Bot):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             command_prefix     = when_mentioned_or(PREFIX),
             strip_after_prefix = True,
@@ -27,7 +26,7 @@ class Furina(Bot):
                                           state="Playing: N̸o̸t̸h̸i̸n̸g̸")
         )
 
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         print(PRFX + " Đã đăng nhập bằng " + Fore.BLUE + self.user.name)
         print(PRFX + " Discordpy version " + Fore.BLUE + discord.__version__)
         print(PRFX + " Python version " + Fore.BLUE + str(platform.python_version()))
@@ -51,8 +50,6 @@ class Furina(Bot):
             embed.description = f"Không tìm thấy lệnh `{ctx.message.content.split()[0]}`"
         elif isinstance(error, commands.MissingRequiredArgument):
             embed.description = f"Lệnh của bạn thiếu phần: `{error.param.name}`"
-        elif isinstance(error, CheckFailure):
-            return
         else:
             embed.description = f"{error}"
         await ctx.reply(embed=embed, ephemeral=True, delete_after=60)
@@ -104,7 +101,7 @@ bot = Furina()
 @bot.hybrid_command(name="sync", hidden=True, description="Update slash command cho server.")
 @commands.is_owner()
 async def sync(ctx: commands.Context) -> None:
-    synced = await ctx.bot.tree.sync()
+    synced = await bot.tree.sync()
     embed = FooterEmbed(
         title=f"Đã đồng bộ hóa {len(synced)} slash commands.",
         color=Color.blue()

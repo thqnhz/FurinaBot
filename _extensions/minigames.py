@@ -1,7 +1,10 @@
 import discord
+import nltk
 from discord import Embed, ButtonStyle
 from discord.ext import commands
 from typing import List
+from nltk.corpus import wordnet
+from collections import Counter
 
 
 class RockPaperScissorButton(discord.ui.Button):
@@ -213,12 +216,68 @@ class TicTacToe(discord.ui.View):
 
         self.embed.set_footer(text="Đã Timeout")
         await self.message.edit(embed=self.embed, view=self)
+        
+
+
+# TODO: FINISH THE WORDLE MINIGAME
+class Wordle(discord.ui.View):
+    def __init__(self, word: str, modal: discord.ui.Modal):
+        super().__init__(timeout=300)
+        self.word: str = word
+        self.message: discord.Message | None = None
+        self.attempt: int = 6
+        self.modal: discord.ui.Modal = modal
+
+    def check_guess(self, guess: str):
+        result = [""] * len(self.word)
+        word_counter = Counter(self.word)
+
+        for i in range(len(self.word)):
+            if guess[i] == self.word[i]:
+                result[i] = ":green_square:"
+                word_counter[guess[i]] -= 1
+
+        for i in range(len(self.word)):
+            if result[i] == "":
+                if guess[i] in word_counter and word_counter[guess[i]] > 0:
+                    result[i] = ":yellow_square:"
+                    word_counter[guess[i]] -= 1
+                else:
+                    result[i] = ":black_large_square:"
+        return "".join(result)
+
+    @discord.ui.button(label="Đoán", emoji="\U0001f4ad", custom_id="guess_button")
+    async def guess_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(self.modal)
+
+    @discord.ui.button(label="Còn lại: 6", custom_id="remaining_attempt", disabled=True)
+    async def remaining_attempt_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        pass
+
+
+class WordleModal(discord.ui.Modal):
+    def __init__(self):
+        super().__init__(timeout=60, title="Wordle")
+        self.text_input = discord.ui.TextInput(label="Nhập dự đoán", min_length=5, max_length=5)
+        self.add_item(self.text_input)
+        self.guess: str = ""
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        self.guess = self.text_input.value
+        assert self.view is not None
+        view: Wordle = self.view
 
 
 class Minigames(commands.Cog):
     """Các Minigame bạn có thể chơi"""
     def __init__(self, bot: commands.Bot):
         self.bot: commands.Bot = bot
+        self.words = None
+
+    async def cog_load(self):
+        nltk.download("wordnet")
+        self.words = wordnet.words()
 
     @commands.hybrid_command(name='tictactoe', aliases=['ttt', 'xo'], description="XO minigame")
     async def tic_tac_toe(self, ctx: commands.Context):

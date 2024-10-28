@@ -7,7 +7,6 @@ from discord.ext.commands import Bot
 from wavelink import Player, Playable
 
 from _classes.embeds import FooterEmbed, ErrorEmbed
-from settings import bookers
 
 
 class AutoPlayButton(Button):
