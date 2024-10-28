@@ -261,14 +261,14 @@ class SelectTrack(ui.Select):
         for i, track in enumerate(yt_tracks):
             self.options.append(
                 discord.SelectOption(
-                    label=f"{str(i + 1)}. (YT) {textwrap.shorten(track.title, width=50, break_long_words=False, placeholder="...")}",
+                    label=f"{str(i + 1)}. (YT) {textwrap.shorten(track.title, width=50, break_long_words=False, placeholder='...')}",
                     value=str(i)
                 )
             )
         for i, track in enumerate(sc_tracks):
             self.options.append(
                 discord.SelectOption(
-                    label=f"{str(i + 1)}. (SC) {textwrap.shorten(track.title, width=50, break_long_words=False, placeholder="...")}",
+                    label=f"{str(i + 1)}. (SC) {textwrap.shorten(track.title, width=50, break_long_words=False, placeholder='...')}",
                     value=str(i+len(yt_tracks))
                 )
             )
@@ -288,7 +288,7 @@ class PlayerEmbed(FooterEmbed):
         self.url = track.uri or None
         self.set_author(name=track.author, icon_url=PLAYING_GIF)
         self.set_thumbnail(url=track.artwork)
-        
+
 
 class QueueView(ui.View):
     def __init__(self, embeds: list[Embed]):
