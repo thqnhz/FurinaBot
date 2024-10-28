@@ -1,14 +1,7 @@
-import asyncio
-import discord
-import os
 from discord.ext import commands
 from deep_translator import GoogleTranslator, MyMemoryTranslator
-from typing import Optional, Literal
 
 from _classes.embeds import *
-from _classes.views import *
-from helper import *
-from settings import *
 
 
 class AI(commands.Cog):
