@@ -109,86 +109,86 @@ def track_check(track: Playable) -> bool:
     return track.length // HOUR < 1
     
 async def add_a_song(ctx: commands.Context, track: Playable, msg: Message) -> None:
-        """
-        Thêm một bài hát vào hàng chờ.
+    """
+    Thêm một bài hát vào hàng chờ.
 
-        Parameters
-        -----------
-        ctx: `commands.Context`
-            Context
-        track: `wavelink.Playable`
-            Bài hát cần thêm vào hàng chờ
-        msg: `discord.Message`
-            Tin nhắn phản hồi ban đầu
-        """
-        if not track_check(track):
-            return await msg.edit(
-                embed=ErrorEmbed("""Bài hát bạn yêu cầu dài hơn 1 tiếng hoặc là bạn đang yêu cầu một livestream. Vui lòng chọn bài khác.""")
-                )
-        player = get_player(ctx)
-        # track.extras = str(ctx.author.id) # TODO: Change bookers sang dùng track.extras
-        await player.queue.put_wait(track)
-        embed = FooterEmbed(title="— Đã thêm vào hàng chờ", color=Color.green())
-        if track.artwork:
-            embed.set_image(url=track.artwork)
-        embed.set_author(name=track.author)
-        embed.add_field(name="Tên bài hát", value=f"[**{track}**](<{track.uri}>)")
-        embed.add_field(name="Độ dài", value=f"{length_convert(track)}")
-        if player.playing:
-            embed.add_field(name="Thứ tự hàng chờ", value=str(player.queue.count))
-        else:
-            await player.play(player.queue.get(), populate=True, volume=50)
-        await msg.edit(embed=embed)
+    Parameters
+    -----------
+    ctx: `commands.Context`
+        Context
+    track: `wavelink.Playable`
+        Bài hát cần thêm vào hàng chờ
+    msg: `discord.Message`
+        Tin nhắn phản hồi ban đầu
+    """
+    if not track_check(track):
+        return await msg.edit(
+            embed=ErrorEmbed("""Bài hát bạn yêu cầu dài hơn 1 tiếng hoặc là bạn đang yêu cầu một livestream. Vui lòng chọn bài khác.""")
+            )
+    player = get_player(ctx)
+    # track.extras = str(ctx.author.id) # TODO: Change bookers sang dùng track.extras
+    await player.queue.put_wait(track)
+    embed = FooterEmbed(title="— Đã thêm vào hàng chờ", color=Color.green())
+    if track.artwork:
+        embed.set_image(url=track.artwork)
+    embed.set_author(name=track.author)
+    embed.add_field(name="Tên bài hát", value=f"[**{track}**](<{track.uri}>)")
+    embed.add_field(name="Độ dài", value=f"{length_convert(track)}")
+    if player.playing:
+        embed.add_field(name="Thứ tự hàng chờ", value=str(player.queue.count))
+    else:
+        await player.play(player.queue.get(), populate=True, volume=50)
+    await msg.edit(embed=embed)
 
 async def add_a_playlist(ctx: commands.Context, tracks: Playlist, msg: Message) -> None:
-        """
-        Thêm một danh sách phát vào hàng chờ.
+    """
+    Thêm một danh sách phát vào hàng chờ.
 
-        Parameters
-        -----------
-        ctx: `commands.Context`
-            Context
-        track: `wavelink.Playlist`
-            Danh sách phát cần thêm vào hàng chờ
-        msg: `discord.Message`
-            Tin nhắn phản hồi ban đầu
-        """
-        track_count: int = 0
-        embed = FooterEmbed(title=f"Đã thêm {track_count} bài hát vào hàng chờ", description="")
-        player: Player = get_player(ctx)
-        for track in tracks:
-            if track_check(track):
-                embed.description += f"- Đã thêm `{track}` vào hàng chờ\n"
-                await player.queue.put_wait(track)
-                track_count += 1
-            else:
-                embed.description += f"- Đã bỏ qua `{track}`\n"
-            embed.title = f"— Đã thêm {track_count} bài hát vào hàng chờ"
-            await msg.edit(embed=embed)
-        embed.description = ""
-        embed.add_field(
-            name="Để xem thứ tự các bài hát",
-            value="Dùng `!queue` hoặc `/queue`"
-        )
+    Parameters
+    -----------
+    ctx: `commands.Context`
+        Context
+    track: `wavelink.Playlist`
+        Danh sách phát cần thêm vào hàng chờ
+    msg: `discord.Message`
+        Tin nhắn phản hồi ban đầu
+    """
+    track_count: int = 0
+    embed = FooterEmbed(title=f"Đã thêm {track_count} bài hát vào hàng chờ", description="")
+    player: Player = get_player(ctx)
+    for track in tracks:
+        if track_check(track):
+            embed.description += f"- Đã thêm `{track}` vào hàng chờ\n"
+            await player.queue.put_wait(track)
+            track_count += 1
+        else:
+            embed.description += f"- Đã bỏ qua `{track}`\n"
+        embed.title = f"— Đã thêm {track_count} bài hát vào hàng chờ"
         await msg.edit(embed=embed)
-        if not player.playing:
-            await player.play(player.queue.get(), populate=True, volume=50)
+    embed.description = ""
+    embed.add_field(
+        name="Để xem thứ tự các bài hát",
+        value="Dùng `!queue` hoặc `/queue`"
+    )
+    await msg.edit(embed=embed)
+    if not player.playing:
+        await player.play(player.queue.get(), populate=True, volume=50)
 
 def get_player(ctx: commands.Context) -> Player:
-        """
-        Lấy wavelink.Player từ ctx.
+    """
+    Lấy wavelink.Player từ ctx.
 
-        Parameters
-        -----------
-        ctx: `commands.Context`
-            Context
-        
-        Returns
-        -----------
-        `wavelink.Player`
-            Player lấy được từ việc cast `ctx.guild.voice_client` vào wavelink.Player
-        """
-        return cast(Player, ctx.guild.voice_client)
+    Parameters
+    -----------
+    ctx: `commands.Context`
+        Context
+    
+    Returns
+    -----------
+    `wavelink.Player`
+        Player lấy được từ việc cast `ctx.guild.voice_client` vào wavelink.Player
+    """
+    return cast(Player, ctx.guild.voice_client)
 
 async def add_to_queue(ctx: commands.Context | discord.Interaction, data: Playlist | Playable):
     msg: Message
