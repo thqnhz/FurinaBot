@@ -546,13 +546,13 @@ class Music(commands.Cog):
     async def connect_command(self, ctx: commands.Context):
         """Gọi bot vào kênh thoại"""
         player = await ensure_voice_connection(ctx)
-        embed = FooterEmbed(title="— Đã kết nối!", desc=f"Đã vào kênh {player.channel.mention}.")
+        embed = FooterEmbed(title="— Đã kết nối!", description=f"Đã vào kênh {player.channel.mention}.")
         await ctx.reply(embed=embed)
 
     @commands.hybrid_command(name='disconnect', aliases=['dc', 'leave', 'l'], description="Ngắt kết nối bot khỏi kênh thoại.")
     async def disconnect_command(self, ctx: commands.Context):
         if ctx.voice_client:
-            embed = FooterEmbed(title="— Đã ngắt kết nối!", desc=f"Đã rời kênh {ctx.voice_client.channel.mention}")
+            embed = FooterEmbed(title="— Đã ngắt kết nối!", description=f"Đã rời kênh {ctx.voice_client.channel.mention}")
             await ctx.voice_client.disconnect(force=True)
             await update_activity(self.bot)
         else:
