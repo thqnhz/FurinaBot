@@ -1,4 +1,4 @@
-import discord, nltk, random, string
+import discord, nltk, random
 from discord import Embed, ButtonStyle
 from discord.ext import commands
 from typing import List
@@ -291,18 +291,8 @@ class Minigames(commands.Cog):
 
     async def cog_load(self):
         nltk.download("wordnet")
-        self.words = wordnet.words()
+        self.words = list(wordnet.words())
 
-    def random_word(self) -> str:
-        words = (word for word in self.words)
-        result: str = None
-        count = 0
-        for word in words:
-            if (len(word) == 5 and all(char in string.ascii_letters for char in word)):
-                count += 1
-                if random.randrange(count) == 0:
-                    result = word
-        return result.upper()
 
     @commands.hybrid_command(name='tictactoe', aliases=['ttt', 'xo'], description="XO minigame")
     async def tic_tac_toe(self, ctx: commands.Context):
@@ -316,7 +306,9 @@ class Minigames(commands.Cog):
 
     @commands.hybrid_command(name='wordle', description="Wordle minigame")
     async def wordle(self, ctx: commands.Context):
-        word = self.random_word()
+        word = random.choice(self.words)
+        while len(word) != 5:
+            word = random.choice(self.words)
         view = Wordle(word)
         view.message = await ctx.reply(embed=view.embed, view=view)
 
