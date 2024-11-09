@@ -307,7 +307,7 @@ class Minigames(commands.Cog):
     @commands.hybrid_command(name='wordle', description="Wordle minigame")
     async def wordle(self, ctx: commands.Context):
         word = random.choice(self.words)
-        while len(word) != 5 or (char not in string.ascii_letters for char in word):
+        while len(word) != 5 or any(char not in string.ascii_letters for char in word):
             word = random.choice(self.words)
         view = Wordle(word)
         view.message = await ctx.reply(embed=view.embed, view=view)
