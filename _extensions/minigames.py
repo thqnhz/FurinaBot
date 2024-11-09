@@ -1,5 +1,4 @@
-import discord
-import nltk
+import discord, nltk, random, string
 from discord import Embed, ButtonStyle
 from discord.ext import commands
 from typing import List
@@ -221,12 +220,13 @@ class TicTacToe(discord.ui.View):
 
 # TODO: FINISH THE WORDLE MINIGAME
 class Wordle(discord.ui.View):
-    def __init__(self, word: str, modal: discord.ui.Modal):
-        super().__init__(timeout=300)
+    def __init__(self, word: str):
+        super().__init__(timeout=None)
         self.word: str = word
         self.message: discord.Message | None = None
         self.attempt: int = 6
-        self.modal: discord.ui.Modal = modal
+        self.embed = Embed(title="WORDLE", description="")
+        self.embed.set_footer(text="Coded by ThanhZ")
 
     def check_guess(self, guess: str):
         result = [""] * len(self.word)
@@ -248,16 +248,33 @@ class Wordle(discord.ui.View):
 
     @discord.ui.button(label="Đoán", emoji="\U0001f4ad", custom_id="guess_button")
     async def guess_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(self.modal)
+        modal = WordleModal()
+        await interaction.response.send_modal(modal)
+        await modal.wait()
+        result = self.check_guess(modal.guess.upper())
+        self.embed.description += f"`{modal.guess.upper()}` {result}\n"
+        self.attempt -= 1
+        self.remaining_attempt_button.label = f"Còn lại: {self.attempt}"
+        if result == (":green_square:" * 5):
+            button.disabled = True
+            button.style = ButtonStyle.success
+            button.label = "Bạn đã đoán đúng"
+            self.embed.description += f"Đáp án là: `{self.word}`"
+        if self.attempt == 0:
+            button.disabled = True
+            button.style = ButtonStyle.danger
+            button.label = "Bạn đã thua"
+            self.embed.description += f"Đáp án là: `{self.word}`"
+        await self.message.edit(embed=self.embed, view=self)
 
     @discord.ui.button(label="Còn lại: 6", custom_id="remaining_attempt", disabled=True)
-    async def remaining_attempt_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def remaining_attempt_button(self, _: discord.Interaction, _b: discord.ui.Button):
         pass
 
 
 class WordleModal(discord.ui.Modal):
     def __init__(self):
-        super().__init__(timeout=60, title="Wordle")
+        super().__init__(timeout=None, title="Wordle")
         self.text_input = discord.ui.TextInput(label="Nhập dự đoán", min_length=5, max_length=5)
         self.add_item(self.text_input)
         self.guess: str = ""
@@ -265,9 +282,6 @@ class WordleModal(discord.ui.Modal):
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer()
         self.guess = self.text_input.value
-        assert self.view is not None
-        view: Wordle = self.view
-
 
 class Minigames(commands.Cog):
     """Các Minigame bạn có thể chơi"""
@@ -279,6 +293,17 @@ class Minigames(commands.Cog):
         nltk.download("wordnet")
         self.words = wordnet.words()
 
+    def random_word(self) -> str:
+        words = (word for word in self.words)
+        result: str = None
+        count = 0
+        for word in words:
+            if (len(word) == 5 and all(char in string.ascii_letters for char in word)):
+                count += 1
+                if random.randrange(count) == 0:
+                    result = word
+        return result.upper()
+
     @commands.hybrid_command(name='tictactoe', aliases=['ttt', 'xo'], description="XO minigame")
     async def tic_tac_toe(self, ctx: commands.Context):
         view: TicTacToe = TicTacToe()
@@ -287,6 +312,12 @@ class Minigames(commands.Cog):
     @commands.hybrid_command(name='rockpaperscissor', aliases=['keobuabao'], description="Kéo Búa Bao minigame")
     async def keo_bua_bao(self, ctx: commands.Context):
         view: RockPaperScissor = RockPaperScissor()
+        view.message = await ctx.reply(embed=view.embed, view=view)
+
+    @commands.hybrid_command(name='wordle', description="Wordle minigame")
+    async def wordle(self, ctx: commands.Context):
+        word = self.random_word()
+        view = Wordle(word)
         view.message = await ctx.reply(embed=view.embed, view=view)
 
 
