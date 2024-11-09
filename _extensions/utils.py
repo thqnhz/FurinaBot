@@ -1,10 +1,4 @@
-import platform
-import discord
-import random
-import psutil
-import wavelink
-import aiohttp
-import typing
+import platform, discord, random, psutil, wavelink, aiohttp
 from discord.ext import commands
 from discord import app_commands
 from datetime import datetime, timedelta
@@ -17,7 +11,6 @@ from _classes.views import *
 
 class HelpSelect(Select):
     """Help Selection Menu"""
-
     def __init__(self, bot: commands.Bot):
         super().__init__(
             placeholder="Chọn mục",
@@ -43,7 +36,7 @@ class HelpSelect(Select):
         embed = FooterEmbed()
         embed.title = "Để xem chi tiết một lệnh, hãy dùng !help <tên lệnh> nhé."
         embed.description = "\n".join(
-            f"- **!{command.name}:** `{command.description}`"
+            f"- **!{command.qualified_name}:** `{command.description}`"
             for command in commands_mixer
         )
 
@@ -52,7 +45,6 @@ class HelpSelect(Select):
 
 class DonateSelect(Select):
     """Donate Selection Menu"""
-
     def __init__(self):
         super().__init__(
             placeholder="Chọn mục",
@@ -109,35 +101,25 @@ class PaginatedView(TimeoutView):
 
 class Utils(commands.Cog):
     """Lệnh hữu dụng."""
-
     def __init__(self, bot):
         self.bot = bot
 
     @staticmethod
     def generate_random_number(min_num: int, max_num: int) -> int:
         random_number: int = -1
-        for i in range(100):
+        for _ in range(100):
             random_number = random.randint(min_num, max_num)
         return random_number
 
-    @commands.hybrid_command(name='ping',
-                             aliases=['test'],
-                             description="Đo ping và thông tin Node của bot.")
+    @commands.hybrid_command(name='ping', aliases=['test'], description="Đo ping và thông tin Node của bot.")
     async def ping_command(self, ctx: commands.Context):
-        """
-        Đo ping và thông tin Node của bot.
-
-        Parameters
-        -----------
-        ctx: commands.Context
-            Context
-        """
+        """Đo ping và thông tin Node của bot."""
         await ctx.defer()
         bot_latency = self.bot.latency
-        api_latency = ctx.guild.voice_client.ping if ctx.guild.voice_client else -1
+        voice_latency = ctx.guild.voice_client.ping if ctx.guild.voice_client else -1
 
         embed = AvatarEmbed(title="— Thành công!", user=ctx.author)
-        embed.add_field(name="Độ trễ:", value=f"**Bot:** {bot_latency * 1000:.2f}ms\n**API:** {api_latency}ms")
+        embed.add_field(name="Độ trễ:", value=f"**Bot:** {bot_latency * 1000:.2f}ms\n**Voice:** {voice_latency}ms")
 
         for i, node in enumerate(wavelink.Pool.nodes, 1):
             node_ = wavelink.Pool.get_node(node)
@@ -151,12 +133,11 @@ class Utils(commands.Cog):
                             value="")
         await ctx.reply(embed=embed)
 
-    @commands.hybrid_command(name='source', aliases=['sources', 'src'], description="Mã nguồn")
+    @commands.command(name='source', aliases=['sources', 'src'], description="Mã nguồn")
     async def source_command(self, ctx: commands.Context):
         await ctx.reply("https://github.com/Th4nhZ/FurinaBot")
 
-    @commands.hybrid_command(name='help',
-                             description="Hiển thị các lệnh của bot/xem chi tiết một lệnh nào đó.")
+    @commands.hybrid_command(name='help', description="Hiển thị các lệnh của bot/xem chi tiết một lệnh nào đó.")
     async def help(self, ctx: commands.Context, command_name: Optional[str] = None):
         """
         Hiển thị các lệnh của bot hoặc xem chi tiết một lệnh nào đó
@@ -181,8 +162,8 @@ class Utils(commands.Cog):
                 for param in command.clean_params.values():
                     usage += f" {'<' if param.default else '['}{param.name}{'>' if param.default else ']'}"
                 embed = discord.Embed()
-                embed.title = f"Chi tiết lệnh {command.name}"
-                embed.description = (f"- **__Tên:__** `{command.name}`\n"
+                embed.title = f"Chi tiết lệnh {command.qualified_name}"
+                embed.description = (f"- **__Tên:__** `{command.qualified_name}`\n"
                                      f"- **__Chi tiết:__** {command.description}\n"
                                      f"- **__Sử dụng:__** {usage}"
                                      )
@@ -192,8 +173,7 @@ class Utils(commands.Cog):
             else:
                 raise commands.BadArgument("""Mình không nhận ra lệnh đó""")
 
-    @commands.command(name='vps',
-                      description="Thông tin về máy ảo.")
+    @commands.command(name='vps', description="Thông tin về máy ảo.")
     async def vps(self, ctx: commands.Context):
         # OS Version
         os_version = platform.platform()
@@ -289,10 +269,9 @@ class Utils(commands.Cog):
         view.add_item(youtube)
         await ctx.reply(view=view)
 
-    @commands.command(name='about',
-                      aliases=['forcalors', 'furina'],
-                      description="Thông tin về bot.")
+    @commands.command(name='about', aliases=['forcalors', 'furina'], description="Thông tin về bot.")
     async def about(self, ctx: commands.Context):
+        """Thông tin về bot."""
         embed = discord.Embed()
         embed.title = "— Thông tin về bot"
         embed.color = discord.Color.blue()
@@ -300,9 +279,7 @@ class Utils(commands.Cog):
         embed.add_field(name="Tester:", value="`@abaduw`, `@holymode`, `@trungtin1425`", inline=False)
         await ctx.reply(embed=embed)
 
-    @commands.hybrid_command(name='premium',
-                             aliases=['vip'],
-                             description="Tính năng trả phí 😱.")
+    @commands.hybrid_command(name='premium', aliases=['vip'], description="Tính năng trả phí 😱.")
     async def premium(self, ctx: commands.Context) -> None:
         embed = discord.Embed(color=discord.Color.blue())
         embed.title = "— Tính năng Premium"
@@ -310,9 +287,7 @@ class Utils(commands.Cog):
         view = TimeoutView().add_item(DonateSelect())
         view.message = await ctx.send(embed=embed, view=view, ephemeral=True)
 
-    @commands.command(name='donate',
-                      aliases=['ungho', 'buymeacoffee'],
-                      description="Mua cho ThanhZ một ly café.")
+    @commands.command(name='donate', aliases=['ungho', 'buymeacoffee'], description="Mua cho ThanhZ một ly café.")
     async def donate(self, ctx: commands.Context) -> None:
         embed = discord.Embed(color=discord.Color.blue())
         embed.title = "— Ủng hộ tôi"
@@ -320,15 +295,11 @@ class Utils(commands.Cog):
         view = TimeoutView().add_item(DonateSelect())
         view.message = await ctx.send(embed=embed, view=view, ephemeral=True)
 
-    @commands.hybrid_command(name='userinfo',
-                             aliases=['uinfo', 'whois'],
-                             description="Xem thông tin của một ai đó.")
+    @commands.hybrid_command(name='userinfo', aliases=['uinfo', 'whois'], description="Xem thông tin của một ai đó.")
     @app_commands.describe(member="username, id người đó")
     async def user_info(self, ctx: commands.Context, member: Optional[discord.Member] = None) -> None:
-        if member is None:
-            member = ctx.author
-        embed = discord.Embed(color=discord.Color.blue())
-        embed.title = "— Thông tin người dùng"
+        member = member or ctx.author
+        embed = discord.Embed(title="— Thông tin người dùng", color=discord.Color.blue())
         embed.add_field(name="Tên hiển thị:", value=member.mention)
         embed.add_field(name="Username:", value=member)
         embed.add_field(name="ID:", value=member.id)
@@ -414,7 +385,7 @@ class Utils(commands.Cog):
     async def flip(self, ctx: commands.Context, number: Optional[int] = 1) -> None:
         embed = discord.Embed()
         if number == 1:
-            for i in range(100):
+            for _ in range(100):
                 rand_flip = random.choice(["Sấp", "Ngửa"])
         else:
             seq = ""
