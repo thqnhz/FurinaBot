@@ -1,9 +1,11 @@
-import discord, nltk, random, string
+import discord, nltk, random, string, asyncio
 from discord import Embed, ButtonStyle
 from discord.ext import commands
 from typing import List
 from nltk.corpus import wordnet
 from collections import Counter
+
+from bot import Furina
 
 
 class RockPaperScissorButton(discord.ui.Button):
@@ -217,8 +219,6 @@ class TicTacToe(discord.ui.View):
         await self.message.edit(embed=self.embed, view=self)
         
 
-
-# TODO: FINISH THE WORDLE MINIGAME
 class Wordle(discord.ui.View):
     def __init__(self, word: str):
         super().__init__(timeout=None)
@@ -226,28 +226,95 @@ class Wordle(discord.ui.View):
         self.message: discord.Message | None = None
         self.attempt: int = 6
         self.embed = Embed(title="WORDLE", description="").set_footer(text="Coded by ThanhZ")
+        self.alphabet: str = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
-        # TODO: implement available characters
-        self.characters: list[str] = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
-                                      'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
+        # status dict để kiểm tra xem ký tự có không được dùng(0), không nằm trong đáp án(1), sai vị trí(2)
+        # hay đúng vị trí(3)
+        self.STATUS: dict[str, int] = {
+            'UNUSED':      0,
+            'NOT_IN_WORD': 1,
+            'WRONG_POS':   2,
+            'CORRECT':     3
+        }
+
+        # list để lưu trạng thái, bắt đầu bằng 26 số 0
+        self.available: list[int] = [self.STATUS['UNUSED']]*26
+
+        # cập nhật trạng thái của các ký tự
+        self.update_available_characters()
 
     def check_guess(self, guess: str):
+        """Kiểm tra input từ người dùng."""
         result = [""] * len(self.word)
         word_counter = Counter(self.word)
 
+        # kiểm tra ký tự nằm đúng vị trí (xanh lá)
         for i in range(len(self.word)):
             if guess[i] == self.word[i]:
                 result[i] = ":green_square:"
                 word_counter[guess[i]] -= 1
 
+                # lấy index của ký tự đúng từ bảng chữ cái sau đó chỉnh sửa trạng thái thành đúng vị trí (3)
+                letter_index = self.alphabet.index(guess[i])
+                self.available[letter_index] = self.STATUS['CORRECT']
+                
+        # kiểm tra ký tự nằm sai vị trí (vàng) hoặc không nằm trong đáp án (xám)
         for i in range(len(self.word)):
-            if result[i] == "":
-                if guess[i] in word_counter and word_counter[guess[i]] > 0:
-                    result[i] = ":yellow_square:"
-                    word_counter[guess[i]] -= 1
-                else:
-                    result[i] = ":black_large_square:"
+            # nếu ký tự ở vị trí đó đã là màu xanh thì skip đến vòng lặp kế tiếp
+            if result[i] != "":
+                continue
+
+            # lấy index của ký tự để chỉnh sửa thành sai vị trí (2) hoặc không nằm trong đáp án (1)
+            letter_index = self.alphabet.index(guess[i])
+            if guess[i] in word_counter and word_counter[guess[i]] > 0:
+                result[i] = ":yellow_square:"
+                word_counter[guess[i]] -= 1
+
+                # trạng thái của ký tự có ưu tiên từ xanh lá (3) > vàng (2) > xám (1) > trắng (0)
+                # nên nếu ký tự này đã là màu xanh lá (3) từ trước thì không thay đổi từ xanh sang vàng (2)
+                if self.available[letter_index] != self.STATUS['CORRECT']:
+                    self.available[letter_index] = self.STATUS['WRONG_POS']
+            else:
+                result[i] = ":black_large_square:"
+
+                # tương tự như độ ưu tiên trên, vì ký tự xám (1) chỉ có thể thay thế ký tự trắng (0)
+                # nên phải kiểm tra xem nó có bé hơn ký tự vàng (2) hay không
+                if self.available[letter_index] < self.STATUS['WRONG_POS']:
+                        self.available[letter_index] = self.STATUS['NOT_IN_WORD']
+
+        self.update_available_characters()
         return "".join(result)
+
+    def update_available_characters(self):
+        """Cập nhật trạng thái cho các ký tự."""
+
+        # tạo layout bàn phím để dễ hình dung hơn
+        keyboard_layout = [
+            'QWERTYUIOP',
+            'ASDFGHJKL',
+            'ZXCVBNM'
+        ]
+
+        available = ""
+        tab = 0
+        for row in keyboard_layout:
+            available += ' '*tab*2 # ký tự trắng để off set bàn phím
+            for letter in row:
+                letter_index = self.alphabet.index(letter)
+                status = self.available[letter_index]
+
+                if status == self.STATUS['CORRECT']:
+                    available += f":green_square:`{letter}` "
+                elif status == self.STATUS['WRONG_POS']:
+                    available += f":yellow_square:`{letter}` "
+                elif status == self.STATUS['NOT_IN_WORD']:
+                    available += f":black_large_square:`{letter}` "
+                else: # status == self.STATUS['UNUSED']
+                    available += f":white_large_square:`{letter}` "
+            available += "\n"
+            tab += 1
+        self.embed.clear_fields()
+        self.embed.add_field(name="Bàn phím", value=available)
 
     @discord.ui.button(label="Đoán", emoji="\U0001f4dd", custom_id="guess_button")
     async def guess_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -258,6 +325,8 @@ class Wordle(discord.ui.View):
         self.embed.description += f"`{modal.guess}` {result}\n"
         self.attempt -= 1
         self.remaining_attempt_button.label = f"Còn lại: {self.attempt}"
+
+        # nếu kết quả là 5 ký tự xanh hoặc hết lượt đoán
         if result == (":green_square:" * 5) or self.attempt == 0:
             button.disabled = True
             self.embed.description += f"Đáp án là: `{self.word}`"
@@ -287,14 +356,17 @@ class WordleModal(discord.ui.Modal):
 
 class Minigames(commands.Cog):
     """Các Minigame bạn có thể chơi"""
-    def __init__(self, bot: commands.Bot):
-        self.bot: commands.Bot = bot
-        self.words = None
+    def __init__(self, bot: Furina):
+        self.bot: Furina = bot
 
     async def cog_load(self):
+        # using to_thread so the download is not blocking
+        self.words = await asyncio.to_thread(self.init_words_db)
+    
+    @staticmethod
+    def init_words_db():
         nltk.download("wordnet")
-        self.words = list(wordnet.words())
-
+        return list(wordnet.words())
 
     @commands.hybrid_command(name='tictactoe', aliases=['ttt', 'xo'], description="XO minigame")
     async def tic_tac_toe(self, ctx: commands.Context):
@@ -315,6 +387,6 @@ class Minigames(commands.Cog):
         view.message = await ctx.reply(embed=view.embed, view=view)
 
 
-async def setup(bot: commands.Bot):
+async def setup(bot: Furina):
     await bot.add_cog(Minigames(bot))
 
