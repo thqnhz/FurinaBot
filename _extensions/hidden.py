@@ -1,10 +1,9 @@
-import subprocess
-
-import discord
+import discord, subprocess
 from discord.ext import commands
 from discord import app_commands, Embed, Color
 from typing import Literal, Optional
 
+from bot import Furina
 from settings import *
 from _classes.embeds import *
 
@@ -27,18 +26,13 @@ class SendEmbedView(discord.ui.View):
 
 class Hidden(commands.Cog):
     """Lệnh ẩn"""
-    def __init__(self, bot):
-        self.bot = bot
+    def __init__(self, bot: Furina):
+        self.bot: Furina = bot
 
-    @commands.command(hidden=True,
-                      aliases=['ext', 'e'],
-                      description="Các hành động liên quan đến extension")
+    @commands.command(hidden=True, aliases=['ext', 'e'], description="Các hành động liên quan đến extension")
     @commands.is_owner()
-    async def extension(self,
-                        ctx: commands.Context,
-                        action: Literal['l', 'u', 'r'],
-                        extension_name: str) -> None:
-        embed = FooterEmbed(title="— Thành công!", color=Color.green())
+    async def extension(self, ctx: commands.Context, action: Literal['l', 'u', 'r'], extension_name: str) -> None:
+        embed: FooterEmbed = FooterEmbed(title="— Thành công!", color=Color.green())
         avatar_url = ctx.author.avatar.url
         embed.set_thumbnail(url=avatar_url)
 
@@ -63,10 +57,7 @@ class Hidden(commands.Cog):
         await ctx.reply(embed=embed, delete_after=5)
         await ctx.message.delete()
 
-    @commands.command(hidden=True,
-                      name='reboot',
-                      aliases=['restart'],
-                      description="Khởi động lại bot.")
+    @commands.command(hidden=True, name='reboot', aliases=['restart'], description="Khởi động lại bot.")
     @commands.is_owner()
     async def reboot(self, ctx: commands.Context) -> None:
         embed = LoadingEmbed(author_name="Đang khởi động lại...")
@@ -77,10 +68,7 @@ class Hidden(commands.Cog):
             embed = ErrorEmbed(f"Có lỗi xảy ra khi khởi động lại: {e}")
             await msg.edit(embed=embed, delete_after=5)
 
-    @commands.command(hidden=True,
-                      name='logs',
-                      aliases=['log'],
-                      description="Lấy nhật ký từ console.")
+    @commands.command(hidden=True, name='logs', aliases=['log'], description="Lấy nhật ký từ console.")
     @commands.is_owner()
     async def logs(self, ctx: commands.Context, number: int = 15) -> None:
         try:
@@ -96,8 +84,7 @@ class Hidden(commands.Cog):
             embed = ErrorEmbed(description=f"Có lỗi xảy ra khi lấy nhật ký: {e}")
         await ctx.reply(embed=embed)
 
-    @app_commands.command(name='embed',
-                          description="Gửi một embed.")
+    @app_commands.command(name='embed', description="Gửi một embed.")
     @app_commands.default_permissions(manage_permissions=True)
     async def send_embed(self, interaction: discord.Interaction,
                          title: str, *, url: Optional[str] = None,
@@ -180,6 +167,6 @@ class Hidden(commands.Cog):
         await interaction.response.send_message(embed=embed, ephemeral=True, view=view)
 
 
-async def setup(bot):
+async def setup(bot: Furina):
     await bot.add_cog(Hidden(bot))
 

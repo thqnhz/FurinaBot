@@ -6,7 +6,7 @@ from wavelink import (Player, Playable, Playlist, TrackSource, Node, Pool, Track
                       TrackEndEventPayload, TrackExceptionEventPayload, AutoPlayMode)
 from youtube_search import YoutubeSearch
 
-# Custom subclasses
+from bot import Furina
 from settings import *
 
 class FooterEmbed(Embed):
@@ -242,8 +242,8 @@ class QueueView(ui.View):
 
 class Music(commands.Cog):
     """Lệnh liên quan đến việc chơi nhạc."""
-    def __init__(self, bot: commands.Bot):
-        self.bot: commands.Bot = bot
+    def __init__(self, bot: Furina):
+        self.bot: Furina = bot
         self.music_channel: discord.TextChannel
 
     async def cog_load(self) -> None:
@@ -316,9 +316,7 @@ class Music(commands.Cog):
     @commands.Cog.listener()
     async def on_wavelink_track_exception(self, payload: TrackExceptionEventPayload):
         """Xử lý khi track bị lỗi khi đang phát."""
-        player: Player = payload.player
-        track: Playable = player.current
-        embed: Embed = Embeds.error_embed(f"Có lỗi xuất hiện khi đang phát {track.title}\n"
+        embed: Embed = Embeds.error_embed(f"Có lỗi xuất hiện khi đang phát {payload.track.title}\n"
                                           f"Chi tiết lỗi:\n"
                                           f"```\n"
                                           f"{payload.exception}\n"
@@ -560,5 +558,5 @@ class Music(commands.Cog):
         await ctx.reply(embed=embed)
 
 
-async def setup(bot):
+async def setup(bot: Furina):
     await bot.add_cog(Music(bot))
