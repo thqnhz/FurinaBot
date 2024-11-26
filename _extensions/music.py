@@ -1,6 +1,6 @@
 import discord, wavelink, textwrap
 from discord.ext import commands
-from discord import Color, Embed, Activity, ActivityType, Message, ui
+from discord import Color, Embed, Message, ui
 from typing import TYPE_CHECKING, Optional, cast
 from wavelink import (Player, Playable, Playlist, TrackSource, Node, Pool, TrackStartEventPayload,
                       TrackEndEventPayload, TrackExceptionEventPayload, AutoPlayMode)
@@ -139,19 +139,6 @@ async def put_a_playlist(*, playlist: Playlist, player: Player) -> Embed:
     if not player.playing:
         await player.play(player.queue.get(), populate=True)
     return embed
-
-async def update_activity(bot: commands.Bot, state: str = "N̸o̸t̸h̸i̸n̸g̸") -> None:
-    """
-    Cập nhật activity của bot theo bài hát đang phát.
-
-    Parameters
-    -----------
-    bot: `commands.Bot`
-        bot
-    state: `str`
-        Tên bài hát đang phát.
-    """
-    await bot.change_presence(activity=Activity(type=ActivityType.playing, name=ACTIVITY_NAME, state=f"Playing: {state}"))
 
 async def play_music(ctx: commands.Context, track_name: str, source: TrackSource | str = None):
     if not ctx.interaction:
@@ -303,14 +290,12 @@ class Music(commands.Cog):
         else:
             embed = FooterEmbed(title="Không còn bài hát nào trong hàng chờ")
             await self.music_channel.send(embed=embed)
-            await update_activity(self.bot)
 
     @commands.Cog.listener()
     async def on_wavelink_track_start(self, payload: TrackStartEventPayload):
         """Xử lý khi bài hát bắt đầu."""
-        player: Player = payload.player
-        await update_activity(self.bot, player.current.title)
-        embed = Embeds.player_embed(track=player.current)
+        track: Playable = payload.track
+        embed = Embeds.player_embed(track=track)
         await self.music_channel.send(embed=embed)
 
     @commands.Cog.listener()
@@ -557,7 +542,6 @@ class Music(commands.Cog):
         if ctx.voice_client:
             embed = FooterEmbed(title="— Đã ngắt kết nối!", description=f"Đã rời kênh {ctx.voice_client.channel.mention}")
             await ctx.voice_client.disconnect(force=True)
-            await update_activity(self.bot)
         else:
             embed = Embeds.error_embed("Bot không nằm trong kênh thoại nào.")
         await ctx.reply(embed=embed)

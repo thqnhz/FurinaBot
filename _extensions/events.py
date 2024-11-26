@@ -1,10 +1,11 @@
 import discord, traceback
-from discord import Embed
+from discord import Embed, Activity, ActivityType
 from discord.ext import commands
 from typing import TYPE_CHECKING
+from wavelink import Player, Playable, TrackStartEventPayload, TrackEndEventPayload
 
 
-from settings import MUSIC_CHANNEL
+from settings import MUSIC_CHANNEL, ACTIVITY_NAME, PRFX
 from _extensions.music import update_activity
 from _classes.embeds import ErrorEmbed, FooterEmbed
 
@@ -15,6 +16,19 @@ if TYPE_CHECKING:
 class BotEvents(commands.Cog):
     def __init__(self, bot: "Furina") -> None:
         self.bot = bot
+
+    async def _update_activity(self, state: str = "N̸o̸t̸h̸i̸n̸g̸") -> None:
+        """
+        Cập nhật activity của bot theo bài hát đang phát.
+
+        Parameters
+        -----------
+        bot: `commands.Bot`
+            bot
+        state: `str`
+            Tên bài hát đang phát.
+        """
+        await self.bot.change_presence(activity=Activity(type=ActivityType.playing, name=ACTIVITY_NAME, state=f"Playing: {state}"))
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -50,20 +64,37 @@ class BotEvents(commands.Cog):
             embed.description = f"{error}"
         await ctx.reply(embed=embed, ephemeral=True, delete_after=60)
 
+        print(PRFX)
         traceback.print_exception(error)
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member: discord.Member, before, after):
-        player_channel = before.channel
-        if player_channel and not after.channel:
-            if len(player_channel.members) == 1 and player_channel.members[0] == self.bot.user:
+        # thay đổi activity khi bot thoát kênh thoại
+        if member == self.bot.user and not after.channel:
+            await self._update_activity(self)
+
+        # thoát kênh nếu là người duy nhất trong kênh
+        if before.channel and not after.channel:
+            if len(before.channel.members) == 1 and before.channel.members[0] == self.bot.user:
                 await member.guild.voice_client.disconnect(force=True)
                 channel = self.bot.get_channel(MUSIC_CHANNEL)
                 embed = FooterEmbed(title="Đừng bỏ mình một mình trong kênh, mình sợ :fearful:")
                 embed.set_image(url="https://media1.tenor.com/m/Cbwh3gVO4KAAAAAC/genshin-impact-furina.gif")
                 await channel.send(embed=embed)
-                await update_activity(self)
 
+
+    @commands.Cog.listener()
+    async def on_wavelink_track_end(self, payload: TrackEndEventPayload):
+        """Cập nhật activity khi track kết thúc."""
+        player: Player = payload.player
+        if player.queue.is_empty:
+            await self._update_activity(self.bot)
+
+    @commands.Cog.listener()
+    async def on_wavelink_track_start(self, payload: TrackStartEventPayload):
+        """Cập nhật activity khi track bắt đầu."""
+        track: Playable = payload.track
+        await self. _update_activity(self.bot, track.title)
 
 async def setup(bot: "Furina"):
     await bot.add_cog(BotEvents(bot))
