@@ -93,7 +93,7 @@ class BotEvents(commands.Cog):
     async def on_wavelink_track_start(self, payload: TrackStartEventPayload):
         """Cập nhật activity khi track bắt đầu."""
         track: Playable = payload.track
-        await self. _update_activity(self.bot, track.title)
+        await self._update_activity(self.bot, track.title)
 
 async def setup(bot: "Furina"):
     await bot.add_cog(BotEvents(bot))
