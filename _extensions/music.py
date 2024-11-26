@@ -18,6 +18,7 @@ class FooterEmbed(Embed):
         super().__init__(*args, **kwargs)
         self.set_footer(text="Coded by ThanhZ")
 
+
 class Embeds:
     @staticmethod
     def loading_embed() -> Embed:
@@ -152,10 +153,6 @@ async def update_activity(bot: commands.Bot, state: str = "N̸o̸t̸h̸i̸n̸g̸
     """
     await bot.change_presence(activity=Activity(type=ActivityType.playing, name=ACTIVITY_NAME, state=f"Playing: {state}"))
 
-def get_player(ctx: commands.Context) -> Player:
-    """Lấy `wavelink.Player` từ ctx."""
-    return cast(Player, ctx.guild.voice_client)
-
 async def play_music(ctx: commands.Context, track_name: str, source: TrackSource | str = None):
     if not ctx.interaction:
         await ctx.message.add_reaction(CHECKMARK)
@@ -248,14 +245,13 @@ class Music(commands.Cog):
     """Lệnh liên quan đến việc chơi nhạc."""
     def __init__(self, bot: "Furina"):
         self.bot = bot
-        self.music_channel: discord.TextChannel
 
     async def cog_load(self) -> None:
         node = Node(uri=LAVA_URI, password=LAVA_PW, heartbeat=5.0, retries=1)
         await Pool.connect(client=self.bot, nodes=[node])
-        self.music_channel = self.bot.get_channel(MUSIC_CHANNEL)
+        self.music_channel: discord.TextChannel | None = self.bot.get_channel(MUSIC_CHANNEL)
         if not self.music_channel:
-            self.music_channel = await self.bot.fetch_channel(MUSIC_CHANNEL)
+            self.music_channel: discord.TextChannel = await self.bot.fetch_channel(MUSIC_CHANNEL)
 
     async def cog_unload(self) -> None:
         await Pool.close()
@@ -264,7 +260,7 @@ class Music(commands.Cog):
         embed = Embeds.error_embed("")
         if not self._is_connected(ctx):
             embed.description = "Bạn cần tham gia kênh thoại để sử dụng lệnh"
-            await ctx.reply(embed=embed, ephemeral=True)
+            await ctx.reply(embed=embed, ephemeral=True, delete_after=10)
             return False
         if not self._is_in_music_channel(ctx):
             embed.description = f"Lệnh này chỉ có thể dùng được ở <#{MUSIC_CHANNEL}>"
@@ -273,7 +269,7 @@ class Music(commands.Cog):
         if not self._is_in_same_channel(ctx):
             embed.description = (f"Bạn và {ctx.me.mention} phải cùng ở một kênh thoại.\n"
                                  f"{ctx.me.mention} đang ở kênh {ctx.guild.me.voice.channel.mention}")
-            await ctx.reply(embed=embed, ephemeral=True)
+            await ctx.reply(embed=embed, ephemeral=True, delete_after=10)
             return False
         return True
 
@@ -326,6 +322,11 @@ class Music(commands.Cog):
                                           f"{payload.exception}\n"
                                           f"```")
         await self.music_channel.send(embed=embed)
+
+    @staticmethod
+    def _get_player(ctx: commands.Context) -> Player:
+        """Lấy `wavelink.Player` từ ctx."""
+        return cast(Player, ctx.guild.voice_client)
 
     @commands.hybrid_group(name='play', aliases=['p'], description="Phát một bài hát")
     async def play_command(self, ctx: commands.Context, *, query: str):
@@ -418,7 +419,7 @@ class Music(commands.Cog):
     @commands.hybrid_command(name='pause', description="Tạm dừng việc phát nhạc")
     async def pause_command(self, ctx: commands.Context) -> None:
         """Tạm dừng việc phát nhạc."""
-        player = get_player(ctx)
+        player: Player = self._get_player(ctx)
         await player.pause(True)
         embed = FooterEmbed(title="Đã tạm dừng chơi nhạc", description="Dùng `!resume` hoặc `/resume` để tiếp tục")
         await ctx.reply(embed=embed)
@@ -426,7 +427,7 @@ class Music(commands.Cog):
     @commands.hybrid_command(name='resume', description="Tiếp tục việc phát nhạc")
     async def resume_command(self, ctx: commands.Context) -> None:
         """Tiếp tục việc phát nhạc."""
-        player: Player = get_player(ctx)
+        player: Player = self._get_player(ctx)
         await player.pause(False)
         embed = FooterEmbed(title="Đã tiếp tục chơi nhạc", description="Dùng `!pause` hoặc `/pause` để tạm dừng")
         await ctx.reply(embed=embed)
@@ -434,7 +435,7 @@ class Music(commands.Cog):
     @commands.hybrid_group(name='autoplay', aliases=['auto'], description="Bật hoặc tắt tự động phát.")
     async def autoplay_switch(self, ctx: commands.Context):
         """Bật hoặc tắt tự động phát."""
-        player: Player = get_player(ctx)
+        player: Player = self._get_player(ctx)
         switch_to_mode: str = "bật" if player.autoplay == AutoPlayMode.disabled else "tắt"
         player.autoplay = AutoPlayMode.disabled if player.autoplay == AutoPlayMode.enabled else AutoPlayMode.disabled
         await ctx.reply(embed=FooterEmbed().set_author(name=f"Đã {switch_to_mode} chế độ tự động phát"))
@@ -442,27 +443,27 @@ class Music(commands.Cog):
     @autoplay_switch.command(name='on', description="Bật tính năng tự động phát")
     async def autoplay_on(self, ctx: commands.Context):
         """Bật tính năng tự động phát."""
-        player = get_player(ctx)
+        player: Player = self._get_player(ctx)
         player.autoplay = AutoPlayMode.enabled
         await ctx.reply(embed=FooterEmbed().set_author(name=f"Đã bật chế độ tự động phát"))
 
     @autoplay_switch.command(name='off', description="Tắt tính năng tự động phát")
     async def autoplay_off(self, ctx: commands.Context):
         """Tắt tính năng tự động phát."""
-        player = get_player(ctx)
+        player: Player = self._get_player(ctx)
         player.autoplay = AutoPlayMode.disabled
         await ctx.reply(embed=FooterEmbed().set_author(name=f"Đã tắt chế độ tự động phát"))
 
     @commands.hybrid_command(name='nowplaying', aliases=['np', 'now', 'current'], description="Đang phát bài gì thế?")
     async def nowplaying_command(self, ctx: commands.Context):
         """Xem bài hát đang phát."""
-        player = get_player(ctx)
+        player: Player = self._get_player(ctx)
         await ctx.reply(embed=Embeds.nowplaying_embed(player))
 
     @commands.hybrid_command(name='skip', description="Bỏ qua bài hát hiện tại.")
     async def skip(self, ctx: commands.Context):
         """Bỏ qua bài hát hiện tại."""
-        player = get_player(ctx)
+        player: Player = self._get_player(ctx)
         track = player.current
         if track:
             embed = Embed().set_author(name=f"Đã skip {track}", icon_url=SKIP_EMOJI)
@@ -474,7 +475,7 @@ class Music(commands.Cog):
     @commands.hybrid_command(name='stop', description="Dừng phát nhạc và xóa hàng chờ")
     async def stop_playing(self, ctx: commands.Context):
         """Tạm dừng phát nhạc và xóa hàng chờ."""
-        player = get_player(ctx)
+        player: Player = self._get_player(ctx)
         player.queue.clear()
         await player.stop(force=True)
         embed = Embed().set_author(name=f"Đã dừng phát nhạc và xóa toàn bộ hàng chờ", icon_url=SKIP_EMOJI)
@@ -493,7 +494,7 @@ class Music(commands.Cog):
         view.message = await ctx.reply(embed=embeds[0], view=view)
 
     def _queue_embeds(self, ctx: commands.Context) -> list[Embed] | Embed:
-        player = get_player(ctx)
+        player: Player = self._get_player(ctx)
         if player.queue.is_empty:
             embed: Embed = FooterEmbed(title="Hàng chờ trống!")
             return embed
@@ -534,7 +535,7 @@ class Music(commands.Cog):
         number
             Số thứ tự bài hát trong hàng chờ, bỏ trống hoặc điền số 0 để xóa bài hát vừa đặt
         """
-        player = get_player(ctx)
+        player: Player = self._get_player(ctx)
         if number < 0 or number > player.queue.count:
             return
         else:

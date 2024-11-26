@@ -44,6 +44,8 @@ class BotEvents(commands.Cog):
             embed.description = f"Không tìm thấy lệnh `{ctx.message.content.split()[0]}`"
         elif isinstance(error, commands.MissingRequiredArgument):
             embed.description = f"Lệnh của bạn thiếu phần: `{error.param.name}`"
+        elif isinstance(error, commands.CheckFailure):
+            return
         else:
             embed.description = f"{error}"
         await ctx.reply(embed=embed, ephemeral=True, delete_after=60)
