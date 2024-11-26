@@ -56,7 +56,7 @@ class BotEvents(commands.Cog):
         if player_channel and not after.channel:
             if len(player_channel.members) == 1 and player_channel.members[0] == self.bot.user:
                 await member.guild.voice_client.disconnect(force=True)
-                channel = self.get_channel(MUSIC_CHANNEL)
+                channel = self.bot.get_channel(MUSIC_CHANNEL)
                 embed = FooterEmbed(title="Đừng bỏ mình một mình trong kênh, mình sợ :fearful:")
                 embed.set_image(url="https://media1.tenor.com/m/Cbwh3gVO4KAAAAAC/genshin-impact-furina.gif")
                 await channel.send(embed=embed)
