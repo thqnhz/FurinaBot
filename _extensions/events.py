@@ -6,7 +6,6 @@ from wavelink import Player, Playable, TrackStartEventPayload, TrackEndEventPayl
 
 
 from settings import MUSIC_CHANNEL, ACTIVITY_NAME, PRFX
-from _extensions.music import update_activity
 from _classes.embeds import ErrorEmbed, FooterEmbed
 
 if TYPE_CHECKING:
