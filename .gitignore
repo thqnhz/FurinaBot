@@ -1,6 +1,5 @@
 
 .env
-/.idea
 /__pycache__
 /_classes/__pycache__
 /_extensions/__pycache__
