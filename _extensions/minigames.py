@@ -1,11 +1,12 @@
-import discord, nltk, random, string, asyncio
+import discord, random, string
 from discord import Embed, ButtonStyle
 from discord.ext import commands
-from typing import List
-from nltk.corpus import wordnet
+from typing import TYPE_CHECKING, List
 from collections import Counter
 
-from bot import Furina
+
+if TYPE_CHECKING:
+    from bot import Furina
 
 
 class RockPaperScissorButton(discord.ui.Button):
@@ -62,7 +63,7 @@ class RockPaperScissor(discord.ui.View):
         super().__init__(timeout=300)
         self.move: int = 0
         self.player_one: discord.User | None = None
-        self.moves: list[int] = []
+        self.moves: List[int] = []
         self.player_two: discord.User | None = None
         for i in range(3):
             self.add_item(RockPaperScissorButton(i))
@@ -238,7 +239,7 @@ class Wordle(discord.ui.View):
         }
 
         # list để lưu trạng thái, bắt đầu bằng 26 số 0
-        self.available: list[int] = [self.STATUS['UNUSED']]*26
+        self.available: List[int] = [self.STATUS['UNUSED']]*26
 
         # cập nhật trạng thái của các ký tự
         self.update_available_characters()
@@ -354,19 +355,12 @@ class WordleModal(discord.ui.Modal):
         await interaction.response.defer()
         self.guess = self.text_input.value.upper()
 
+
 class Minigames(commands.Cog):
     """Các Minigame bạn có thể chơi"""
-    def __init__(self, bot: Furina):
-        self.bot: Furina = bot
-
-    async def cog_load(self):
-        # using to_thread so the download is not blocking
-        self.words = await asyncio.to_thread(self.init_words_db)
-    
-    @staticmethod
-    def init_words_db():
-        nltk.download("wordnet")
-        return list(wordnet.words())
+    def __init__(self, bot: "Furina"):
+        self.bot = bot
+        self.words: List[str] = self.bot.words
 
     @commands.hybrid_command(name='tictactoe', aliases=['ttt', 'xo'], description="XO minigame")
     async def tic_tac_toe(self, ctx: commands.Context):
@@ -387,6 +381,6 @@ class Minigames(commands.Cog):
         view.message = await ctx.reply(embed=view.embed, view=view)
 
 
-async def setup(bot: Furina):
+async def setup(bot: "Furina"):
     await bot.add_cog(Minigames(bot))
 

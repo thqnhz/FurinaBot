@@ -1,14 +1,18 @@
 import discord, random
 from discord.ext import commands
+from typing import TYPE_CHECKING
 
-from bot import Furina
+
 from _classes.embeds import *
+
+if TYPE_CHECKING:
+    from bot import Furina
 
 
 class Fun(commands.Cog):
     """Lệnh funny hahaha XD."""
-    def __init__(self, bot: Furina):
-        self.bot: Furina = bot
+    def __init__(self, bot: "Furina"):
+        self.bot = bot
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
@@ -68,6 +72,6 @@ class Fun(commands.Cog):
         await ctx.send(embed=embed)
 
 
-async def setup(bot: Furina):
+async def setup(bot: "Furina"):
     await bot.add_cog(Fun(bot))
 

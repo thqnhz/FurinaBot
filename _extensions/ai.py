@@ -1,15 +1,19 @@
 import discord
 from discord.ext import commands
 from deep_translator import GoogleTranslator, MyMemoryTranslator
+from typing import TYPE_CHECKING
 
-from bot import Furina
+
 from _classes.embeds import *
+
+if TYPE_CHECKING:
+    from bot import Furina
 
 
 class AI(commands.Cog):
     """Lệnh liên quan đến AI"""
-    def __init__(self, bot: Furina):
-        self.bot: Furina = bot
+    def __init__(self, bot: "Furina"):
+        self.bot = bot
 
     @commands.command(name="translate", aliases=['tr'], description="Dịch thuật sử dụng Google & MyMemory.")
     async def translate_command(self, ctx: commands.Context, *, text: str) -> None:
@@ -32,5 +36,5 @@ class AI(commands.Cog):
         await msg.edit(embed=embed)
 
 
-async def setup(bot: Furina):
+async def setup(bot: "Furina"):
     await bot.add_cog(AI(bot))

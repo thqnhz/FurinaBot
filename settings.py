@@ -8,7 +8,6 @@ load_dotenv()
 # Basic
 PREFIX = "!"
 ACTIVITY_NAME = "Music » /play"
-OWNER_ID = 596886610214125598
 TOKEN = os.getenv("BOT_TOKEN")
 DEBUG_CHANNEL = 1155196242062753924
 

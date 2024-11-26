@@ -2,16 +2,20 @@ import platform, discord, random, psutil, wavelink, aiohttp
 from discord.ext import commands
 from discord import app_commands
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 from discord.ui import View, Select
+
 
 from _classes.embeds import *
 from _classes.views import *
 
+if TYPE_CHECKING:
+    from bot import Furina
+
 
 class HelpSelect(Select):
     """Help Selection Menu"""
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: "Furina"):
         super().__init__(
             placeholder="Chọn mục",
             options=[
@@ -101,8 +105,19 @@ class PaginatedView(TimeoutView):
 
 class Utils(commands.Cog):
     """Lệnh hữu dụng."""
-    def __init__(self, bot):
+    def __init__(self, bot: "Furina"):
         self.bot = bot
+
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        if message.author == self.bot.user:
+            pass
+
+        if message.content == '<@1131530915223441468>':
+            embed = FooterEmbed(title=MENTIONED_TITLE, description=MENTIONED_DESC, color=Color.blue())
+            embed.timestamp = message.created_at
+            view = SelectView().add_item(HelpSelect(self))
+            view.message = await message.channel.send(embed=embed, view=view, reference=message.author)
 
     @staticmethod
     def generate_random_number(min_num: int, max_num: int) -> int:
@@ -467,5 +482,5 @@ class Utils(commands.Cog):
         view.message = await ctx.reply(embed=view.embeds[0], view=view)
 
 
-async def setup(bot):
+async def setup(bot: "Furina"):
     await bot.add_cog(Utils(bot))

@@ -1,13 +1,17 @@
 import discord, wavelink, textwrap
 from discord.ext import commands
 from discord import Color, Embed, Activity, ActivityType, Message, ui
-from typing import Optional, cast
+from typing import TYPE_CHECKING, Optional, cast
 from wavelink import (Player, Playable, Playlist, TrackSource, Node, Pool, TrackStartEventPayload,
                       TrackEndEventPayload, TrackExceptionEventPayload, AutoPlayMode)
 from youtube_search import YoutubeSearch
 
-from bot import Furina
+
 from settings import *
+
+if TYPE_CHECKING:
+    from bot import Furina
+
 
 class FooterEmbed(Embed):
     def __init__(self, *args, **kwargs):
@@ -242,8 +246,8 @@ class QueueView(ui.View):
 
 class Music(commands.Cog):
     """Lệnh liên quan đến việc chơi nhạc."""
-    def __init__(self, bot: Furina):
-        self.bot: Furina = bot
+    def __init__(self, bot: "Furina"):
+        self.bot = bot
         self.music_channel: discord.TextChannel
 
     async def cog_load(self) -> None:
@@ -558,5 +562,5 @@ class Music(commands.Cog):
         await ctx.reply(embed=embed)
 
 
-async def setup(bot: Furina):
+async def setup(bot: "Furina"):
     await bot.add_cog(Music(bot))
