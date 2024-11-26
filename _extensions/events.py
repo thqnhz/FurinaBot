@@ -54,7 +54,7 @@ class BotEvents(commands.Cog):
     async def on_voice_state_update(self, member: discord.Member, before, after):
         player_channel = before.channel
         if player_channel and not after.channel:
-            if len(player_channel.members) == 1 and player_channel.members[0] == self.user:
+            if len(player_channel.members) == 1 and player_channel.members[0] == self.bot.user:
                 await member.guild.voice_client.disconnect(force=True)
                 channel = self.get_channel(MUSIC_CHANNEL)
                 embed = FooterEmbed(title="Đừng bỏ mình một mình trong kênh, mình sợ :fearful:")
