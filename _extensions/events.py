@@ -70,7 +70,7 @@ class BotEvents(commands.Cog):
     async def on_voice_state_update(self, member: discord.Member, before, after):
         # thay đổi activity khi bot thoát kênh thoại
         if member == self.bot.user and not after.channel:
-            await self._update_activity(self)
+            await self._update_activity()
 
         # thoát kênh nếu là người duy nhất trong kênh
         if before.channel and not after.channel:
@@ -87,13 +87,13 @@ class BotEvents(commands.Cog):
         """Cập nhật activity khi track kết thúc."""
         player: Player = payload.player
         if player.queue.is_empty:
-            await self._update_activity(self.bot)
+            await self._update_activity()
 
     @commands.Cog.listener()
     async def on_wavelink_track_start(self, payload: TrackStartEventPayload):
         """Cập nhật activity khi track bắt đầu."""
         track: Playable = payload.track
-        await self._update_activity(self.bot, track.title)
+        await self._update_activity(track.title)
 
 async def setup(bot: "Furina"):
     await bot.add_cog(BotEvents(bot))
