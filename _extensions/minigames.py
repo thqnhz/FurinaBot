@@ -221,9 +221,10 @@ class TicTacToe(discord.ui.View):
         
 
 class Wordle(discord.ui.View):
-    def __init__(self, word: str):
+    def __init__(self, word: str, bot: "Furina"):
         super().__init__(timeout=None)
         self.word: str = word
+        self.bot = bot
         self.message: discord.Message | None = None
         self.attempt: int = 6
         self.embed = Embed(title="WORDLE", description="").set_footer(text="Coded by ThanhZ")
@@ -322,6 +323,8 @@ class Wordle(discord.ui.View):
         modal = WordleModal()
         await interaction.response.send_modal(modal)
         await modal.wait()
+        if modal.guess.lower() not in self.bot.words:
+            return await interaction.followup.send(f"Từ bạn vừa đoán ({modal.guess}) không nằm trong hệ thống!", ephemeral=True)
         result = self.check_guess(modal.guess)
         self.embed.description += f"`{modal.guess}` {result}\n"
         self.attempt -= 1
@@ -377,7 +380,7 @@ class Minigames(commands.Cog):
         word: str = random.choice(self.words)
         while len(word) != 5 or any(char not in string.ascii_letters for char in word):
             word = random.choice(self.words)
-        view = Wordle(word.upper())
+        view = Wordle(word=word.upper(), bot=self.bot)
         view.message = await ctx.reply(embed=view.embed, view=view)
 
 

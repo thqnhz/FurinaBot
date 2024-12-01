@@ -3,7 +3,6 @@ from discord.ext import commands
 # Custom subclasses
 from bot import Furina
 from _classes.embeds import *
-from _classes.views import *
 from settings import *
 
 bot = Furina()
