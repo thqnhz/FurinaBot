@@ -48,4 +48,15 @@ MOMO = os.getenv("MOMO")
 PAYPAL = os.getenv("PAYPAL")
 BANKING = os.getenv("BANKING")
 
+# Hidden Cog
+
+instance_name = "furina"
+
+# Edit this if you are using different package manager, I'm using PM2
+REBOOT_CMD = f"pm2 start {instance_name}"
+
+# Edit this if your logs file location is different, since I'm using pm2 and host the bot on AWS
+# the logs file is at /home/ubuntu/.pm2/logs/{instance_name}-error.log
+LOG_FILE = f"/home/ubuntu/.pm2/logs/{instance_name}-error.log"
+
 

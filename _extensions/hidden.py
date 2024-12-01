@@ -1,4 +1,4 @@
-import discord, subprocess
+import discord, io, subprocess
 from discord.ext import commands
 from discord import app_commands, Embed, Color
 from typing import TYPE_CHECKING, Literal, Optional
@@ -66,7 +66,7 @@ class Hidden(commands.Cog):
         embed = LoadingEmbed(author_name="Đang khởi động lại...")
         msg = await ctx.reply(embed=embed)
         try:
-            subprocess.run("pm2 restart furina", shell=True, check=True)
+            subprocess.run(REBOOT_CMD, shell=True, check=True)
         except Exception as e:
             embed = ErrorEmbed(f"Có lỗi xảy ra khi khởi động lại: {e}")
             await msg.edit(embed=embed, delete_after=5)
@@ -74,18 +74,25 @@ class Hidden(commands.Cog):
     @commands.command(hidden=True, name='logs', aliases=['log'], description="Lấy nhật ký từ console.")
     @commands.is_owner()
     async def logs(self, ctx: commands.Context, number: int = 15) -> None:
-        try:
+        process = subprocess.Popen(
+            ['tail', LOG_FILE, f'-n {number}'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        output, errors = process.communicate()
+        file = None
+
+        if process.returncode == 0:
             embed = FooterEmbed(title=f"Nhật ký lỗi gần đây nhất của Furina ({number} dòng)",
-                                description="```")
-            with open('../.pm2/logs/furina-error.log', 'r', encoding='utf-8') as file:
-                lines = file.readlines()
-                last_n_lines = lines[-number:]
-                for line in last_n_lines:
-                    embed.description += f"{line}\n"
-                embed.description += "```"
-        except Exception as e:
-            embed = ErrorEmbed(description=f"Có lỗi xảy ra khi lấy nhật ký: {e}")
-        await ctx.reply(embed=embed)
+                                description="")
+            if len(output) < 4096 and number < 30:
+                embed.description = f"```\n{output}\n```"
+            else:
+                file = discord.File(fp=io.StringIO(output), filename='logs.txt')
+        else:
+            embed = ErrorEmbed(description=f"Có lỗi xảy ra khi lấy nhật ký: {errors}")
+        await ctx.reply(embed=embed, file=file)
 
     @app_commands.command(name='embed', description="Gửi một embed.")
     @app_commands.default_permissions(manage_permissions=True)
