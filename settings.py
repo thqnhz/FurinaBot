@@ -36,12 +36,9 @@ MENTIONED_DESC = ("**- Prefix của mình:** `!` \n"
 # Music Cog
 MUSIC_CHANNEL = 1089851760425848923
 PLAYER_CHANNEL = 1221123310893404241
-HOUR = 3600000
 LAVA_URI = os.getenv("LAVA_URI")
 LAVA_BACKUP = os.getenv("LAVA_BACKUP")
 LAVA_PW = os.getenv("LAVA_PW")
-CLIENT_ID = os.getenv("CLIENT_ID")
-CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 
 # Utils Cog
 MOMO = os.getenv("MOMO")

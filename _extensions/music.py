@@ -236,9 +236,9 @@ class Music(commands.Cog):
     async def cog_load(self) -> None:
         node = Node(uri=LAVA_URI, password=LAVA_PW, heartbeat=5.0, retries=1)
         await Pool.connect(client=self.bot, nodes=[node])
-        self.music_channel: discord.TextChannel | None = self.bot.get_channel(MUSIC_CHANNEL)
+        self.music_channel: discord.TextChannel = self.bot.get_channel(MUSIC_CHANNEL)
         if not self.music_channel:
-            self.music_channel: discord.TextChannel = await self.bot.fetch_channel(MUSIC_CHANNEL)
+            self.music_channel = await self.bot.fetch_channel(MUSIC_CHANNEL)
 
     async def cog_unload(self) -> None:
         await Pool.close()
