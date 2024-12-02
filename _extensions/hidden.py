@@ -66,7 +66,7 @@ class Hidden(commands.Cog):
         embed = LoadingEmbed(author_name="Đang khởi động lại...")
         msg = await ctx.reply(embed=embed)
         try:
-            subprocess.run(REBOOT_CMD, shell=True, check=True)
+            subprocess.run(REBOOT_CMD, shell=True)
         except Exception as e:
             embed = ErrorEmbed(f"Có lỗi xảy ra khi khởi động lại: {e}")
             await msg.edit(embed=embed, delete_after=5)
