@@ -87,9 +87,9 @@ class Hidden(commands.Cog):
             embed = FooterEmbed(title=f"Nhật ký lỗi gần đây nhất của Furina ({number} dòng)",
                                 description="")
             if len(output) < 4096 and number < 30:
-                embed.description = f"```\n{output}\n```"
+                embed.description = f"```prolog\n{output}\n```"
             else:
-                file = discord.File(fp=io.StringIO(output), filename='logs.txt')
+                file = discord.File(fp=io.StringIO(output), filename=f'logs-{number}lines.log')
         else:
             embed = ErrorEmbed(description=f"Có lỗi xảy ra khi lấy nhật ký: {errors}")
         await ctx.reply(embed=embed, file=file)
