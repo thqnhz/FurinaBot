@@ -2,7 +2,7 @@ import discord, wavelink, textwrap
 from discord.ext import commands
 from discord import Color, Embed, Message, ui
 from typing import TYPE_CHECKING, Optional, cast
-from wavelink import (Player, Playable, Playlist, TrackSource, Node, Pool, TrackStartEventPayload,
+from wavelink import (Player, Playable, Playlist, TrackSource, TrackStartEventPayload,
                       TrackEndEventPayload, TrackExceptionEventPayload, AutoPlayMode)
 from youtube_search import YoutubeSearch
 
@@ -81,13 +81,18 @@ def is_valid(track: Playable, player: Player = None) -> bool:
     return False if (track.is_stream or track.length // 3_600_000 > 2) else True
 
 async def ensure_voice_connection(ctx: commands.Context | discord.Interaction) -> Player:
-    if ctx.guild.voice_client:
-        return cast(Player, ctx.guild.voice_client)
-    elif isinstance(ctx, commands.Context):
-        return await ctx.author.voice.channel.connect(cls=Player, self_deaf=True)
-    else:
-        interaction = ctx
-        return await interaction.user.voice.channel.connect(cls=Player, self_deaf=True)
+    try:
+        if ctx.guild.voice_client:
+            return cast(Player, ctx.guild.voice_client)
+        elif isinstance(ctx, commands.Context):
+            return await ctx.author.voice.channel.connect(cls=Player, self_deaf=True)
+        else:
+            interaction = ctx
+            return await interaction.user.voice.channel.connect(cls=Player, self_deaf=True)
+    except wavelink.exceptions.ChannelTimeoutException:
+        await ctx.send("Bot không kết nối được với kênh thoại, đang thử kết nối lại với Lavalink...", delete_after=10.0)
+        bot: "Furina" = ctx.bot if isinstance(ctx, commands.Context) else ctx.client
+        await bot.refresh_node_connection()
 
 async def add_to_queue(ctx: commands.Context | discord.Interaction, data: Playlist | Playable):
     msg = await loading_embed_reply(ctx)
@@ -234,14 +239,10 @@ class Music(commands.Cog):
         self.bot = bot
 
     async def cog_load(self) -> None:
-        node = Node(uri=LAVA_URI, password=LAVA_PW, heartbeat=5.0, retries=1)
-        await Pool.connect(client=self.bot, nodes=[node])
+        await self.bot.refresh_node_connection()
         self.music_channel: discord.TextChannel = self.bot.get_channel(MUSIC_CHANNEL)
         if not self.music_channel:
             self.music_channel = await self.bot.fetch_channel(MUSIC_CHANNEL)
-
-    async def cog_unload(self) -> None:
-        await Pool.close()
 
     async def cog_check(self, ctx: commands.Context) -> bool:
         embed = Embeds.error_embed("")
@@ -259,7 +260,7 @@ class Music(commands.Cog):
             await ctx.reply(embed=embed, ephemeral=True, delete_after=10)
             return False
         return True
-
+        
     @staticmethod
     def _is_connected(ctx: commands.Context) -> bool:
         """Kiểm tra người dùng đã kết nối chưa."""

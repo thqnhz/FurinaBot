@@ -3,6 +3,7 @@ from discord import Intents, Activity, ActivityType
 from discord.ext.commands import Bot, when_mentioned_or
 from nltk.corpus import wordnet
 from typing import List
+from wavelink import Node, Pool
 
 
 from settings import *
@@ -21,6 +22,11 @@ class Furina(Bot):
                                           name=ACTIVITY_NAME,
                                           state="Playing: N̸o̸t̸h̸i̸n̸g̸")
         )
+        self.node = Node(uri=LAVA_URI, password=LAVA_PW, heartbeat=5.0, retries=1)
+
+    async def refresh_node_connection(self):
+        await Pool.close()
+        await Pool.connect(client=self, nodes=[self.node])
 
     async def on_ready(self) -> None:
         print(PRFX + " Đã đăng nhập bằng " + Fore.BLUE + self.user.name)
