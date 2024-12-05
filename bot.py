@@ -24,9 +24,9 @@ class Furina(Bot):
         )
 
     async def refresh_node_connection(self):
-        self.node = Node(uri=LAVA_URI, password=LAVA_PW, heartbeat=5.0, retries=1)
+        node = Node(uri=LAVA_URI, password=LAVA_PW, heartbeat=5.0, retries=1)
         await Pool.close()
-        await Pool.connect(client=self, nodes=[self.node])
+        await Pool.connect(client=self, nodes=[node])
 
     async def on_ready(self) -> None:
         print(PRFX + " Đã đăng nhập bằng " + Fore.BLUE + self.user.name)
