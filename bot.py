@@ -22,9 +22,9 @@ class Furina(Bot):
                                           name=ACTIVITY_NAME,
                                           state="Playing: N̸o̸t̸h̸i̸n̸g̸")
         )
-        self.node = Node(uri=LAVA_URI, password=LAVA_PW, heartbeat=5.0, retries=1)
 
     async def refresh_node_connection(self):
+        self.node = Node(uri=LAVA_URI, password=LAVA_PW, heartbeat=5.0, retries=1)
         await Pool.close()
         await Pool.connect(client=self, nodes=[self.node])
 
