@@ -422,8 +422,12 @@ class Music(commands.Cog):
     async def autoplay_switch(self, ctx: commands.Context):
         """Bật hoặc tắt tự động phát."""
         player: Player = self._get_player(ctx)
-        switch_to_mode: str = "bật" if player.autoplay == AutoPlayMode.disabled else "tắt"
-        player.autoplay = AutoPlayMode.disabled if player.autoplay == AutoPlayMode.enabled else AutoPlayMode.disabled
+        if player.autoplay == AutoPlayMode.disabled:
+            switch_to_mode: str = "bật"
+            player.autoplay = AutoPlayMode.enabled
+        else:
+            switch_to_mode: str = "tắt"
+            player.autoplay = AutoPlayMode.disabled
         await ctx.reply(embed=FooterEmbed().set_author(name=f"Đã {switch_to_mode} chế độ tự động phát"))
 
     @autoplay_switch.command(name='on', description="Bật tính năng tự động phát")
