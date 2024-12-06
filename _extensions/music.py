@@ -90,7 +90,7 @@ async def ensure_voice_connection(ctx: commands.Context | discord.Interaction) -
             interaction = ctx
             return await interaction.user.voice.channel.connect(cls=Player, self_deaf=True)
     except wavelink.exceptions.ChannelTimeoutException:
-        await ctx.send("Bot không kết nối được với kênh thoại, đang thử kết nối lại với Lavalink...", delete_after=10.0)
+        await ctx.channel.send("Bot không kết nối được với kênh thoại, đang thử kết nối lại với Lavalink...", delete_after=10.0)
         bot: "Furina" = ctx.bot if isinstance(ctx, commands.Context) else ctx.client
         await bot.refresh_node_connection()
 
