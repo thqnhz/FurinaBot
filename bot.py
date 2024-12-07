@@ -1,4 +1,4 @@
-import discord, platform, nltk
+import discord, platform, nltk, wavelink
 from discord import Intents, Activity, ActivityType
 from discord.ext.commands import Bot, when_mentioned_or
 from nltk.corpus import wordnet
@@ -31,6 +31,7 @@ class Furina(Bot):
     async def on_ready(self) -> None:
         print(PRFX + " Đã đăng nhập bằng " + Fore.BLUE + self.user.name)
         print(PRFX + " Discordpy version " + Fore.BLUE + discord.__version__)
+        print(PRFX + " Wavelink version " + Fore.BLUE + wavelink.__version__)
         print(PRFX + " Python version " + Fore.BLUE + str(platform.python_version()))
 
         channel = self.get_channel(DEBUG_CHANNEL)
