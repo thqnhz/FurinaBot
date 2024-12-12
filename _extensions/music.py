@@ -65,51 +65,6 @@ class Embeds:
         return embed
 
 
-class LoopView(ui.View):
-    def __init__(self, *, player: Player):
-        super().__init__(timeout=60)
-        self.player = player
-        if self.player.queue.mode == QueueMode.normal:
-            self.loop_off.style = ButtonStyle.green
-        elif self.player.queue.mode == QueueMode.loop:
-            self.loop_current.style = ButtonStyle.green
-        else:
-            self.loop_all.style = ButtonStyle.green
-
-    @ui.button(emoji="\U0000274e", style=ButtonStyle.grey)
-    async def loop_off(self, interaction: discord.Interaction, button: ui.Button):
-        await interaction.response.defer()
-        self.player.queue.mode = QueueMode.normal
-        await self.mass_button_style_change(button)
-
-    @ui.button(emoji="\U0001f502", style=ButtonStyle.grey)
-    async def loop_current(self, interaction: discord.Interaction, button: ui.Button):
-        await interaction.response.defer()
-        self.player.queue.mode = QueueMode.loop_all
-        self.player.autoplay = AutoPlayMode.enabled
-        await self.mass_button_style_change(button)
-
-    @ui.button(emoji="\U0001f501", style=ButtonStyle.grey)
-    async def loop_all(self, interaction: discord.Interaction, button: ui.Button):
-        await interaction.response.defer()
-        self.player.queue.mode = QueueMode.loop
-        self.player.autoplay = AutoPlayMode.enabled
-        await self.mass_button_style_change(button)
-
-    async def mass_button_style_change(self, button: ui.Button):
-        for child in self.children:
-            if child == button:
-                child.style = ButtonStyle.green
-            else:
-                child.style = ButtonStyle.grey
-        await self.message.edit(view=self)
-
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        await self.message.edit(view=self)
-
-
 def format_len(length: int) -> str:
     """Chuyển đổi độ dài track sang dạng `phút:giây`"""
     minutes, seconds = divmod(length // 1000, 60)
@@ -276,6 +231,51 @@ class QueueView(ui.View):
 
     async def on_timeout(self) -> None:
         self.stop()
+        for child in self.children:
+            child.disabled = True
+        await self.message.edit(view=self)
+
+
+class LoopView(ui.View):
+    def __init__(self, *, player: Player):
+        super().__init__(timeout=60)
+        self.player = player
+        if self.player.queue.mode == QueueMode.normal:
+            self.loop_off.style = ButtonStyle.green
+        elif self.player.queue.mode == QueueMode.loop:
+            self.loop_current.style = ButtonStyle.green
+        else:
+            self.loop_all.style = ButtonStyle.green
+
+    @ui.button(emoji="\U0000274e", style=ButtonStyle.grey)
+    async def loop_off(self, interaction: discord.Interaction, button: ui.Button):
+        await interaction.response.defer()
+        self.player.queue.mode = QueueMode.normal
+        await self.mass_button_style_change(button)
+
+    @ui.button(emoji="\U0001f502", style=ButtonStyle.grey)
+    async def loop_current(self, interaction: discord.Interaction, button: ui.Button):
+        await interaction.response.defer()
+        self.player.queue.mode = QueueMode.loop_all
+        self.player.autoplay = AutoPlayMode.enabled
+        await self.mass_button_style_change(button)
+
+    @ui.button(emoji="\U0001f501", style=ButtonStyle.grey)
+    async def loop_all(self, interaction: discord.Interaction, button: ui.Button):
+        await interaction.response.defer()
+        self.player.queue.mode = QueueMode.loop
+        self.player.autoplay = AutoPlayMode.enabled
+        await self.mass_button_style_change(button)
+
+    async def mass_button_style_change(self, button: ui.Button):
+        for child in self.children:
+            if child == button:
+                child.style = ButtonStyle.green
+            else:
+                child.style = ButtonStyle.grey
+        await self.message.edit(view=self)
+
+    async def on_timeout(self):
         for child in self.children:
             child.disabled = True
         await self.message.edit(view=self)
@@ -589,8 +589,6 @@ class Music(commands.Cog):
         player = self._get_player(ctx)
         view = LoopView(player=player)
         view.message = await ctx.reply(view=view)
-
-        
 
     @commands.hybrid_command(name='connect', aliases=['j', 'join'], description="Kết nối bot vào kênh thoại.")
     async def connect_command(self, ctx: commands.Context):
