@@ -515,6 +515,7 @@ class Music(commands.Cog):
         """Tạm dừng phát nhạc và xóa hàng chờ."""
         player: Player = self._get_player(ctx)
         player.queue.clear()
+        player.autoplay = AutoPlayMode.disabled
         await player.stop(force=True)
         embed = Embed().set_author(name=f"Đã dừng phát nhạc và xóa toàn bộ hàng chờ", icon_url=SKIP_EMOJI)
         await ctx.reply(embed=embed)
