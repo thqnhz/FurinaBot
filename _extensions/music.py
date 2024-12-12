@@ -587,7 +587,7 @@ class Music(commands.Cog):
     @commands.hybrid_command(name='loop', aliases=['repeat'], desciption="Chuyển đổi giữa các chế độ lặp.")
     async def loop_command(self, ctx: commands.Context) -> None:
         player = self._get_player(ctx)
-        view = LoopView(player)
+        view = LoopView(player=player)
         view.message = await ctx.reply(view=view)
 
         
