@@ -76,20 +76,20 @@ class LoopView(ui.View):
         else:
             self.loop_all.style = ButtonStyle.green
 
-    @ui.button(emoji="", style=ButtonStyle.grey)
+    @ui.button(emoji="\U0000274e", style=ButtonStyle.grey)
     async def loop_off(self, interaction: discord.Interaction, button: ui.Button):
         await interaction.response.defer()
         self.player.queue.mode = QueueMode.normal
         await self.mass_button_style_change(button)
 
-    @ui.button(emoji="", style=ButtonStyle.grey)
+    @ui.button(emoji="\U0001f502", style=ButtonStyle.grey)
     async def loop_current(self, interaction: discord.Interaction, button: ui.Button):
         await interaction.response.defer()
         self.player.queue.mode = QueueMode.loop_all
         self.player.autoplay = AutoPlayMode.enabled
         await self.mass_button_style_change(button)
 
-    @ui.button(emoji="", style=ButtonStyle.grey)
+    @ui.button(emoji="\U0001f501", style=ButtonStyle.grey)
     async def loop_all(self, interaction: discord.Interaction, button: ui.Button):
         await interaction.response.defer()
         self.player.queue.mode = QueueMode.loop
