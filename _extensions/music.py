@@ -257,14 +257,12 @@ class LoopView(ui.View):
     async def loop_current(self, interaction: discord.Interaction, button: ui.Button):
         await interaction.response.defer()
         self.player.queue.mode = QueueMode.loop_all
-        self.player.autoplay = AutoPlayMode.enabled
         await self.mass_button_style_change(button)
 
     @ui.button(emoji="\U0001f501", style=ButtonStyle.grey)
     async def loop_all(self, interaction: discord.Interaction, button: ui.Button):
         await interaction.response.defer()
         self.player.queue.mode = QueueMode.loop
-        self.player.autoplay = AutoPlayMode.enabled
         await self.mass_button_style_change(button)
 
     async def mass_button_style_change(self, button: ui.Button):
