@@ -1,8 +1,8 @@
 import discord, wavelink, textwrap
 from discord.ext import commands
-from discord import Color, Embed, Message, ui
-from typing import TYPE_CHECKING, Optional, cast
-from wavelink import (Player, Playable, Playlist, TrackSource, TrackStartEventPayload,
+from discord import ButtonStyle, Color, Embed, Message, ui
+from typing import TYPE_CHECKING, Optional, Literal, cast
+from wavelink import (Player, Playable, Playlist, TrackSource, TrackStartEventPayload, QueueMode,
                       TrackEndEventPayload, TrackExceptionEventPayload, AutoPlayMode)
 from youtube_search import YoutubeSearch
 
@@ -63,6 +63,51 @@ class Embeds:
         embed.set_author(name=track.author, icon_url=PLAYING_GIF)
         embed.set_thumbnail(url=track.artwork)
         return embed
+
+
+class LoopView(ui.View):
+    def __init__(self, *, player: Player):
+        super().__init__(timeout=60)
+        self.player = player
+        if self.player.queue.mode == QueueMode.normal:
+            self.loop_off.style = ButtonStyle.green
+        elif self.player.queue.mode == QueueMode.loop:
+            self.loop_current.style = ButtonStyle.green
+        else:
+            self.loop_all.style = ButtonStyle.green
+
+    @ui.button(emoji="", style=ButtonStyle.grey)
+    async def loop_off(self, interaction: discord.Interaction, button: ui.Button):
+        await interaction.response.defer()
+        self.player.queue.mode = QueueMode.normal
+        await self.mass_button_style_change(button)
+
+    @ui.button(emoji="", style=ButtonStyle.grey)
+    async def loop_current(self, interaction: discord.Interaction, button: ui.Button):
+        await interaction.response.defer()
+        self.player.queue.mode = QueueMode.loop_all
+        self.player.autoplay = AutoPlayMode.enabled
+        await self.mass_button_style_change(button)
+
+    @ui.button(emoji="", style=ButtonStyle.grey)
+    async def loop_all(self, interaction: discord.Interaction, button: ui.Button):
+        await interaction.response.defer()
+        self.player.queue.mode = QueueMode.loop
+        self.player.autoplay = AutoPlayMode.enabled
+        await self.mass_button_style_change(button)
+
+    async def mass_button_style_change(self, button: ui.Button):
+        for child in self.children:
+            if child == button:
+                child.style = ButtonStyle.green
+            else:
+                child.style = ButtonStyle.grey
+        await self.message.edit(view=self)
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        await self.message.edit(view=self)
 
 
 def format_len(length: int) -> str:
@@ -454,7 +499,7 @@ class Music(commands.Cog):
         await ctx.reply(embed=Embeds.nowplaying_embed(player))
 
     @commands.hybrid_command(name='skip', description="Bỏ qua bài hát hiện tại.")
-    async def skip(self, ctx: commands.Context):
+    async def skip_command(self, ctx: commands.Context):
         """Bỏ qua bài hát hiện tại."""
         player: Player = self._get_player(ctx)
         track = player.current
@@ -537,6 +582,14 @@ class Music(commands.Cog):
             del player.queue[track_index]
             await ctx.send(embed=Embed(title=f"Đã xóa {deleted} khỏi hàng chờ."))
             await self._show_queue(ctx)
+
+    @commands.hybrid_command(name='loop', aliases=['repeat'], desciption="Chuyển đổi giữa các chế độ lặp.")
+    async def loop_command(self, ctx: commands.Context) -> None:
+        player = self._get_player(ctx)
+        view = LoopView(player)
+        view.message = await ctx.reply(view=view)
+
+        
 
     @commands.hybrid_command(name='connect', aliases=['j', 'join'], description="Kết nối bot vào kênh thoại.")
     async def connect_command(self, ctx: commands.Context):
