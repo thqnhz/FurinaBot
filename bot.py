@@ -24,7 +24,7 @@ class Furina(Bot):
         )
 
     async def refresh_node_connection(self):
-        node = Node(uri=LAVA_URI, password=LAVA_PW, heartbeat=5.0, retries=1, inactive_player_timeout=None)
+        node = Node(uri=LAVA_URI, password=LAVA_PW, heartbeat=5.0, inactive_player_timeout=None)
         await Pool.close()
         await Pool.connect(client=self, nodes=[node])
 
