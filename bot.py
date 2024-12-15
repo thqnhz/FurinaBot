@@ -1,5 +1,5 @@
 import discord, platform, nltk, wavelink
-from discord import Intents, Activity, ActivityType
+from discord import Intents, Activity, ActivityType, app_commands
 from discord.ext.commands import Bot, when_mentioned_or
 from nltk.corpus import wordnet
 from typing import List
@@ -22,6 +22,7 @@ class Furina(Bot):
                                           name=ACTIVITY_NAME,
                                           state="Playing: N̸o̸t̸h̸i̸n̸g̸")
         )
+        self.tree.allowed_contexts = app_commands.AppCommandContext(dm_channel=False, guild=True)
 
     async def refresh_node_connection(self):
         node = Node(uri=LAVA_URI, password=LAVA_PW, heartbeat=5.0, inactive_player_timeout=None)
