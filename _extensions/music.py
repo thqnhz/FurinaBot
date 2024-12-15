@@ -582,7 +582,7 @@ class Music(commands.Cog):
             await ctx.send(embed=Embed(title=f"Đã xóa {deleted} khỏi hàng chờ."))
             await self._show_queue(ctx)
 
-    @commands.hybrid_command(name='loop', aliases=['repeat'], desciption="Chuyển đổi giữa các chế độ lặp.")
+    @commands.hybrid_command(name='loop', aliases=['repeat'], description="Chuyển đổi giữa các chế độ lặp.")
     async def loop_command(self, ctx: commands.Context) -> None:
         player = self._get_player(ctx)
         view = LoopView(player=player)
