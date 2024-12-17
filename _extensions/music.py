@@ -594,7 +594,7 @@ class Music(commands.Cog):
     @remove_slashcommand.autocomplete("track_name")
     async def remove_slashcommand_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice]:
         player: Player = self._get_player(interaction)
-        return [app_commands.Choice(name=track.title, value=track.title) for track in player.queue if current.lower() in track.title.lower()]
+        return [app_commands.Choice(name=track.title, value=track.title) for track in player.queue if current.lower() in track.title.lower()][:25]
     
     @commands.command(name='remove', aliases=['rm', 'delete'], description="Xóa một bài hát khỏi hàng chờ")
     async def remove_prefixcommand(self, ctx: commands.Context):
