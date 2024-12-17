@@ -1,7 +1,7 @@
 import discord, wavelink, textwrap
 from discord.ext import commands
 from discord import app_commands, ButtonStyle, Color, Embed, Message, ui
-from typing import TYPE_CHECKING, Optional, List, cast
+from typing import TYPE_CHECKING, List, cast
 from wavelink import (Player, Playable, Playlist, TrackSource, TrackStartEventPayload, QueueMode,
                       TrackEndEventPayload, TrackExceptionEventPayload, AutoPlayMode)
 from youtube_search import YoutubeSearch
@@ -107,11 +107,14 @@ async def add_to_queue(ctx: commands.Context | discord.Interaction, data: Playli
 
     async with ctx.channel.typing():
         if isinstance(data, Playlist):
-            embed = await put_a_playlist(playlist=data, player=player)
+            embeds = await put_a_playlist(playlist=data, player=player)
+            view = QueueView(embeds)
+            embed = embeds[0]
         else:
             embed = await put_a_song(track=data, player=player)
+            view = None
 
-        await msg.edit(embed=embed)
+        await msg.edit(embed=embed, view=view)
 
 async def loading_embed_reply(ctx: commands.Context | discord.Interaction) -> Message:
     """Reply lệnh với `LoadingEmbed` và trả về `Message`"""
@@ -133,20 +136,30 @@ async def put_a_song(*, track: Playable, player: Player) -> Embed:
 
 async def put_a_playlist(*, playlist: Playlist, player: Player) -> Embed:
     """Thêm một playlist vào hàng chờ."""
-    track_count: int = 0
+    track_added: int = 0
+    track_skipped: int = 0
     embed = FooterEmbed(description="")
+    embeds = []
     for track in playlist.tracks:
         if is_valid(track):
             embed.description += f"- Đã thêm `{track}` vào hàng chờ\n"
             await player.queue.put_wait(track)
-            track_count += 1
+            track_added += 1
         else:
             embed.description += f"- Đã bỏ qua `{track}`\n"
-    embed.title = f"— Đã thêm {track_count} bài hát vào hàng chờ"
-    embed.add_field(name="Để xem thứ tự các bài hát", value="Dùng `!queue` hoặc `/queue`")
+            track_skipped += 1
+
+        if (track_added + track_skipped) % 10 == 0: # Phân trang
+            embeds.append(embed)
+            embed = FooterEmbed(description="")
+    if embed.description != "":
+        embeds.append(embed)
+            
+    for embed in embeds:
+        embed.title = f"Đã thêm {track_added}, bỏ qua {track_skipped} trên tổng số {len(playlist.tracks)} track"
     if not player.playing:
         await player.play(player.queue.get(), populate=True)
-    return embed
+    return embeds
 
 async def play_music(ctx: commands.Context, track_name: str, source: TrackSource | str = None):
     if not ctx.interaction:
@@ -539,7 +552,7 @@ class Music(commands.Cog):
         q: str = ""
         for i, track in enumerate(player.queue, 1):
             q += f"{i}. [**{track}**](<{track.uri}>) ({format_len(track.length)})\n"
-            if i % 5 == 0:
+            if i % 10 == 0:
                 embed: Embed = self._create_queue_embed(player, q)
                 queue_embeds.append(embed)
                 q = ""
