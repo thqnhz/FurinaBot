@@ -1,7 +1,7 @@
 import discord, wavelink, textwrap
 from discord.ext import commands
-from discord import ButtonStyle, Color, Embed, Message, ui
-from typing import TYPE_CHECKING, Optional, Literal, cast
+from discord import app_commands, ButtonStyle, Color, Embed, Message, ui
+from typing import TYPE_CHECKING, Optional, List, cast
 from wavelink import (Player, Playable, Playlist, TrackSource, TrackStartEventPayload, QueueMode,
                       TrackEndEventPayload, TrackExceptionEventPayload, AutoPlayMode)
 from youtube_search import YoutubeSearch
@@ -560,8 +560,8 @@ class Music(commands.Cog):
                 )
         return embed
 
-    @commands.hybrid_command(name='delete', aliases=['rm', 'remove'], description="Xóa một bài hát khỏi hàng chờ.")
-    async def remove_track_command(self, ctx: commands.Context, number: Optional[int] = 0):
+    @app_commands.command(name='remove', description="Xóa một bài hát khỏi hàng chờ")
+    async def remove_slashcommand(self, interaction: discord.Interaction, track_name: str = None):
         """
         Xóa một bài hát khỏi hàng chờ.
 
@@ -569,33 +569,46 @@ class Music(commands.Cog):
         -----------
         ctx
             commands.Context
-        number
-            Số thứ tự bài hát trong hàng chờ, bỏ trống hoặc điền số 0 để xóa bài hát vừa đặt
+        track_name
+            Tên bài hát cần xóa
         """
-        player: Player = self._get_player(ctx)
-        if number < 0 or number > player.queue.count:
-            return
-        else:
-            track_index = player.queue.count - 1 if number == 0 else number - 1
-            deleted = player.queue[track_index]
-            del player.queue[track_index]
-            await ctx.send(embed=Embed(title=f"Đã xóa {deleted} khỏi hàng chờ."))
-            await self._show_queue(ctx)
+        player: Player = self._get_player(interaction)
+        player.queue.remove(track for track in player.queue if track.title == track_name)
+        deleted: str = track_name
 
-    @commands.hybrid_command(name='loop', aliases=['repeat'], description="Chuyển đổi giữa các chế độ lặp.")
+        await interaction.response.send_message(embed=Embed(title=f"Đã xóa {deleted} khỏi hàng chờ."))
+
+    @remove_slashcommand.autocomplete("track_name")
+    async def remove_slashcommand_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice]:
+        player: Player = self._get_player(interaction)
+        return [app_commands.Choice(name=track.title, value=track.title) for track in player.queue if current.lower() in track.title.lower()]
+    
+    @commands.command(name='remove', aliases=['rm', 'delete'], description="Xóa một bài hát khỏi hàng chờ")
+    async def remove_prefixcommand(self, ctx: commands.Context):
+        player: Player = self._get_player(ctx)
+        if player.queue.is_empty:
+            return
+        track_index = player.queue.count - 1
+        deleted: Playable = player.queue[track_index]
+        del player.queue[track_index]
+        await ctx.reply(embed=Embed(title=f"Đã xóa {deleted} khỏi hàng chờ."))  
+        await self._show_queue(ctx)
+
+
+    @commands.hybrid_command(name='loop', aliases=['repeat'], description="Chuyển đổi giữa các chế độ lặp")
     async def loop_command(self, ctx: commands.Context) -> None:
-        player = self._get_player(ctx)
+        player: Player = self._get_player(ctx)
         view = LoopView(player=player)
         view.message = await ctx.reply(view=view)
 
-    @commands.hybrid_command(name='connect', aliases=['j', 'join'], description="Kết nối bot vào kênh thoại.")
+    @commands.hybrid_command(name='connect', aliases=['j', 'join'], description="Kết nối bot vào kênh thoại")
     async def connect_command(self, ctx: commands.Context):
         """Gọi bot vào kênh thoại"""
-        player = await ensure_voice_connection(ctx)
+        player: Player = await ensure_voice_connection(ctx)
         embed = FooterEmbed(title="— Đã kết nối!", description=f"Đã vào kênh {player.channel.mention}.")
         await ctx.reply(embed=embed)
 
-    @commands.hybrid_command(name='disconnect', aliases=['dc', 'leave', 'l'], description="Ngắt kết nối bot khỏi kênh thoại.")
+    @commands.hybrid_command(name='disconnect', aliases=['dc', 'leave', 'l'], description="Ngắt kết nối bot khỏi kênh thoại")
     async def disconnect_command(self, ctx: commands.Context):
         if ctx.voice_client:
             embed = FooterEmbed(title="— Đã ngắt kết nối!", description=f"Đã rời kênh {ctx.voice_client.channel.mention}")
