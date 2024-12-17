@@ -25,9 +25,12 @@ class Furina(Bot):
         self.tree.allowed_contexts = app_commands.AppCommandContext(dm_channel=False, guild=True)
 
     async def refresh_node_connection(self):
-        node = Node(uri=LAVA_URI, password=LAVA_PW, heartbeat=5.0, inactive_player_timeout=None)
-        await Pool.close()
-        await Pool.connect(client=self, nodes=[node])
+        try:
+            Pool.get_node()
+        except wavelink.InvalidNodeException:
+            node = Node(uri=LAVA_URI, password=LAVA_PW, heartbeat=5.0, inactive_player_timeout=None)
+            await Pool.close()
+            await Pool.connect(client=self, nodes=[node])
 
     async def on_ready(self) -> None:
         print(PRFX + " Đã đăng nhập bằng " + Fore.BLUE + self.user.name)
