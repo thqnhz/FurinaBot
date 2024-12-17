@@ -574,7 +574,7 @@ class Music(commands.Cog):
         return embed
 
     @app_commands.command(name='remove', description="Xóa một bài hát khỏi hàng chờ")
-    async def remove_slashcommand(self, interaction: discord.Interaction, track_name: str = None):
+    async def remove_slashcommand(self, interaction: discord.Interaction, track_name: str):
         """
         Xóa một bài hát khỏi hàng chờ.
 
