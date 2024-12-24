@@ -447,23 +447,23 @@ class Utils(commands.Cog):
             phonetics = d['phonetic'] if 'phonetic' in d \
                 else ", ".join([p['text'] for p in d['phonetics'] if 'text' in p])
             # Phiên âm
-            embed.description = f"Phiên âm (Pronunciation): `{phonetics}`"
+            embed.description = f"Pronunciation: `{phonetics}`"
 
             # Định nghĩa
             for meaning in d['meanings']:
                 embed.title += f" ({meaning['partOfSpeech']})"
                 if meaning['synonyms']:
                     embed.add_field(
-                        name="Từ đồng nghĩa (Synonyms):",
+                        name="Synonyms:",
                         value=', '.join(meaning['synonyms'])
                     )
                 if meaning['antonyms']:
                     embed.add_field(
-                        name="Từ trái nghĩa (Antonyms):",
+                        name="Antonyms:",
                         value=', '.join(meaning['antonyms'])
                     )
                 embed.add_field(
-                    name="Định nghĩa (Definition)",
+                    name="Definition",
                     value="\n".join(definition['definition'] for definition in meaning['definitions']),
                     inline=False
                 )
