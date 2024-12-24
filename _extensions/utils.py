@@ -474,7 +474,7 @@ class Utils(commands.Cog):
                 )
         return PaginatedView(embeds)
 
-    @commands.command(name='dictionary',
+    @commands.hybrid_command(name='dictionary',
                       aliases=['dict'],
                       description="Tra từ điển một từ.")
     @app_commands.allowed_installs(guilds=True, users=True)
