@@ -478,8 +478,8 @@ class Utils(commands.Cog):
                       aliases=['dict'],
                       description="Tra từ điển một từ.")
     @app_commands.allowed_installs(guilds=True, users=True)
-    async def dict_command(self, ctx: commands.Context, word: str, *_):
-        view = await self.dictionary_call(word)
+    async def dict_command(self, ctx: commands.Context, word: str):
+        view = await self.dictionary_call(word.split()[0])
         view.message = await ctx.reply(embed=view.embeds[0], view=view)
 
 
