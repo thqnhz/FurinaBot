@@ -326,7 +326,7 @@ class Wordle(discord.ui.View):
         if modal.guess.lower() not in self.bot.words:
             return await interaction.followup.send(f"Your guess (`{modal.guess}`) is not a real word!", ephemeral=True)
         result = self.check_guess(modal.guess)
-        self.embed.description += f"`{modal.guess}` {result}\n"
+        self.embed.description += f"`{modal.guess}` {result} by {interaction.user.mention}\n"
         self.attempt -= 1
         self.remaining_attempt_button.label = f"Attempts: {self.attempt}"
 
