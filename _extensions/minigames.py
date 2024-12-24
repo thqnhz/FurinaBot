@@ -350,7 +350,7 @@ class Wordle(discord.ui.View):
 class WordleModal(discord.ui.Modal):
     def __init__(self):
         super().__init__(timeout=None, title="Wordle")
-        self.text_input = discord.ui.TextInput(label="Nhập dự đoán", min_length=5, max_length=5)
+        self.text_input = discord.ui.TextInput(label="Type in your guess", min_length=5, max_length=5)
         self.add_item(self.text_input)
         self.guess: str = ""
 
