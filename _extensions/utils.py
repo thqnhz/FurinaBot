@@ -470,7 +470,7 @@ class Utils(commands.Cog):
                 embeds.append(embed)
                 embed = FooterEmbed(
                     title=word.capitalize(),
-                    description=f"Phiên âm (Pronunciation): `{phonetics}`"
+                    description=f"Pronunciation: `{phonetics}`"
                 )
         return PaginatedView(embeds)
 
