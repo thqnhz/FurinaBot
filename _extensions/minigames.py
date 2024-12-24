@@ -1,5 +1,5 @@
 import discord, random, string
-from discord import Embed, ButtonStyle
+from discord import app_commands, Embed, ButtonStyle
 from discord.ext import commands
 from typing import TYPE_CHECKING, List
 from collections import Counter
@@ -316,33 +316,33 @@ class Wordle(discord.ui.View):
             available += "\n"
             tab += 1
         self.embed.clear_fields()
-        self.embed.add_field(name="Bàn phím", value=available)
+        self.embed.add_field(name="Keyboard", value=available)
 
-    @discord.ui.button(label="Đoán", emoji="\U0001f4dd", custom_id="guess_button")
+    @discord.ui.button(label="Guess", emoji="\U0001f4dd", custom_id="guess_button")
     async def guess_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         modal = WordleModal()
         await interaction.response.send_modal(modal)
         await modal.wait()
         if modal.guess.lower() not in self.bot.words:
-            return await interaction.followup.send(f"Từ bạn vừa đoán ({modal.guess}) không nằm trong hệ thống!", ephemeral=True)
+            return await interaction.followup.send(f"Your guess (`{modal.guess}`) is not a real word!", ephemeral=True)
         result = self.check_guess(modal.guess)
         self.embed.description += f"`{modal.guess}` {result}\n"
         self.attempt -= 1
-        self.remaining_attempt_button.label = f"Còn lại: {self.attempt}"
+        self.remaining_attempt_button.label = f"Attempts: {self.attempt}"
 
         # nếu kết quả là 5 ký tự xanh hoặc hết lượt đoán
         if result == (":green_square:" * 5) or self.attempt == 0:
             button.disabled = True
-            self.embed.description += f"Đáp án là: `{self.word}`"
+            self.embed.description += f"The word is: `{self.word}`"
             if result == (":green_square:" * 5):
                 button.style = ButtonStyle.success
-                button.label = "Bạn đã đoán đúng"
+                button.label = "You WON!"
             else:
                 button.style = ButtonStyle.danger
-                button.label = "Bạn đã thua"
+                button.label = "You Lost!"
         await self.message.edit(embed=self.embed, view=self)
 
-    @discord.ui.button(label="Còn lại: 6", emoji="\U0001f4ad", custom_id="remaining_attempt", disabled=True)
+    @discord.ui.button(label="Attempts: 6", emoji="\U0001f4ad", custom_id="remaining_attempt", disabled=True)
     async def remaining_attempt_button(self, _: discord.Interaction, _b: discord.ui.Button):
         pass
 
@@ -376,6 +376,7 @@ class Minigames(commands.Cog):
         view.message = await ctx.reply(embed=view.embed, view=view)
 
     @commands.hybrid_command(name='wordle', description="Wordle minigame")
+    @app_commands.allowed_installs(guilds=True, users=True)
     async def wordle(self, ctx: commands.Context):
         word: str = random.choice(self.words)
         while len(word) != 5 or any(char not in string.ascii_letters for char in word):
