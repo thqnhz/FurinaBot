@@ -4,6 +4,8 @@ from discord.ext import commands
 from typing import TYPE_CHECKING, List
 from collections import Counter
 
+from .utils import Utils
+
 
 if TYPE_CHECKING:
     from bot import Furina
@@ -225,7 +227,6 @@ class Wordle(discord.ui.View):
         super().__init__(timeout=None)
         self.word: str = word
         self.bot = bot
-        self.message: discord.Message | None = None
         self.attempt: int = 6
         self.embed = Embed(title="WORDLE", description="").set_footer(text="Coded by ThanhZ")
         self.alphabet: str = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -332,6 +333,8 @@ class Wordle(discord.ui.View):
 
         # nếu kết quả là 5 ký tự xanh hoặc hết lượt đoán
         if result == (":green_square:" * 5) or self.attempt == 0:
+            view = await Utils.dictionary_call(self.word)
+            await interaction.followup.send(embed=view.embeds[0], view=view)
             button.disabled = True
             self.embed.description += f"The word is: `{self.word}`"
             if result == (":green_square:" * 5):
@@ -340,7 +343,7 @@ class Wordle(discord.ui.View):
             else:
                 button.style = ButtonStyle.danger
                 button.label = "You Lost!"
-        await self.message.edit(embed=self.embed, view=self)
+        await interaction.edit_original_response(embed=self.embed, view=self)
 
     @discord.ui.button(label="Attempts: 6", emoji="\U0001f4ad", custom_id="remaining_attempt", disabled=True)
     async def remaining_attempt_button(self, _: discord.Interaction, _b: discord.ui.Button):

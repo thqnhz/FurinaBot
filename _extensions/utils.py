@@ -462,9 +462,14 @@ class Utils(commands.Cog):
                         name="Antonyms:",
                         value=', '.join(meaning['antonyms'])
                     )
+                definition_value = ""
+                for definition in meaning['definitions']:
+                    after = definition_value + ("\n- " + definition['definition'])
+                    if len(after) < 1024:
+                        definition_value = after
                 embed.add_field(
                     name="Definition",
-                    value="\n".join(definition['definition'] for definition in meaning['definitions']),
+                    value=definition_value,
                     inline=False
                 )
                 embeds.append(embed)
