@@ -44,7 +44,7 @@ class RockPaperScissorButton(discord.ui.Button):
             view.moves.append(self.converter())
         else:
             if interaction.user == view.player_one:
-                return await interaction.response.send_message("You can't play with yourself!\n -# || Or can you ? Hello Michael, Vsauce here *insert Vsauce music*||", ephemeral=True)
+                return await interaction.response.send_message("You can't play with yourself!\n-# || Or can you? Hello Michael, Vsauce here||", ephemeral=True)
             view.player_two = interaction.user
             view.embed.add_field(name="Player 2", value=interaction.user.mention, inline=False)
             await interaction.response.edit_message(embed=view.embed, view=view)
