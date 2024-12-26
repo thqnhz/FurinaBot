@@ -332,7 +332,7 @@ class Wordle(discord.ui.View):
         self.remaining_attempt_button.label = f"Attempts: {self.attempt}"
 
         # nếu kết quả là 5 ký tự xanh hoặc hết lượt đoán
-        if result == (":green_square:" * 5) or self.attempt == 0:
+        if result == (":green_square:" * 5) or self.attempt <= 0:
             view = await Utils.dictionary_call(self.word)
             await interaction.followup.send(embed=view.embeds[0], view=view)
             button.disabled = True
