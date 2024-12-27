@@ -2,7 +2,7 @@ import platform, discord, random, psutil, wavelink, aiohttp
 from discord.ext import commands
 from discord import app_commands
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, List
 from discord.ui import View, Select
 
 
@@ -81,9 +81,9 @@ class DonateSelect(Select):
 
 
 class PaginatedView(TimeoutView):
-    def __init__(self, embeds: list):
+    def __init__(self, embeds: List[Embed]):
         super().__init__(timeout=300)
-        self.embeds: list[Embed] = embeds
+        self.embeds = embeds
         self.page: int = 0
         if len(self.embeds) == 1:
             self.right_button.disabled = True
@@ -422,13 +422,13 @@ class Utils(commands.Cog):
 
         Parameters
         -----------
-        word: str
+        word: `str`
             Từ cần tra từ điển.
 
         Returns
         -----------
-        FooterEmbed
-            Embed để phản hồi về người dùng
+        PaginatedView
+            A view that contains list of embeds and navigate buttons
         """
         embeds: list[Embed] = []
         async with aiohttp.ClientSession() as cs:
