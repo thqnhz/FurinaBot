@@ -7,7 +7,7 @@ from wavelink import (Player, Playable, Playlist, TrackSource, TrackStartEventPa
 from youtube_search import YoutubeSearch
 
 
-from .._classes.views import PaginatedView
+from _classes.views import PaginatedView
 from settings import *
 
 if TYPE_CHECKING:
