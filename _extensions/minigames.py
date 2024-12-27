@@ -377,7 +377,7 @@ class LookUpButton(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction):
         await interaction.response.defer(thinking=True, ephemeral=True)
         view = await Utils.dictionary_call(self.word)
-        await interaction.followup.send(embed=view.embeds[0], view=view, ephemeral=True)
+        view.message = await interaction.followup.send(embed=view.embeds[0], view=view, ephemeral=True, wait=True)
 
 
 class Minigames(commands.Cog):
