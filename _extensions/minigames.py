@@ -223,13 +223,14 @@ class TicTacToe(discord.ui.View):
         
 
 class Wordle(discord.ui.View):
-    def __init__(self, word: str, bot: "Furina"):
-        super().__init__(timeout=None)
+    def __init__(self, *, bot: "Furina", word: str):
+        super().__init__(timeout=1200)
         self.word: str = word
         self.bot = bot
         self.attempt: int = 6
         self.embed = Embed(title="WORDLE", description="").set_footer(text="Coded by ThanhZ")
         self.alphabet: str = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+        self.message: discord.Message
 
         # status dict để kiểm tra xem ký tự có không được dùng(0), không nằm trong đáp án(1), sai vị trí(2)
         # hay đúng vị trí(3)
@@ -325,7 +326,7 @@ class Wordle(discord.ui.View):
         await interaction.response.send_modal(modal)
         await modal.wait()
         if modal.guess.lower() not in self.bot.words:
-            return await interaction.followup.send(f"Your guess (`{modal.guess}`) is not a real word!", ephemeral=True)
+            return await interaction.followup.send(f"`{modal.guess}` is not a real word!", ephemeral=True)
         result = self.check_guess(modal.guess)
         self.embed.description += f"`{modal.guess}` {result} by {interaction.user.mention}\n"
         self.attempt -= 1
@@ -333,10 +334,10 @@ class Wordle(discord.ui.View):
 
         # nếu kết quả là 5 ký tự xanh hoặc hết lượt đoán
         if result == (":green_square:" * 5) or self.attempt <= 0:
-            view = await Utils.dictionary_call(self.word)
-            await interaction.followup.send(embed=view.embeds[0], view=view)
             button.disabled = True
             self.embed.description += f"The word is: `{self.word}`"
+            self.add_item(LookUpButton(self.word))
+
             if result == (":green_square:" * 5):
                 button.style = ButtonStyle.success
                 button.label = "You WON!"
@@ -349,6 +350,11 @@ class Wordle(discord.ui.View):
     async def remaining_attempt_button(self, _: discord.Interaction, _b: discord.ui.Button):
         pass
 
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        await self.message.edit(view=self)
+
 
 class WordleModal(discord.ui.Modal):
     def __init__(self):
@@ -360,6 +366,18 @@ class WordleModal(discord.ui.Modal):
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer()
         self.guess = self.text_input.value.upper()
+        await self.stop()
+
+
+class LookUpButton(discord.ui.Button):
+    def __init__(self, word: str):
+        super().__init__(style=ButtonStyle.secondary, label="Look Up", emoji="\U0001f310")
+        self.word = word
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.defer(thinking=True, ephemeral=True)
+        view = await Utils.dictionary_call(self.word)
+        await interaction.followup.send(embed=view.embeds[0], view=view, ephemeral=True)
 
 
 class Minigames(commands.Cog):
@@ -385,7 +403,7 @@ class Minigames(commands.Cog):
         word: str = random.choice(self.words)
         while len(word) != 5 or any(char not in string.ascii_letters for char in word):
             word = random.choice(self.words)
-        view = Wordle(word=word.upper(), bot=self.bot)
+        view = Wordle(bot=self.bot, word=word.upper())
         view.message = await ctx.reply(embed=view.embed, view=view)
 
 
