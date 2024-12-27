@@ -7,6 +7,7 @@ from wavelink import (Player, Playable, Playlist, TrackSource, TrackStartEventPa
 from youtube_search import YoutubeSearch
 
 
+from .._classes.views import PaginatedView
 from settings import *
 
 if TYPE_CHECKING:
@@ -108,7 +109,7 @@ async def add_to_queue(ctx: commands.Context | discord.Interaction, data: Playli
     async with ctx.channel.typing():
         if isinstance(data, Playlist):
             embeds = await put_a_playlist(playlist=data, player=player)
-            view = QueueView(embeds)
+            view = PaginatedView(timeout=180, embeds=embeds)
             embed = embeds[0]
         else:
             embed = await put_a_song(track=data, player=player)
@@ -215,38 +216,6 @@ class SelectTrack(ui.Select):
         await interaction.response.defer()
         self.view.message = None
         await add_to_queue(interaction, self.tracks[int(self.values[0])])
-
-
-class QueueView(ui.View):
-    def __init__(self, embeds: list[Embed]):
-        super().__init__(timeout=180)
-        self.embeds = embeds
-        self.page: int = 0
-        self.message: Message | None = None
-        if len(self.embeds) == 1:
-            self.next_button.disabled = True
-
-    @ui.button(emoji="\u25c0", disabled=True)
-    async def previous_button(self, interaction: discord.Interaction, button: ui.Button):
-        self.page -= 1
-        if self.page == 0:
-            button.disabled = True
-        self.next_button.disabled = False
-        await interaction.response.edit_message(embed=self.embeds[self.page], view=self)
-
-    @ui.button(emoji="\u25b6")
-    async def next_button(self, interaction: discord.Interaction, button: ui.Button):
-        self.page += 1
-        if self.page == len(self.embeds) - 1:
-            button.disabled = True
-        self.previous_button.disabled = False
-        await interaction.response.edit_message(embed=self.embeds[self.page], view=self)
-
-    async def on_timeout(self) -> None:
-        self.stop()
-        for child in self.children:
-            child.disabled = True
-        await self.message.edit(view=self)
 
 
 class LoopView(ui.View):
@@ -540,7 +509,7 @@ class Music(commands.Cog):
         embeds: list[Embed] | Embed = self._queue_embeds(ctx)
         if isinstance(embeds, Embed):
             return await ctx.reply(embed=embeds)
-        view = QueueView(embeds)
+        view = PaginatedView(timeout=60, embeds=embeds)
         view.message = await ctx.reply(embed=embeds[0], view=view)
 
     def _queue_embeds(self, ctx: commands.Context) -> list[Embed] | Embed:

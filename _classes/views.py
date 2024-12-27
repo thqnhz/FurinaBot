@@ -1,8 +1,8 @@
-import json
-
 import discord
-from discord import ButtonStyle
-from discord.ui import View, Button, Modal, Select
+from discord import ButtonStyle, Embed
+from discord.ui import View
+
+from typing import List
 
 from _classes.buttons import *
 import settings
@@ -22,6 +22,29 @@ class TimeoutView(View):
             await self.message.edit(view=self)
         except discord.NotFound:
             pass
+
+
+class PaginatedView(TimeoutView):
+    def __init__(self, *, timeout: float, embeds: List[Embed]):
+        super().__init__(timeout=timeout)
+        self.embeds = embeds
+        self.page: int = 0
+        if len(self.embeds) == 1:
+            self.clear_items()
+
+    @discord.ui.button(emoji="\U00002b05", disabled=True)
+    async def left_button(self, interaction: discord.Interaction, button: discord.Button):
+        self.page -= 1
+        button.disabled = True if self.page == 0 else False
+        self.right_button.disabled = False
+        await interaction.response.edit_message(embed=self.embeds[self.page], view=self)
+
+    @discord.ui.button(emoji="\U000027a1")
+    async def right_button(self, interaction: discord.Interaction, button: discord.Button):
+        self.page += 1 if self.page <= len(self.embeds) - 1 else self.page
+        button.disabled = True if self.page == len(self.embeds) - 1 else False
+        self.left_button.disabled = False
+        await interaction.response.edit_message(embed=self.embeds[self.page], view=self)
 
 
 class ButtonView(View):

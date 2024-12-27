@@ -2,12 +2,12 @@ import platform, discord, random, psutil, wavelink, aiohttp
 from discord.ext import commands
 from discord import app_commands
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Optional, List
+from typing import TYPE_CHECKING, Optional
 from discord.ui import View, Select
 
 
 from _classes.embeds import *
-from _classes.views import *
+from _classes.views import PaginatedView, TimeoutView, SelectView
 
 if TYPE_CHECKING:
     from bot import Furina
@@ -78,29 +78,6 @@ class DonateSelect(Select):
             embed.title = "Banking"
             embed.description = f"||{BANKING}||"
         await interaction.response.send_message(embed=embed, ephemeral=True)
-
-
-class PaginatedView(TimeoutView):
-    def __init__(self, embeds: List[Embed]):
-        super().__init__(timeout=300)
-        self.embeds = embeds
-        self.page: int = 0
-        if len(self.embeds) == 1:
-            self.right_button.disabled = True
-
-    @discord.ui.button(emoji="\U00002b05", disabled=True)
-    async def left_button(self, interaction: discord.Interaction, button: discord.Button):
-        self.page -= 1
-        button.disabled = True if self.page == 0 else False
-        self.right_button.disabled = False
-        await interaction.response.edit_message(embed=self.embeds[self.page], view=self)
-
-    @discord.ui.button(emoji="\U000027a1")
-    async def right_button(self, interaction: discord.Interaction, button: discord.Button):
-        self.page += 1 if self.page <= len(self.embeds) - 1 else self.page
-        button.disabled = True if self.page == len(self.embeds) - 1 else False
-        self.left_button.disabled = False
-        await interaction.response.edit_message(embed=self.embeds[self.page], view=self)
 
 
 class Utils(commands.Cog):
@@ -415,6 +392,13 @@ class Utils(commands.Cog):
         await ctx.send(embed=embed)
         await ctx.message.delete()
 
+
+    @staticmethod
+    async def dictionary_api_call(word: str) -> aiohttp.ClientResponse:
+        async with aiohttp.ClientSession() as cs:
+            async with cs.get(f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}") as response:
+                return response
+
     @staticmethod
     async def dictionary_call(word: str) -> PaginatedView:
         """
@@ -438,7 +422,7 @@ class Utils(commands.Cog):
                         title=word.capitalize(),
                         description="No definitions found. API call returned 404."
                     )
-                    return PaginatedView(embeds=[embed])
+                    return PaginatedView(timeout=300, embeds=[embed])
                 data: list[dict] = eval(await response.text())
 
         embed = FooterEmbed(title=word.capitalize())
@@ -477,7 +461,7 @@ class Utils(commands.Cog):
                     title=word.capitalize(),
                     description=f"Pronunciation: `{phonetics}`"
                 )
-        return PaginatedView(embeds)
+        return PaginatedView(timeout=300, embeds=embeds)
 
     @commands.hybrid_command(name='dictionary',
                       aliases=['dict'],

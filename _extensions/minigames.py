@@ -365,8 +365,8 @@ class WordleModal(discord.ui.Modal):
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer()
+        self.stop()
         self.guess = self.text_input.value.upper()
-        await self.stop()
 
 
 class LookUpButton(discord.ui.Button):
