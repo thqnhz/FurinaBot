@@ -422,12 +422,12 @@ class Utils(commands.Cog):
 
         Parameters
         -----------
-        word: `str`
+        `word: str`
             Từ cần tra từ điển.
 
         Returns
         -----------
-        PaginatedView
+        `PaginatedView`
             A view that contains list of embeds and navigate buttons
         """
         embeds: list[Embed] = []
@@ -438,7 +438,7 @@ class Utils(commands.Cog):
                         title=word.capitalize(),
                         description="No definitions found. API call returned 404."
                     )
-                    return embed
+                    return PaginatedView(embeds=[embed])
                 data: list[dict] = eval(await response.text())
 
         embed = FooterEmbed(title=word.capitalize())
