@@ -138,7 +138,7 @@ class Utils(commands.Cog):
         -----------
         ctx
             commands.Context
-        command_name
+        command_name: `str`
             Tên của lệnh cần xem chi tiết
         """
         if command_name is None:
@@ -392,13 +392,6 @@ class Utils(commands.Cog):
         await ctx.send(embed=embed)
         await ctx.message.delete()
 
-
-    @staticmethod
-    async def dictionary_api_call(word: str) -> aiohttp.ClientResponse:
-        async with aiohttp.ClientSession() as cs:
-            async with cs.get(f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}") as response:
-                return response
-
     @staticmethod
     async def dictionary_call(word: str) -> PaginatedView:
         """
@@ -463,11 +456,19 @@ class Utils(commands.Cog):
                 )
         return PaginatedView(timeout=300, embeds=embeds)
 
-    @commands.hybrid_command(name='dictionary',
-                      aliases=['dict'],
-                      description="Tra từ điển một từ.")
+    @commands.hybrid_command(name='dictionary', aliases=['dict'], description="Tra từ điển một từ.")
     @app_commands.allowed_installs(guilds=True, users=True)
     async def dict_command(self, ctx: commands.Context, word: str):
+        """
+        Tra từ điển một từ.
+        
+        Parameters
+        -----------
+        ctx: `commands.Context`
+            Context
+        word: `str`
+            Từ cần tra
+        """
         view = await self.dictionary_call(word.split()[0])
         view.message = await ctx.reply(embed=view.embeds[0], view=view)
 

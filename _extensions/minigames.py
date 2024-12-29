@@ -1,7 +1,8 @@
-import discord, random, string
+from __future__ import annotations
+import asyncio, discord, random, string
 from discord import app_commands, Embed, ButtonStyle
 from discord.ext import commands
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Dict
 from collections import Counter
 
 from .utils import Utils
@@ -223,66 +224,80 @@ class TicTacToe(discord.ui.View):
         
 
 class Wordle(discord.ui.View):
-    def __init__(self, *, bot: "Furina", word: str):
-        super().__init__(timeout=1200)
-        self.word: str = word
+    def __init__(self, *, bot: Furina, word: str):
+        super().__init__(timeout=None)
+        self.word = word
         self.bot = bot
         self.attempt: int = 6
         self.embed = Embed(title="WORDLE", description="").set_footer(text="Coded by ThanhZ")
         self.alphabet: str = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
         self.message: discord.Message
 
-        # status dict để kiểm tra xem ký tự có không được dùng(0), không nằm trong đáp án(1), sai vị trí(2)
-        # hay đúng vị trí(3)
-        self.STATUS: dict[str, int] = {
+        # a status dict to check if the letter is not yet guessed (0), wrong letter (1), wrong position (2) or correct (3)
+        self.STATUS: Dict[str, int] = {
             'UNUSED':      0,
             'NOT_IN_WORD': 1,
             'WRONG_POS':   2,
             'CORRECT':     3
         }
 
-        # list để lưu trạng thái, bắt đầu bằng 26 số 0
+        # a list to store the status of the letters in alphabetical order, init with 26 0s
         self.available: List[int] = [self.STATUS['UNUSED']]*26
 
-        # cập nhật trạng thái của các ký tự
+        # update the availability right away to get the keyboard field
         self.update_available_characters()
 
-    def check_guess(self, guess: str):
-        """Kiểm tra input từ người dùng."""
+    @property
+    def is_over(self) -> bool:
+        """Is the game over or not"""
+        return self.attempt == 0
+
+    def check_guess(self, guess: str) -> str:
+        """
+        Check the user's input and update the availabilities afterward
+        
+        Parameters
+        -----------
+        guess: `str`
+            User's input
+        
+        Returns
+        -----------
+        `str`
+            A `string` of emojis to represent the result, consists of :green_square: for correct,
+            :yellow_square: for wrong pos and :black_large_square: for wrong letter
+        """
         result = [""] * len(self.word)
         word_counter = Counter(self.word)
 
-        # kiểm tra ký tự nằm đúng vị trí (xanh lá)
+        # correct square
         for i in range(len(self.word)):
             if guess[i] == self.word[i]:
                 result[i] = ":green_square:"
                 word_counter[guess[i]] -= 1
-
-                # lấy index của ký tự đúng từ bảng chữ cái sau đó chỉnh sửa trạng thái thành đúng vị trí (3)
                 letter_index = self.alphabet.index(guess[i])
                 self.available[letter_index] = self.STATUS['CORRECT']
                 
-        # kiểm tra ký tự nằm sai vị trí (vàng) hoặc không nằm trong đáp án (xám)
+        # wrong position square or wrong letter square
         for i in range(len(self.word)):
-            # nếu ký tự ở vị trí đó đã là màu xanh thì skip đến vòng lặp kế tiếp
+            # if the square is already correct, don't change it
             if result[i] != "":
                 continue
 
-            # lấy index của ký tự để chỉnh sửa thành sai vị trí (2) hoặc không nằm trong đáp án (1)
             letter_index = self.alphabet.index(guess[i])
             if guess[i] in word_counter and word_counter[guess[i]] > 0:
                 result[i] = ":yellow_square:"
                 word_counter[guess[i]] -= 1
 
-                # trạng thái của ký tự có ưu tiên từ xanh lá (3) > vàng (2) > xám (1) > trắng (0)
-                # nên nếu ký tự này đã là màu xanh lá (3) từ trước thì không thay đổi từ xanh sang vàng (2)
+                # status priority: correct (3) > wrong pos (2) > wrong letter (1) > not yet guessed (0)
+                # so if the status of the current pos is already correct, don't change it
                 if self.available[letter_index] != self.STATUS['CORRECT']:
                     self.available[letter_index] = self.STATUS['WRONG_POS']
             else:
                 result[i] = ":black_large_square:"
 
-                # tương tự như độ ưu tiên trên, vì ký tự xám (1) chỉ có thể thay thế ký tự trắng (0)
-                # nên phải kiểm tra xem nó có bé hơn ký tự vàng (2) hay không
+                # as above, wrong letter can only replace not yet guessed square
+                # so we need to check if the value is lower than wrong pos (2)
                 if self.available[letter_index] < self.STATUS['WRONG_POS']:
                         self.available[letter_index] = self.STATUS['NOT_IN_WORD']
 
@@ -290,9 +305,7 @@ class Wordle(discord.ui.View):
         return "".join(result)
 
     def update_available_characters(self):
-        """Cập nhật trạng thái cho các ký tự."""
-
-        # tạo layout bàn phím để dễ hình dung hơn
+        """Update letters availability"""
         keyboard_layout = [
             'QWERTYUIOP',
             'ASDFGHJKL',
@@ -302,7 +315,7 @@ class Wordle(discord.ui.View):
         available = ""
         tab = 0
         for row in keyboard_layout:
-            available += ' '*tab*2 # ký tự trắng để off set bàn phím
+            available += ' '*tab*2 # half space blank unicode character
             for letter in row:
                 letter_index = self.alphabet.index(letter)
                 status = self.available[letter_index]
@@ -320,20 +333,24 @@ class Wordle(discord.ui.View):
         self.embed.clear_fields()
         self.embed.add_field(name="Keyboard", value=available)
 
-    @discord.ui.button(label="Guess", emoji="\U0001f4dd", custom_id="guess_button")
+    @discord.ui.button(label="Guess", emoji="\U0001f4dd")
     async def guess_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         modal = WordleModal()
         await interaction.response.send_modal(modal)
         await modal.wait()
         if modal.guess.lower() not in self.bot.words:
             return await interaction.followup.send(f"`{modal.guess}` is not a real word!", ephemeral=True)
+
+        if self.is_over:
+            return await interaction.followup.send("The game is over, your guess didn't count.", ephemeral=True)
+
+        self.attempt -= 1 # update the attempt property as soon as possible so self.is_over is updated
         result = self.check_guess(modal.guess)
         self.embed.description += f"`{modal.guess}` {result} by {interaction.user.mention}\n"
-        self.attempt -= 1
         self.remaining_attempt_button.label = f"Attempts: {self.attempt}"
-
+            
         # nếu kết quả là 5 ký tự xanh hoặc hết lượt đoán
-        if result == (":green_square:" * 5) or self.attempt <= 0:
+        if result == (":green_square:" * 5) or self.is_over:
             button.disabled = True
             self.embed.description += f"The word is: `{self.word}`"
             self.add_item(LookUpButton(self.word))
@@ -346,7 +363,13 @@ class Wordle(discord.ui.View):
                 button.label = "You Lost!"
         await interaction.edit_original_response(embed=self.embed, view=self)
 
-    @discord.ui.button(label="Attempts: 6", emoji="\U0001f4ad", custom_id="remaining_attempt", disabled=True)
+        if self.is_over:
+            await asyncio.sleep(300)
+            self.remove_item(self.children[2])
+            self.stop()
+            await interaction.edit_original_response(view=self)
+
+    @discord.ui.button(label="Attempts: 6", emoji="\U0001f4ad", disabled=True)
     async def remaining_attempt_button(self, _: discord.Interaction, _b: discord.ui.Button):
         pass
 
@@ -361,11 +384,9 @@ class WordleModal(discord.ui.Modal):
         super().__init__(timeout=None, title="Wordle")
         self.text_input = discord.ui.TextInput(label="Type in your guess", min_length=5, max_length=5)
         self.add_item(self.text_input)
-        self.guess: str = ""
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer()
-        self.stop()
         self.guess = self.text_input.value.upper()
 
 
@@ -377,7 +398,7 @@ class LookUpButton(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction):
         await interaction.response.defer(thinking=True, ephemeral=True)
         view = await Utils.dictionary_call(self.word)
-        view.message = await interaction.followup.send(embed=view.embeds[0], view=view, ephemeral=True, wait=True)
+        await interaction.followup.send(embed=view.embeds[0], view=view)
 
 
 class Minigames(commands.Cog):
@@ -407,6 +428,6 @@ class Minigames(commands.Cog):
         view.message = await ctx.reply(embed=view.embed, view=view)
 
 
-async def setup(bot: "Furina"):
+async def setup(bot: Furina):
     await bot.add_cog(Minigames(bot))
 
