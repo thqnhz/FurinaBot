@@ -373,11 +373,6 @@ class Wordle(discord.ui.View):
     async def remaining_attempt_button(self, _: discord.Interaction, _b: discord.ui.Button):
         pass
 
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        await self.message.edit(view=self)
-
 
 class WordleModal(discord.ui.Modal):
     def __init__(self):
