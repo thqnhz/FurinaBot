@@ -62,8 +62,7 @@ class BotEvents(commands.Cog):
         else:
             embed.description = f"{error}"
         await ctx.reply(embed=embed, ephemeral=True, delete_after=60)
-
-        print(PRFX)
+        
         traceback.print_exception(error)
 
     @commands.Cog.listener()
