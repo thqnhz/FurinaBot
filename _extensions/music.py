@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import discord, wavelink, textwrap
 from discord.ext import commands
 from discord import app_commands, ButtonStyle, Color, Embed, Message, ui
@@ -263,8 +265,9 @@ class LoopView(ui.View):
 
 class Music(commands.Cog):
     """Lệnh liên quan đến việc chơi nhạc."""
-    def __init__(self, bot: "Furina"):
+    def __init__(self, bot: Furina):
         self.bot = bot
+        self.webhook = discord.SyncWebhook.from_url(MUSIC_WEBHOOK)
 
     async def cog_load(self) -> None:
         await self.refresh_node_connection()
@@ -319,23 +322,22 @@ class Music(commands.Cog):
     async def on_wavelink_track_end(self, payload: TrackEndEventPayload):
         """Xử lý khi bài hát kết thúc."""
         player: Player = payload.player
+        if not player:
+            return
         if player.autoplay == AutoPlayMode.enabled:
             return
         if hasattr(player, "queue") and not player.queue.is_empty:
-            await player.play(player.queue.get(), populate=True, volume=50)
+            await player.play(player.queue.get(), volume=50)
         else:
             embed = FooterEmbed(title="Không còn bài hát nào trong hàng chờ")
-            await self.music_channel.send(embed=embed)
+            self.webhook.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_wavelink_track_start(self, payload: TrackStartEventPayload):
         """Xử lý khi bài hát bắt đầu."""
         track: Playable = payload.track
-        webhook = discord.Webhook.from_url(MUSIC_WEBHOOK)
-        webhook.avatar = self.bot.user.display_avatar
-        webhook.name = self.bot.user.name
         embed = Embeds.player_embed(track=track)
-        await webhook.send(embed=embed)
+        self.webhook.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_wavelink_track_exception(self, payload: TrackExceptionEventPayload):
@@ -610,5 +612,5 @@ class Music(commands.Cog):
         await ctx.reply(embed=embed)
 
 
-async def setup(bot: "Furina"):
+async def setup(bot: Furina):
     await bot.add_cog(Music(bot))

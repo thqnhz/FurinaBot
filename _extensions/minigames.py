@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import asyncio, discord, random, string
 from discord import app_commands, Embed, ButtonStyle
 from discord.ext import commands

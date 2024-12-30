@@ -3,11 +3,10 @@ from discord.ext import commands
 # Custom subclasses
 from bot import Furina
 from _classes.embeds import *
-from settings import *
 
 bot = Furina()
 
-@bot.hybrid_command(name="sync", hidden=True, description="Update slash command cho server.")
+@bot.hybrid_command(name="sync", hidden=True, description="Sync app commands.")
 @commands.is_owner()
 async def sync(ctx: commands.Context) -> None:
     synced = await bot.tree.sync()
