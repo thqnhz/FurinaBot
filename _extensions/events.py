@@ -1,3 +1,4 @@
+from __future__ import annotations
 import discord, traceback
 from discord import Embed, Activity, ActivityType
 from discord.ext import commands
@@ -13,7 +14,7 @@ if TYPE_CHECKING:
 
 
 class BotEvents(commands.Cog):
-    def __init__(self, bot: "Furina") -> None:
+    def __init__(self, bot: Furina) -> None:
         self.bot = bot
 
     async def _update_activity(self, state: str = "N̸o̸t̸h̸i̸n̸g̸") -> None:
@@ -80,7 +81,6 @@ class BotEvents(commands.Cog):
                 embed.set_image(url="https://media1.tenor.com/m/Cbwh3gVO4KAAAAAC/genshin-impact-furina.gif")
                 await channel.send(embed=embed)
 
-
     @commands.Cog.listener()
     async def on_wavelink_track_end(self, payload: TrackEndEventPayload):
         """Cập nhật activity khi track kết thúc."""
@@ -94,6 +94,6 @@ class BotEvents(commands.Cog):
         track: Playable = payload.track
         await self._update_activity(track.title)
 
-async def setup(bot: "Furina"):
+async def setup(bot: Furina):
     await bot.add_cog(BotEvents(bot))
 

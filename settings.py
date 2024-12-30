@@ -21,12 +21,13 @@ CHECKMARK = "<a:check:1238796460569657375>"
 
 # Mentioned
 MENTIONED_TITLE = "Miss me that much?"
-MENTIONED_DESC = (f"My Prefix: `{PREFIX}` \n"
+MENTIONED_DESC = (f"My Prefix is `{PREFIX}`\n"
                   "### I also support slash commands \n-> Type `/` to see commands i can do!\n"
                   "### Or you can select one category below to see all the commands.")
 
 # Music Cog
 MUSIC_CHANNEL = 1089851760425848923
+MUSIC_WEBHOOK = os.getenv("MUSIC_WEBHOOK")
 LAVA_URI = os.getenv("LAVA_URI")
 LAVA_BACKUP = os.getenv("LAVA_BACKUP")
 LAVA_PW = os.getenv("LAVA_PW")

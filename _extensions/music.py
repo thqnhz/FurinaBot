@@ -267,7 +267,7 @@ class Music(commands.Cog):
         self.bot = bot
 
     async def cog_load(self) -> None:
-        await self.bot.refresh_node_connection()
+        await self.refresh_node_connection()
         self.music_channel: discord.TextChannel = self.bot.get_channel(MUSIC_CHANNEL)
         if not self.music_channel:
             self.music_channel = await self.bot.fetch_channel(MUSIC_CHANNEL)
@@ -331,8 +331,11 @@ class Music(commands.Cog):
     async def on_wavelink_track_start(self, payload: TrackStartEventPayload):
         """Xử lý khi bài hát bắt đầu."""
         track: Playable = payload.track
+        webhook = discord.Webhook.from_url(MUSIC_WEBHOOK)
+        webhook.avatar = self.bot.user.display_avatar
+        webhook.name = self.bot.user.name
         embed = Embeds.player_embed(track=track)
-        await self.music_channel.send(embed=embed)
+        await webhook.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_wavelink_track_exception(self, payload: TrackExceptionEventPayload):
