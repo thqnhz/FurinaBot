@@ -3,7 +3,7 @@ from discord.ext import commands
 from discord import app_commands, ButtonStyle, Color, Embed, Message, ui
 from typing import TYPE_CHECKING, List, cast
 from wavelink import (Player, Playable, Playlist, TrackSource, TrackStartEventPayload, QueueMode,
-                      TrackEndEventPayload, TrackExceptionEventPayload, AutoPlayMode)
+                      TrackEndEventPayload, TrackExceptionEventPayload, AutoPlayMode, Node, Pool)
 from youtube_search import YoutubeSearch
 
 
@@ -289,6 +289,13 @@ class Music(commands.Cog):
             return False
         return True
         
+    async def refresh_node_connection(self) -> None:
+        try:
+            Pool.get_node()
+        except wavelink.InvalidNodeException:
+            node = Node(uri=LAVA_URI, password=LAVA_PW, heartbeat=5.0, inactive_player_timeout=None)
+            await Pool.close()
+            await Pool.connect(client=self.bot, nodes=[node])
     @staticmethod
     def _is_connected(ctx: commands.Context) -> bool:
         """Kiểm tra người dùng đã kết nối chưa."""

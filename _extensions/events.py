@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from wavelink import Player, Playable, TrackStartEventPayload, TrackEndEventPayload
 
 
-from settings import MUSIC_CHANNEL, ACTIVITY_NAME, PRFX
+from settings import MUSIC_CHANNEL, ACTIVITY_NAME
 from _classes.embeds import ErrorEmbed, FooterEmbed
 
 if TYPE_CHECKING:

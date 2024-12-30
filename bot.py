@@ -1,14 +1,10 @@
-import discord, platform, nltk, wavelink
-from discord import Intents, Activity, ActivityType, app_commands
+import datetime, discord, os, platform, nltk, wavelink
+from discord import Intents, Activity, ActivityType, Embed, app_commands
 from discord.ext.commands import Bot, when_mentioned_or
 from nltk.corpus import wordnet
 from typing import List
-from wavelink import Node, Pool
 
-
-from settings import *
-from _classes.embeds import FooterEmbed
-
+from settings import PREFIX, ACTIVITY_NAME, DEBUG_WEBHOOK
 
 class Furina(Bot):
     def __init__(self) -> None:
@@ -24,23 +20,18 @@ class Furina(Bot):
         )
         self.tree.allowed_contexts = app_commands.AppCommandContext(dm_channel=False, guild=True)
 
-    async def refresh_node_connection(self):
-        try:
-            Pool.get_node()
-        except wavelink.InvalidNodeException:
-            node = Node(uri=LAVA_URI, password=LAVA_PW, heartbeat=5.0, inactive_player_timeout=None)
-            await Pool.close()
-            await Pool.connect(client=self, nodes=[node])
-
     async def on_ready(self) -> None:
-        print(PRFX + " Đã đăng nhập bằng " + Fore.BLUE + self.user.name)
-        print(PRFX + " Discordpy version " + Fore.BLUE + discord.__version__)
-        print(PRFX + " Wavelink version " + Fore.BLUE + wavelink.__version__)
-        print(PRFX + " Python version " + Fore.BLUE + str(platform.python_version()))
+        print(f"Logged in as {self.user.name}")
+        print(f"discord.py version {discord.__version__}")
+        print(f"Wavelink version {wavelink.__version__}")
+        print(f"Python version {platform.python_version()}")
 
-        channel = self.get_channel(DEBUG_CHANNEL)
-        embed = FooterEmbed(title="Bot hoàn tất khởi động và sẵn sàng nhận lệnh!")
-        await channel.send(embed=embed)
+        embed = Embed(color=self.user.accent_color).set_author(
+            name="BOT IS READY!",
+            icon_url=self.user.display_avatar.url
+        )
+        embed.timestamp = datetime.datetime.now()
+        discord.SyncWebhook.from_url(DEBUG_WEBHOOK).send(embed=embed)
 
     async def setup_hook(self) -> None:
         nltk.download("wordnet")
@@ -48,9 +39,10 @@ class Furina(Bot):
         
         for filename in os.listdir("./_extensions"):
             if filename.endswith(".py"):
+                extension = filename[:-3]
                 try:
-                    await self.load_extension(f"_extensions.{filename[:-3]}")
-                    print(PRFX + " Đã load extension: " + Fore.BLUE + str(filename[:-3]))
+                    await self.load_extension(f"_extensions.{extension}")
+                    print(f"Đã load extension: {extension}")
                 except Exception as e:
-                    print(PRFX + " Lỗi khi load extension " + Fore.BLUE + str(filename[:-3]) + f"{e}")
+                    print(f"Lỗi khi load extension {extension}\n{e}")
 

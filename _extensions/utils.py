@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import platform, discord, random, psutil, wavelink, aiohttp
 from discord.ext import commands
 from discord import app_commands
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Optional
-from discord.ui import View, Select
+from typing import TYPE_CHECKING, Optional, List
+from discord.ui import Select
 
 
 from _classes.embeds import *
@@ -15,9 +17,9 @@ if TYPE_CHECKING:
 
 class HelpSelect(Select):
     """Help Selection Menu"""
-    def __init__(self, bot: "Furina"):
+    def __init__(self, bot: Furina):
         super().__init__(
-            placeholder="Chọn mục",
+            placeholder="Select Category",
             options=[
                 discord.SelectOption(
                     label=cog_name, description=cog.__doc__
@@ -30,71 +32,40 @@ class HelpSelect(Select):
         cog = self.bot.get_cog(self.values[0])
         assert cog
 
-        commands_mixer = []
+        commands_mixer: List[commands.Command] = []
+
         for i in cog.walk_commands():
             commands_mixer.append(i)
 
-        for i in cog.walk_app_commands():
-            commands_mixer.append(i)
-
         embed = FooterEmbed()
-        embed.title = "Để xem chi tiết một lệnh, hãy dùng !help <tên lệnh> nhé."
+        embed.title = "To see more detail about a specific command, use `!help <command_name>`"
         embed.description = "\n".join(
-            f"- **!{command.qualified_name}:** `{command.description}`"
+            f"- **{PREFIX}{command.qualified_name}:** `{command.description}`"
             for command in commands_mixer
         )
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
-class DonateSelect(Select):
-    """Donate Selection Menu"""
-    def __init__(self):
-        super().__init__(
-            placeholder="Chọn mục",
-            options=[
-                discord.SelectOption(
-                    label="Momo/Zalo Pay/Viettel Money", value="momo", description=None
-                ),
-                discord.SelectOption(
-                    label="Paypal", value="paypal", description=None
-                ),
-                discord.SelectOption(
-                    label="Banking", value="banking", description=None
-                ),
-            ]
-        )
-
-    async def callback(self, interaction: discord.Interaction) -> None:
-        selected = self.values[0]
-        embed = discord.Embed()
-        if selected == "momo":
-            embed.title = "Momo/Zalo Pay/Viettel Money"
-            embed.description = f"||{MOMO}||"
-        elif selected == "paypal":
-            embed.title = "Paypal"
-            embed.description = f"||{PAYPAL}||"
-        else:
-            embed.title = "Banking"
-            embed.description = f"||{BANKING}||"
-        await interaction.response.send_message(embed=embed, ephemeral=True)
-
-
 class Utils(commands.Cog):
     """Lệnh hữu dụng."""
-    def __init__(self, bot: "Furina"):
+    def __init__(self, bot: Furina):
         self.bot = bot
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if message.author == self.bot.user:
-            pass
+            return
 
         if message.content == '<@1131530915223441468>':
-            embed = FooterEmbed(title=MENTIONED_TITLE, description=MENTIONED_DESC, color=Color.blue())
+            embed = FooterEmbed(description=MENTIONED_DESC, color=Color.blue())
+            embed.set_author(
+                name=MENTIONED_TITLE,
+                icon_url="https://cdn.7tv.app/emote/01HHV72FBG000870SVK5KGTSJM/4x.png"
+            )
             embed.timestamp = message.created_at
-            view = SelectView().add_item(HelpSelect(self))
-            view.message = await message.channel.send(embed=embed, view=view, reference=message.author)
+            view = SelectView().add_item(HelpSelect(self.bot))
+            view.message = await message.channel.send(embed=embed, view=view, reference=message)
 
     @staticmethod
     def generate_random_number(min_num: int, max_num: int) -> int:
@@ -209,83 +180,6 @@ class Utils(commands.Cog):
             inline=False
         )
         await ctx.reply(embed=embed)
-
-    @commands.command(name='abaduw', aliases=['duwdapoet'], description="Thông tin về AbaDuw.")
-    async def abaduw(self, ctx: commands.Context):
-        view = View()
-        tiktok = discord.ui.Button(label="TikTok",
-                                   style=discord.ButtonStyle.link,
-                                   url="https://tiktok.com/@duwdapoet",
-                                   emoji="<:tiktok:1170619432532451348>")
-        view.add_item(tiktok)
-        youtube = discord.ui.Button(label="Subscribe",
-                                    style=discord.ButtonStyle.link,
-                                    url="https://youtube.com/@abaduw",
-                                    emoji="<:yt:1162334665387032627>")
-        view.add_item(youtube)
-        playerduo = discord.ui.Button(label="PlayerDuo",
-                                      style=discord.ButtonStyle.link,
-                                      url="https://playerduo.net/6288c683e560b573774ae204",
-                                      emoji="<:playerduo:1170622166878920814>",
-                                      row=1)
-        view.add_item(playerduo)
-        await ctx.reply(view=view)
-
-    @commands.command(name='abatom', aliases=['tomnaunuocdua', 'tomdayminh'], description="Thông tin về AbaTom.")
-    async def abatom(self, ctx: commands.Context):
-        view = View()
-        tiktok = discord.ui.Button(label="TikTok",
-                                   style=discord.ButtonStyle.link,
-                                   url="https://tiktok.com/@abadontom",
-                                   emoji="<:tiktok:1170619432532451348>")
-        view.add_item(tiktok)
-        youtube = discord.ui.Button(label="YouTube",
-                                    style=discord.ButtonStyle.link,
-                                    url="https://youtube.com/@dontom7048",
-                                    emoji="<:yt:1162334665387032627>")
-        view.add_item(youtube)
-        await ctx.reply(view=view)
-
-    @commands.command(name='thanhz', description="Thông tin về ThanhZ.")
-    async def thanhz(self, ctx: commands.Context):
-        view = View()
-        tiktok = discord.ui.Button(label="TikTok",
-                                   style=discord.ButtonStyle.link,
-                                   url="https://tiktok.com/@th4nhz",
-                                   emoji="<:tiktok:1170619432532451348>")
-        view.add_item(tiktok)
-        youtube = discord.ui.Button(label="YouTube",
-                                    style=discord.ButtonStyle.link,
-                                    url="https://youtube.com/thanhz/?sub_comfirmation=1",
-                                    emoji="<:yt:1162334665387032627>")
-        view.add_item(youtube)
-        await ctx.reply(view=view)
-
-    @commands.command(name='about', aliases=['forcalors', 'furina'], description="Thông tin về bot.")
-    async def about(self, ctx: commands.Context):
-        """Thông tin về bot."""
-        embed = discord.Embed()
-        embed.title = "— Thông tin về bot"
-        embed.color = discord.Color.blue()
-        embed.add_field(name="Lập trình:", value="`@_thanhz`", inline=False)
-        embed.add_field(name="Tester:", value="`@abaduw`, `@holymode`, `@trungtin1425`", inline=False)
-        await ctx.reply(embed=embed)
-
-    @commands.hybrid_command(name='premium', aliases=['vip'], description="Tính năng trả phí 😱.")
-    async def premium(self, ctx: commands.Context) -> None:
-        embed = discord.Embed(color=discord.Color.blue())
-        embed.title = "— Tính năng Premium"
-        embed.description = "Không có tính năng premium nào ở đây cả. Tuy nhiên, nếu bạn muốn donate cho chủ sở hữu của tôi để anh ấy không chết đói/khát lúc đang code, tôi rất cảm ơn sự giúp đỡ của bạn.\n||P/s: Ít thì cũng phải 5 quả trứng, nhiều thì 1 quả tên lửa.||"
-        view = TimeoutView().add_item(DonateSelect())
-        view.message = await ctx.send(embed=embed, view=view, ephemeral=True)
-
-    @commands.command(name='donate', aliases=['ungho', 'buymeacoffee'], description="Mua cho ThanhZ một ly café.")
-    async def donate(self, ctx: commands.Context) -> None:
-        embed = discord.Embed(color=discord.Color.blue())
-        embed.title = "— Ủng hộ tôi"
-        embed.description = "Chân thành cảm ơn bạn đã ủng hộ chủ sở hữu của tôi trên con đường này.\nHãy lựa chọn những cách ủng hộ ở menu bên dưới"
-        view = TimeoutView().add_item(DonateSelect())
-        view.message = await ctx.send(embed=embed, view=view, ephemeral=True)
 
     @commands.hybrid_command(name='userinfo', aliases=['uinfo', 'whois'], description="Xem thông tin của một ai đó.")
     @app_commands.describe(member="username, id người đó")
