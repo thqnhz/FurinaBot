@@ -58,7 +58,7 @@ class Embeds:
 
     @staticmethod
     def error_embed(error: str) -> Embed:
-        return FooterEmbed(title="Errpr", description=error)
+        return FooterEmbed(title="Error", description=error)
 
     @staticmethod
     def player_embed(track: Playable) -> Embed:

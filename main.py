@@ -1,8 +1,9 @@
+from discord import Color
 from discord.ext import commands
 
-# Custom subclasses
 from bot import Furina
-from _classes.embeds import *
+from settings import TOKEN
+from _classes.embeds import FooterEmbed
 
 bot = Furina()
 
@@ -11,7 +12,8 @@ bot = Furina()
 async def sync(ctx: commands.Context) -> None:
     synced = await bot.tree.sync()
     embed = FooterEmbed(
-        title=f"Đã đồng bộ hóa {len(synced)} slash commands.",
+        title=f"Synced {len(synced)} slash commands.",
+        description="\n".join(f"</{cmd.name}:{cmd.id}>" for cmd in synced),
         color=Color.blue()
     )
     await ctx.reply(embed=embed)
