@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import discord, wavelink, textwrap
 from discord.ext import commands
-from discord import app_commands, ButtonStyle, Color, Embed, Message, ui
+from discord import app_commands, ui, Color, ButtonStyle, Embed, Message
 from typing import TYPE_CHECKING, List, cast
 from wavelink import (Player, Playable, Playlist, TrackSource, TrackStartEventPayload, QueueMode,
                       TrackEndEventPayload, TrackExceptionEventPayload, AutoPlayMode, Node, Pool)
@@ -25,30 +25,30 @@ class FooterEmbed(Embed):
 class Embeds:
     @staticmethod
     def loading_embed() -> Embed:
-        return FooterEmbed(color=Color.blue()).set_author(name="Đang tải...")
+        return FooterEmbed(color=Color.blue()).set_author(name="Loading...")
     
     @staticmethod
     def invalid_embed() -> Embed:
-        return FooterEmbed(title="Lỗi",
-                           description="Track dài hơn 2 tiếng hoặc là livestream. Vui lòng chọn track khác.",
+        return FooterEmbed(title="Error",
+                           description="The track is more than 2 hours or is a livestream. Please choose another one.",
                            color=Color.red())
     
     @staticmethod
     def added_embed(track: Playable, player: Player) -> Embed:
         """Embed phản hồi khi được thêm vào danh sách phát."""
-        embed = FooterEmbed(title="Đã thêm vào hàng chờ", color=Color.green())
+        embed = FooterEmbed(title="Added to queue", color=Color.green())
         embed.description = f"### Track: [{track}]({track.uri}) ({format_len(track.length)})"
         embed.set_author(name=track.author)
         embed.set_image(url=track.artwork)
         if player.queue.count > 0:
-            embed.add_field(name="Thứ tự hàng chờ", value=player.queue.count)
+            embed.add_field(name="Number in queue", value=player.queue.count)
         return embed
 
     @staticmethod
     def nowplaying_embed(player: Player) -> Embed:
         """Embed phản hồi cho lệnh nowplaying"""
         current = player.current
-        embed = FooterEmbed(title=f"Đang phát", description=f"### [{current}]({current.uri})\n", color=Color.blue())
+        embed = FooterEmbed(title=f"Now Playing", description=f"### [{current}]({current.uri})\n", color=Color.blue())
         embed.set_author(icon_url=PLAYING_GIF, name=current.author)
         embed.set_image(url=current.artwork)
         played = int((player.position / current.length) * 20)
@@ -58,11 +58,11 @@ class Embeds:
 
     @staticmethod
     def error_embed(error: str) -> Embed:
-        return FooterEmbed(title="Lỗi", description=error)
+        return FooterEmbed(title="Errpr", description=error)
 
     @staticmethod
     def player_embed(track: Playable) -> Embed:
-        embed = FooterEmbed(title=f"Đang phát: **{track}**", url = track.uri)
+        embed = FooterEmbed(title=f"Playing: **{track}**", url = track.uri)
         embed.set_author(name=track.author, icon_url=PLAYING_GIF)
         embed.set_thumbnail(url=track.artwork)
         return embed
@@ -264,16 +264,13 @@ class LoopView(ui.View):
 
 
 class Music(commands.Cog):
-    """Lệnh liên quan đến việc chơi nhạc."""
+    """Music Related Commands"""
     def __init__(self, bot: Furina):
         self.bot = bot
         self.webhook = discord.SyncWebhook.from_url(MUSIC_WEBHOOK)
 
     async def cog_load(self) -> None:
         await self.refresh_node_connection()
-        self.music_channel: discord.TextChannel = self.bot.get_channel(MUSIC_CHANNEL)
-        if not self.music_channel:
-            self.music_channel = await self.bot.fetch_channel(MUSIC_CHANNEL)
 
     async def cog_check(self, ctx: commands.Context) -> bool:
         embed = Embeds.error_embed("")
@@ -327,9 +324,9 @@ class Music(commands.Cog):
         if player.autoplay == AutoPlayMode.enabled:
             return
         if hasattr(player, "queue") and not player.queue.is_empty:
-            await player.play(player.queue.get(), volume=50)
+            await player.play(player.queue.get())
         else:
-            embed = FooterEmbed(title="Không còn bài hát nào trong hàng chờ")
+            embed = FooterEmbed(title="Queue is empty")
             self.webhook.send(embed=embed)
 
     @commands.Cog.listener()
@@ -342,12 +339,12 @@ class Music(commands.Cog):
     @commands.Cog.listener()
     async def on_wavelink_track_exception(self, payload: TrackExceptionEventPayload):
         """Xử lý khi track bị lỗi khi đang phát."""
-        embed: Embed = Embeds.error_embed(f"Có lỗi xuất hiện khi đang phát {payload.track.title}\n"
-                                          f"Chi tiết lỗi:\n"
-                                          f"```\n"
-                                          f"{payload.exception}\n"
-                                          f"```")
-        await self.music_channel.send(embed=embed)
+        embed = Embeds.error_embed(f"Có lỗi xuất hiện khi đang phát {payload.track.title}\n"
+                                   f"Chi tiết lỗi:\n"
+                                   f"```\n"
+                                   f"{payload.exception}\n"
+                                   f"```")
+        self.webhook.send(embed=embed)
 
     @staticmethod
     def _get_player(ctx: commands.Context) -> Player:
