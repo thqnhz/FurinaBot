@@ -2,6 +2,7 @@ from discord import Color
 from discord.ext import commands
 
 from bot import Furina
+from keep_alive import keep_alive
 from settings import TOKEN
 from _classes.embeds import FooterEmbed
 
@@ -18,6 +19,6 @@ async def sync(ctx: commands.Context) -> None:
     )
     await ctx.reply(embed=embed)
 
-
+keep_alive()
 bot.run(TOKEN)
 
