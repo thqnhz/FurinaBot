@@ -4,9 +4,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Basic
-PREFIX = "!"
+DEFAULT_PREFIX = "!"
 ACTIVITY_NAME = "Music » /play"
-TOKEN = os.getenv("BOT_TOKEN")
+TOKEN = os.getenv("BOT_TOKEN2")
 DEBUG_WEBHOOK = os.getenv("DEBUG_WEBHOOK")
 
 # GIF
@@ -18,12 +18,6 @@ SKIP_EMOJI = "https://cdn.discordapp.com/emojis/1174966018280529931.png?size=64&
 
 # Emotes
 CHECKMARK = "<a:check:1238796460569657375>"
-
-# Mentioned
-MENTIONED_TITLE = "Miss me that much?"
-MENTIONED_DESC = (f"My Prefix is `{PREFIX}`\n"
-                  "### I also support slash commands \n-> Type `/` to see commands i can do!\n"
-                  "### Or you can select one category below to see all the commands.")
 
 # Music Cog
 MUSIC_CHANNEL = 1089851760425848923

@@ -1,15 +1,17 @@
-import datetime, discord, os, platform, nltk, wavelink
+import aiosqlite, datetime, discord, os, platform, nltk, wavelink
 from discord import Intents, Activity, ActivityType, Embed, app_commands
+import discord.ext.commands
 from discord.ext.commands import Bot, when_mentioned_or
 from nltk.corpus import wordnet
 from typing import List
 
-from settings import PREFIX, ACTIVITY_NAME, DEBUG_WEBHOOK
+import discord.ext
+from settings import DEFAULT_PREFIX, ACTIVITY_NAME, DEBUG_WEBHOOK
 
 class Furina(Bot):
     def __init__(self) -> None:
         super().__init__(
-            command_prefix     = when_mentioned_or(PREFIX),
+            command_prefix     = self.get_pre,
             case_insensitive   = True,
             strip_after_prefix = True,
             intents            = Intents.all(),
@@ -18,7 +20,25 @@ class Furina(Bot):
                                           name=ACTIVITY_NAME,
                                           state="Playing: N̸o̸t̸h̸i̸n̸g̸")
         )
+
+        # only allow app_commands to be used in servers, so you can't use the bot's app_commands in its dm
+        # change the aguments or comment this out if you wish to use app_commands in bot's dm
         self.tree.allowed_contexts = app_commands.AppCommandContext(dm_channel=False, guild=True)
+
+    async def create_prefix_table(self) -> None:
+        async with aiosqlite.connect("config.db") as db:
+            await db.execute(
+                """CREATE TABLE custom_prefixes
+                   ( guild_id INT NOT NULL PRIMARY KEY, prefix TEXT NOT NULL )""")
+            
+    async def update_prefixes(self) -> None:
+        async with aiosqlite.connect("config.db") as db:
+            prefixes = await db.execute_fetchall("""SELECT * FROM custom_prefixes""")
+            self.prefixes = {prefix[0]: prefix[1] for prefix in prefixes}
+            
+    def get_pre(self, _, message: discord.Message):
+        prefix = self.prefixes.get(message.guild.id) or DEFAULT_PREFIX
+        return when_mentioned_or(prefix)(self, message)
 
     async def on_ready(self) -> None:
         print(f"Logged in as {self.user.name}")
@@ -26,14 +46,21 @@ class Furina(Bot):
         print(f"Wavelink version {wavelink.__version__}")
         print(f"Python version {platform.python_version()}")
 
-        embed = Embed(color=self.user.accent_color).set_author(
-            name="BOT IS READY!",
-            icon_url=self.user.display_avatar.url
-        )
-        embed.timestamp = datetime.datetime.now()
-        discord.SyncWebhook.from_url(DEBUG_WEBHOOK).send(embed=embed)
+        try:
+            embed = Embed(color=self.user.accent_color).set_author(
+                name="BOT IS READY!",
+                icon_url=self.user.display_avatar.url
+            )
+            embed.timestamp = datetime.datetime.now()
+            discord.SyncWebhook.from_url(DEBUG_WEBHOOK).send(embed=embed)
+        except ValueError:
+            print("Cannot get the Webhook url for on_ready events."
+                  "If you don't want to get a webhook message when the bot is ready, please ignore this.")
 
     async def setup_hook(self) -> None:
+        await self.create_prefix_table()
+        await self.update_prefixes()
+
         nltk.download("wordnet")
         self.words: List[str] = list(wordnet.words())
         
@@ -42,7 +69,9 @@ class Furina(Bot):
                 extension = filename[:-3]
                 try:
                     await self.load_extension(f"_extensions.{extension}")
-                    print(f"Đã load extension: {extension}")
+                    print(f"Loaded extension: {extension}")
+                except discord.ext.commands.errors.NoEntryPointError:
+                    print(f"Extension {extension} has no setup function so it cannot be loaded.")
                 except Exception as e:
-                    print(f"Lỗi khi load extension {extension}\n{e}")
+                    print(f"An error occured when trying to load {extension}\n{e}")
 

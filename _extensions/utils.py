@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import platform, discord, random, psutil, wavelink, aiohttp
+import aiosqlite, platform, discord, random, psutil, wavelink, aiohttp
 from discord.ext import commands
 from discord import app_commands
 from datetime import datetime, timedelta
@@ -40,7 +40,7 @@ class HelpSelect(Select):
         embed = FooterEmbed()
         embed.title = "To see more detail about a specific command, use `!help <command_name>`"
         embed.description = "\n".join(
-            f"- **{PREFIX}{command.qualified_name}:** `{command.description}`"
+            f"- **{DEFAULT_PREFIX}{command.qualified_name}:** `{command.description}`"
             for command in commands_mixer
         )
 
@@ -58,9 +58,14 @@ class Utils(commands.Cog):
             return
 
         if message.content == '<@1131530915223441468>':
-            embed = FooterEmbed(description=MENTIONED_DESC, color=Color.blue())
+            embed = FooterEmbed(
+                description=(f"My Prefix is `{self.bot.prefixes.get(message.guild.id) or DEFAULT_PREFIX}`\n"
+                              "### I also support slash commands \n-> Type `/` to see commands i can do!\n"
+                              "### Or you can select one category below to see all the commands."), 
+                color=Color.blue()
+            )
             embed.set_author(
-                name=MENTIONED_TITLE,
+                name="Miss me that much?",
                 icon_url="https://cdn.7tv.app/emote/01HHV72FBG000870SVK5KGTSJM/4x.png"
             )
             embed.timestamp = message.created_at
@@ -95,6 +100,30 @@ class Utils(commands.Cog):
             embed.add_field(name=f"Node {i}: {node_status}",
                             value="")
         await ctx.reply(embed=embed)
+
+    @commands.command(name="prefix", description="Set a custom prefix")
+    async def prefix_command(self, ctx: commands.Context, prefix: str):
+        """Set a custom prefix or clear it with 'clear' or 'reset'"""
+        async with aiosqlite.connect("config.db") as db:
+            if prefix in ['clear', 'reset', 'default']:
+                await db.execute(
+                    f"""DELETE FROM custom_prefixes
+                        WHERE guild_id = {ctx.guild.id}"""
+                )
+            else:
+                await db.execute(
+                    """INSERT INTO custom_prefixes ( guild_id, prefix )
+                       VALUES ( ?, ? )
+                       ON CONFLICT(guild_id) DO UPDATE SET
+                       prefix = excluded.prefix""", (ctx.guild.id, prefix)
+                )
+            await db.commit()
+        await self.bot.update_prefixes()
+        await ctx.reply(
+            embed=FooterEmbed(
+                description=f"Prefix for this server has been changed to `{self.bot.prefixes.get(ctx.guild.id) or DEFAULT_PREFIX}`"
+            )
+        )
 
     @commands.command(name='source', aliases=['sources', 'src'], description="Mã nguồn")
     async def source_command(self, ctx: commands.Context):
@@ -367,5 +396,5 @@ class Utils(commands.Cog):
         view.message = await ctx.reply(embed=view.embeds[0], view=view)
 
 
-async def setup(bot: "Furina"):
+async def setup(bot: Furina):
     await bot.add_cog(Utils(bot))
