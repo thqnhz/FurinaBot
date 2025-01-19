@@ -29,22 +29,20 @@ class HelpSelect(Select):
         self.bot = bot
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        cog = self.bot.get_cog(self.values[0])
-        assert cog
-
-        commands_mixer: List[commands.Command] = []
-
-        for i in cog.walk_commands():
-            commands_mixer.append(i)
-
-        embed = FooterEmbed()
-        embed.title = "To see more detail about a specific command, use `!help <command_name>`"
-        embed.description = "\n".join(
-            f"- **{DEFAULT_PREFIX}{command.qualified_name}:** `{command.description}`"
-            for command in commands_mixer
+        embed = CommandListEmbed(
+            prefix=self.bot.prefixes.get(interaction.guild.id) or DEFAULT_PREFIX,  
+            cog=self.bot.get_cog(self.values[0])
         )
-
         await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+class CommandListEmbed(FooterEmbed):
+    def __init__(self, *, prefix: str, cog: commands.Cog):
+        super().__init__(color=Color.blue(), title=cog.__cog_name__, description="")
+        self.description = "\n".join(
+            f"- **{prefix}{command.qualified_name}:** `{command.description}`"
+            for command in cog.walk_commands()
+        )
 
 
 class Utils(commands.Cog):
@@ -129,41 +127,45 @@ class Utils(commands.Cog):
     async def source_command(self, ctx: commands.Context):
         await ctx.reply("https://github.com/Th4nhZ/FurinaBot")
 
-    @commands.hybrid_command(name='help', description="Hiển thị các lệnh của bot/xem chi tiết một lệnh nào đó.")
-    async def help(self, ctx: commands.Context, command_name: Optional[str] = None):
+    @commands.command(name='help', description="Help command")
+    async def help(self, ctx: commands.Context, category_or_command_name: Optional[str] = None):
         """
-        Hiển thị các lệnh của bot hoặc xem chi tiết một lệnh nào đó
+        Help command
 
         Parameters
         -----------
         ctx
             commands.Context
-        command_name: `str`
-            Tên của lệnh cần xem chi tiết
+        category_or_command_name: `str`
+            Category/Command name you need help with
         """
-        if command_name is None:
-            embed = discord.Embed(title="Help Command",
-                                  description="Vui lòng chọn mục ở menu bên dưới.")
+        # !help
+        if category_or_command_name is None:
             view = TimeoutView().add_item(HelpSelect(self.bot))
-            view.message = await ctx.send(embed=embed, view=view)
-
+            view.message = await ctx.reply(view=view)
+            return
+        
+        # !help <CogName>
+        cog = self.bot.get_cog(category_or_command_name.capitalize())
+        if cog and cog.__cog_name__ != "Hidden":
+            embed = CommandListEmbed(prefix=self.bot.prefixes.get(ctx.guild.id) or DEFAULT_PREFIX, cog=cog)
+            return await ctx.reply(embed=embed)
+        
+        # !help <Command>
+        command = self.bot.get_command(category_or_command_name)
+        if command and not command.hidden:
+            usage = f"{ctx.prefix}{command.name}"
+            for param in command.clean_params.values():
+                usage += f" {'<' if param.default else '['}{param.name}{'>' if param.default else ']'}"
+            embed = discord.Embed()
+            embed.description = (f"- **__Name:__** `{command.qualified_name}`\n"
+                                    f"- **__Description:__** {command.description}\n"
+                                    f"- **__How to use:__** `{usage}`"
+            )
+            embed.set_footer(text="Aliases: " + ", ".join(alias for alias in command.aliases)) if command.aliases else None
+            await ctx.reply(embed=embed)
         else:
-            command = self.bot.get_command(command_name)
-            if command and command.hidden is False:
-                usage = f"{ctx.prefix}{command.name}"
-                for param in command.clean_params.values():
-                    usage += f" {'<' if param.default else '['}{param.name}{'>' if param.default else ']'}"
-                embed = discord.Embed()
-                embed.title = f"Chi tiết lệnh {command.qualified_name}"
-                embed.description = (f"- **__Tên:__** `{command.qualified_name}`\n"
-                                     f"- **__Chi tiết:__** {command.description}\n"
-                                     f"- **__Sử dụng:__** {usage}"
-                                     )
-                embed.set_footer(
-                    text="Aliases: " + ", ".join(alias for alias in command.aliases)) if command.aliases else None
-                await ctx.reply(embed=embed)
-            else:
-                raise commands.BadArgument("""Mình không nhận ra lệnh đó""")
+            raise commands.BadArgument("""I don't recognize that command/category""")
 
     @commands.command(name='vps', description="Thông tin về máy ảo.")
     async def vps(self, ctx: commands.Context):

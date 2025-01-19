@@ -28,7 +28,7 @@ class Furina(Bot):
     async def create_prefix_table(self) -> None:
         async with aiosqlite.connect("config.db") as db:
             await db.execute(
-                """CREATE TABLE custom_prefixes
+                """CREATE TABLE IF NOT EXISTS custom_prefixes
                    ( guild_id INT NOT NULL PRIMARY KEY, prefix TEXT NOT NULL )""")
             
     async def update_prefixes(self) -> None:
