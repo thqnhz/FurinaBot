@@ -3,8 +3,8 @@ from __future__ import annotations
 import aiosqlite, platform, discord, random, psutil, wavelink, aiohttp
 from discord.ext import commands
 from discord import app_commands
-from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Optional, List
+from enum import Enum
+from typing import TYPE_CHECKING, Optional
 from discord.ui import Select
 
 
@@ -45,8 +45,15 @@ class CommandListEmbed(FooterEmbed):
         )
 
 
+class MemberStatus(Enum):
+    online  = ":green_circle: `Online`"
+    offline = ":black_circle: `Offline`"
+    idle    = ":yellow_circle: `Idling`"
+    dnd     = ":red_circle: `DND`"
+    
+
 class Utils(commands.Cog):
-    """Lệnh hữu dụng."""
+    """Utility Commands"""
     def __init__(self, bot: Furina):
         self.bot = bot
 
@@ -77,7 +84,7 @@ class Utils(commands.Cog):
             random_number = random.randint(min_num, max_num)
         return random_number
 
-    @commands.hybrid_command(name='ping', aliases=['test'], description="Đo ping và thông tin Node của bot.")
+    @commands.hybrid_command(name='ping', aliases=['test'], description="Get the ping to discord api and lavalink node(s)")
     async def ping_command(self, ctx: commands.Context):
         """Đo ping và thông tin Node của bot."""
         await ctx.defer()
@@ -99,7 +106,7 @@ class Utils(commands.Cog):
                             value="")
         await ctx.reply(embed=embed)
 
-    @commands.command(name="prefix", description="Set a custom prefix")
+    @commands.command(name="prefix", description="Set a custom prefix for your server")
     async def prefix_command(self, ctx: commands.Context, prefix: str):
         """Set a custom prefix or clear it with 'clear' or 'reset'"""
         async with aiosqlite.connect("config.db") as db:
@@ -123,12 +130,12 @@ class Utils(commands.Cog):
             )
         )
 
-    @commands.command(name='source', aliases=['sources', 'src'], description="Mã nguồn")
+    @commands.command(name='source', aliases=['sources', 'src'], description="Source code of the bot")
     async def source_command(self, ctx: commands.Context):
         await ctx.reply("https://github.com/Th4nhZ/FurinaBot")
 
     @commands.command(name='help', description="Help command")
-    async def help(self, ctx: commands.Context, category_or_command_name: Optional[str] = None):
+    async def help_command(self, ctx: commands.Context, category_or_command_name: Optional[str] = None):
         """
         Help command
 
@@ -159,16 +166,16 @@ class Utils(commands.Cog):
                 usage += f" {'<' if param.default else '['}{param.name}{'>' if param.default else ']'}"
             embed = discord.Embed()
             embed.description = (f"- **__Name:__** `{command.qualified_name}`\n"
-                                    f"- **__Description:__** {command.description}\n"
-                                    f"- **__How to use:__** `{usage}`"
+                                 f"- **__Description:__** {command.description}\n"
+                                 f"- **__How to use:__** `{usage}`"
             )
             embed.set_footer(text="Aliases: " + ", ".join(alias for alias in command.aliases)) if command.aliases else None
             await ctx.reply(embed=embed)
         else:
             raise commands.BadArgument("""I don't recognize that command/category""")
 
-    @commands.command(name='vps', description="Thông tin về máy ảo.")
-    async def vps(self, ctx: commands.Context):
+    @commands.command(name='vps', description="VPS Info")
+    async def vps_command(self, ctx: commands.Context):
         # OS Version
         os_version = platform.platform()
 
@@ -212,43 +219,40 @@ class Utils(commands.Cog):
         )
         await ctx.reply(embed=embed)
 
-    @commands.hybrid_command(name='userinfo', aliases=['uinfo', 'whois'], description="Xem thông tin của một ai đó.")
-    @app_commands.describe(member="username, id người đó")
-    async def user_info(self, ctx: commands.Context, member: Optional[discord.Member] = None) -> None:
+    @commands.hybrid_command(name='userinfo', aliases=['uinfo', 'whois'], description="Get info about a member")
+    async def user_info_command(self, ctx: commands.Context, member: Optional[discord.Member] = None):
+        """
+        Get info about a member
+
+        Parameters
+        -----------
+        ctx: `commands.Context`
+            commands.Context
+        member: `Optional[discord.Member]`
+            A member to get info from
+        """
         member = member or ctx.author
-        embed = discord.Embed(title="— Thông tin người dùng", color=discord.Color.blue())
-        embed.add_field(name="Tên hiển thị:", value=member.mention)
+        embed = FooterEmbed(title="— Member Info", color=Color.blue())
+        embed.add_field(name="Display Name:", value=member.mention)
         embed.add_field(name="Username:", value=member)
         embed.add_field(name="ID:", value=member.id)
-        embed.set_thumbnail(url=member.avatar.url)
-        embed.add_field(name="Ngày tạo tài khoản:",
-                        value="`  " + datetime.fromisoformat(str(member.created_at + timedelta(hours=7))).strftime(
-                            "%H:%M:%S  \n %d/%m/%Y") + " `")
-        embed.add_field(name="Ngày tham gia:",
-                        value="`  " + datetime.fromisoformat(str(member.joined_at + timedelta(hours=7))).strftime(
-                            "%H:%M:%S  \n %d/%m/%Y") + " `")
-        status = str(member.status)
-        if status == 'online':
-            member_status = ":green_circle: Đang Online"
-        elif status == 'offline':
-            member_status = ":black_circle: Đã Offline"
-        elif status == 'idle':
-            member_status = ":yellow_circle: Đang treo máy"
-        else:
-            member_status = ":red_circle: Đừng làm phiền"
-        embed.add_field(name="Trạng thái hoạt động: ", value=member_status)
-        roles = [role for role in reversed(member.roles) if role.name != '@everyone']
-        embed.add_field(name="Roles:", value=", ".join(role.mention for role in roles))
+        embed.set_thumbnail(url=member.display_avatar.url)
+        account_created = int(member.created_at.timestamp())
+        embed.add_field(name="Account Created:", value=f"<t:{account_created}>\n<t:{account_created}:R>")
+        server_joined = int(member.created_at.timestamp())
+        embed.add_field(name="Server Joined:", value=f"<t:{server_joined}>\n<t:{server_joined}:R>")
+        embed.add_field(name="Status: ", value=MemberStatus[str(member.status)].value)
+        embed.add_field(name="Roles:", value=", ".join(role.mention for role in reversed(member.roles) if role.name != '@everyone'))
         if member.activity:
-            embed.add_field(name="Trạng thái tùy chỉnh:",
-                            value=f"{member.activity.emoji if member.activity.emoji else ''} **{str.capitalize(member.activity.type.name)}**: {member.activity.name}" if member.activity.name != None else "Không có")
-        embed.set_footer(text="Coded by ThanhZ")
+            embed.add_field(
+                name="Activity:",
+                value=f"**{str.capitalize(member.activity.type.name)}**: `{member.activity.name}`"
+                if member.activity.name != None else "`None`"
+            )
         embed.timestamp = ctx.message.created_at
         await ctx.reply(embed=embed)
 
-    @commands.command(name='random',
-                      aliases=['rand'],
-                      description="Random số ngẫu nhiên.")
+    @commands.command(name='random', aliases=['rand'], description="Random số ngẫu nhiên.")
     async def random(self, ctx: commands.Context, number: Optional[int] = 1) -> None:
         embed = discord.Embed()
         if number == 1:
@@ -277,9 +281,7 @@ class Utils(commands.Cog):
         await ctx.send(embed=embed)
         await ctx.message.delete()
 
-    @commands.command(name='dice',
-                      aliases=['roll'],
-                      description="Tung xúc xắc.")
+    @commands.command(name='dice', aliases=['roll'], description="Tung xúc xắc.")
     async def dice(self, ctx: commands.Context, number: Optional[int] = 1) -> None:
         embed = discord.Embed()
         if number == 1:
@@ -296,9 +298,7 @@ class Utils(commands.Cog):
         await ctx.send(embed=embed)
         await ctx.message.delete()
 
-    @commands.command(name='flip',
-                      aliases=['coin', 'coinflip'],
-                      description="Tung đồng xu.")
+    @commands.command(name='flip', aliases=['coin', 'coinflip'], description="Tung đồng xu.")
     async def flip(self, ctx: commands.Context, number: Optional[int] = 1) -> None:
         embed = discord.Embed()
         if number == 1:
