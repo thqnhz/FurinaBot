@@ -1,11 +1,9 @@
 import aiosqlite, datetime, discord, os, platform, nltk, wavelink
 from discord import Intents, Activity, ActivityType, Embed, app_commands
-import discord.ext.commands
 from discord.ext.commands import Bot, when_mentioned_or
 from nltk.corpus import wordnet
 from typing import List
 
-import discord.ext
 from settings import DEFAULT_PREFIX, ACTIVITY_NAME, DEBUG_WEBHOOK
 
 class Furina(Bot):
@@ -36,7 +34,7 @@ class Furina(Bot):
             prefixes = await db.execute_fetchall("""SELECT * FROM custom_prefixes""")
             self.prefixes = {prefix[0]: prefix[1] for prefix in prefixes}
             
-    def get_pre(self, _, message: discord.Message):
+    def get_pre(self, _, message: discord.Message) -> List[str]:
         prefix = self.prefixes.get(message.guild.id) or DEFAULT_PREFIX
         return when_mentioned_or(prefix)(self, message)
 

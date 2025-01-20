@@ -4,5 +4,6 @@
 /_classes/__pycache__
 /_extensions/__pycache__
 /_extensions/private.py
+/.vscode
 /gacha.db
 /config.db
