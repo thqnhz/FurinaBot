@@ -1,4 +1,4 @@
-import asqlite, datetime, discord, os, platform, nltk, wavelink
+import asqlite, aiohttp, datetime, discord, os, platform, nltk, wavelink
 from discord import Intents, Activity, ActivityType, Embed, app_commands
 from discord.ext.commands import Bot, when_mentioned_or
 from nltk.corpus import wordnet
@@ -7,7 +7,7 @@ from typing import List
 from settings import DEFAULT_PREFIX, ACTIVITY_NAME, DEBUG_WEBHOOK
 
 class Furina(Bot):
-    def __init__(self) -> None:
+    def __init__(self, *, pool: asqlite.Pool, client_session: aiohttp.ClientSession) -> None:
         super().__init__(
             command_prefix     = self.get_pre,
             case_insensitive   = True,
@@ -23,16 +23,23 @@ class Furina(Bot):
         # change the aguments or comment this out if you wish to use app_commands in bot's dm
         self.tree.allowed_contexts = app_commands.AppCommandContext(dm_channel=False, guild=True)
 
+        # database pool
+        self.pool = pool
+
+        # client session for requests
+        self.cs = client_session
+
     async def create_prefix_table(self) -> None:
-        async with asqlite.connect("config.db") as db:
+        async with self.pool.acquire() as db:
             await db.execute(
                 """CREATE TABLE IF NOT EXISTS custom_prefixes
                    ( guild_id INT NOT NULL PRIMARY KEY, prefix TEXT NOT NULL )""")
             
     async def update_prefixes(self) -> None:
-        async with asqlite.connect("config.db") as db:
-            prefixes = await db.execute_fetchall("""SELECT * FROM custom_prefixes""")
-            self.prefixes = {prefix[0]: prefix[1] for prefix in prefixes}
+        async with self.pool.acquire() as db:
+            async with db.execute("""SELECT * FROM custom_prefixes""") as cursor:
+                prefixes = await cursor.fetchall()
+                self.prefixes = {prefix[0]: prefix[1] for prefix in prefixes}
             
     def get_pre(self, _, message: discord.Message) -> List[str]:
         prefix = self.prefixes.get(message.guild.id) or DEFAULT_PREFIX

@@ -6,4 +6,4 @@
 /_extensions/private.py
 /.vscode
 /gacha.db
-/config.db
+/config.*
