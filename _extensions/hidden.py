@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import discord, io, subprocess
 from discord.ext import commands
 from discord import app_commands, Embed, Color
@@ -28,8 +30,8 @@ class SendEmbedView(discord.ui.View):
 
 
 class Hidden(commands.Cog):
-    """Lệnh ẩn"""
-    def __init__(self, bot: "Furina"):
+    """Hidden Commands"""
+    def __init__(self, bot: Furina):
         self.bot = bot
 
     @commands.command(hidden=True, aliases=['ext', 'e'], description="Các hành động liên quan đến extension")
@@ -177,6 +179,6 @@ class Hidden(commands.Cog):
         await interaction.response.send_message(embed=embed, ephemeral=True, view=view)
 
 
-async def setup(bot: "Furina"):
+async def setup(bot: Furina):
     await bot.add_cog(Hidden(bot))
 

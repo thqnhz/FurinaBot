@@ -1,9 +1,11 @@
-import platform, discord, random, psutil, wavelink, aiohttp
+from __future__ import annotations
+
+import asqlite, platform, discord, random, psutil, wavelink, aiohttp
 from discord.ext import commands
 from discord import app_commands
-from datetime import datetime, timedelta
+from enum import Enum
 from typing import TYPE_CHECKING, Optional
-from discord.ui import View, Select
+from discord.ui import Select
 
 
 from _classes.embeds import *
@@ -15,9 +17,9 @@ if TYPE_CHECKING:
 
 class HelpSelect(Select):
     """Help Selection Menu"""
-    def __init__(self, bot: "Furina"):
+    def __init__(self, bot: Furina):
         super().__init__(
-            placeholder="Chọn mục",
+            placeholder="Select Category",
             options=[
                 discord.SelectOption(
                     label=cog_name, description=cog.__doc__
@@ -27,74 +29,53 @@ class HelpSelect(Select):
         self.bot = bot
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        cog = self.bot.get_cog(self.values[0])
-        assert cog
-
-        commands_mixer = []
-        for i in cog.walk_commands():
-            commands_mixer.append(i)
-
-        for i in cog.walk_app_commands():
-            commands_mixer.append(i)
-
-        embed = FooterEmbed()
-        embed.title = "Để xem chi tiết một lệnh, hãy dùng !help <tên lệnh> nhé."
-        embed.description = "\n".join(
-            f"- **!{command.qualified_name}:** `{command.description}`"
-            for command in commands_mixer
+        embed = CommandListEmbed(
+            prefix=self.bot.prefixes.get(interaction.guild.id) or DEFAULT_PREFIX,  
+            cog=self.bot.get_cog(self.values[0])
         )
-
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
-class DonateSelect(Select):
-    """Donate Selection Menu"""
-    def __init__(self):
-        super().__init__(
-            placeholder="Chọn mục",
-            options=[
-                discord.SelectOption(
-                    label="Momo/Zalo Pay/Viettel Money", value="momo", description=None
-                ),
-                discord.SelectOption(
-                    label="Paypal", value="paypal", description=None
-                ),
-                discord.SelectOption(
-                    label="Banking", value="banking", description=None
-                ),
-            ]
+class CommandListEmbed(FooterEmbed):
+    def __init__(self, *, prefix: str, cog: commands.Cog):
+        super().__init__(color=Color.blue(), title=cog.__cog_name__, description="")
+        self.description = "\n".join(
+            f"- **{prefix}{command.qualified_name}:** `{command.description}`"
+            for command in cog.walk_commands()
         )
 
-    async def callback(self, interaction: discord.Interaction) -> None:
-        selected = self.values[0]
-        embed = discord.Embed()
-        if selected == "momo":
-            embed.title = "Momo/Zalo Pay/Viettel Money"
-            embed.description = f"||{MOMO}||"
-        elif selected == "paypal":
-            embed.title = "Paypal"
-            embed.description = f"||{PAYPAL}||"
-        else:
-            embed.title = "Banking"
-            embed.description = f"||{BANKING}||"
-        await interaction.response.send_message(embed=embed, ephemeral=True)
 
+class MemberStatus(Enum):
+    online  = ":green_circle: `Online`"
+    offline = ":black_circle: `Offline`"
+    idle    = ":yellow_circle: `Idling`"
+    dnd     = ":red_circle: `DND`"
+    
 
 class Utils(commands.Cog):
-    """Lệnh hữu dụng."""
-    def __init__(self, bot: "Furina"):
+    """Utility Commands"""
+    def __init__(self, bot: Furina):
         self.bot = bot
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if message.author == self.bot.user:
-            pass
+            return
 
         if message.content == '<@1131530915223441468>':
-            embed = FooterEmbed(title=MENTIONED_TITLE, description=MENTIONED_DESC, color=Color.blue())
+            embed = FooterEmbed(
+                description=(f"My Prefix is `{self.bot.prefixes.get(message.guild.id) or DEFAULT_PREFIX}`\n"
+                              "### I also support slash commands \n-> Type `/` to see commands i can do!\n"
+                              "### Or you can select one category below to see all the commands."), 
+                color=Color.blue()
+            )
+            embed.set_author(
+                name="Miss me that much?",
+                icon_url="https://cdn.7tv.app/emote/01HHV72FBG000870SVK5KGTSJM/4x.png"
+            )
             embed.timestamp = message.created_at
-            view = SelectView().add_item(HelpSelect(self))
-            view.message = await message.channel.send(embed=embed, view=view, reference=message.author)
+            view = SelectView().add_item(HelpSelect(self.bot))
+            view.message = await message.channel.send(embed=embed, view=view, reference=message)
 
     @staticmethod
     def generate_random_number(min_num: int, max_num: int) -> int:
@@ -103,7 +84,7 @@ class Utils(commands.Cog):
             random_number = random.randint(min_num, max_num)
         return random_number
 
-    @commands.hybrid_command(name='ping', aliases=['test'], description="Đo ping và thông tin Node của bot.")
+    @commands.hybrid_command(name='ping', aliases=['test'], description="Get the ping to discord api and lavalink node(s)")
     async def ping_command(self, ctx: commands.Context):
         """Đo ping và thông tin Node của bot."""
         await ctx.defer()
@@ -125,48 +106,76 @@ class Utils(commands.Cog):
                             value="")
         await ctx.reply(embed=embed)
 
-    @commands.command(name='source', aliases=['sources', 'src'], description="Mã nguồn")
+    @commands.command(name="prefix", description="Set a custom prefix for your server")
+    async def prefix_command(self, ctx: commands.Context, prefix: str):
+        """Set a custom prefix or clear it with 'clear' or 'reset'"""
+        async with asqlite.connect("config.db") as db:
+            if prefix in ['clear', 'reset', 'default']:
+                await db.execute(
+                    f"""DELETE FROM custom_prefixes
+                        WHERE guild_id = {ctx.guild.id}"""
+                )
+            else:
+                await db.execute(
+                    """INSERT INTO custom_prefixes ( guild_id, prefix )
+                       VALUES ( ?, ? )
+                       ON CONFLICT(guild_id) DO UPDATE SET
+                       prefix = excluded.prefix""", (ctx.guild.id, prefix)
+                )
+            await db.commit()
+        await self.bot.update_prefixes()
+        await ctx.reply(
+            embed=FooterEmbed(
+                description=f"Prefix for this server has been changed to `{self.bot.prefixes.get(ctx.guild.id) or DEFAULT_PREFIX}`"
+            )
+        )
+
+    @commands.command(name='source', aliases=['sources', 'src'], description="Source code of the bot")
     async def source_command(self, ctx: commands.Context):
         await ctx.reply("https://github.com/Th4nhZ/FurinaBot")
 
-    @commands.hybrid_command(name='help', description="Hiển thị các lệnh của bot/xem chi tiết một lệnh nào đó.")
-    async def help(self, ctx: commands.Context, command_name: Optional[str] = None):
+    @commands.command(name='help', description="Help command")
+    async def help_command(self, ctx: commands.Context, category_or_command_name: Optional[str] = None):
         """
-        Hiển thị các lệnh của bot hoặc xem chi tiết một lệnh nào đó
+        Help command
 
         Parameters
         -----------
         ctx
             commands.Context
-        command_name: `str`
-            Tên của lệnh cần xem chi tiết
+        category_or_command_name: `str`
+            Category/Command name you need help with
         """
-        if command_name is None:
-            embed = discord.Embed(title="Help Command",
-                                  description="Vui lòng chọn mục ở menu bên dưới.")
+        # !help
+        if category_or_command_name is None:
             view = TimeoutView().add_item(HelpSelect(self.bot))
-            view.message = await ctx.send(embed=embed, view=view)
-
+            view.message = await ctx.reply(view=view)
+            return
+        
+        # !help <CogName>
+        cog = self.bot.get_cog(category_or_command_name.capitalize())
+        if cog and cog.__cog_name__ != "Hidden":
+            embed = CommandListEmbed(prefix=self.bot.prefixes.get(ctx.guild.id) or DEFAULT_PREFIX, cog=cog)
+            return await ctx.reply(embed=embed)
+        
+        # !help <Command>
+        command = self.bot.get_command(category_or_command_name)
+        if command and not command.hidden:
+            usage = f"{ctx.prefix}{command.name}"
+            for param in command.clean_params.values():
+                usage += f" {'<' if param.default else '['}{param.name}{'>' if param.default else ']'}"
+            embed = discord.Embed()
+            embed.description = (f"- **__Name:__** `{command.qualified_name}`\n"
+                                 f"- **__Description:__** {command.description}\n"
+                                 f"- **__How to use:__** `{usage}`"
+            )
+            embed.set_footer(text="Aliases: " + ", ".join(alias for alias in command.aliases)) if command.aliases else None
+            await ctx.reply(embed=embed)
         else:
-            command = self.bot.get_command(command_name)
-            if command and command.hidden is False:
-                usage = f"{ctx.prefix}{command.name}"
-                for param in command.clean_params.values():
-                    usage += f" {'<' if param.default else '['}{param.name}{'>' if param.default else ']'}"
-                embed = discord.Embed()
-                embed.title = f"Chi tiết lệnh {command.qualified_name}"
-                embed.description = (f"- **__Tên:__** `{command.qualified_name}`\n"
-                                     f"- **__Chi tiết:__** {command.description}\n"
-                                     f"- **__Sử dụng:__** {usage}"
-                                     )
-                embed.set_footer(
-                    text="Aliases: " + ", ".join(alias for alias in command.aliases)) if command.aliases else None
-                await ctx.reply(embed=embed)
-            else:
-                raise commands.BadArgument("""Mình không nhận ra lệnh đó""")
+            raise commands.BadArgument("""I don't recognize that command/category""")
 
-    @commands.command(name='vps', description="Thông tin về máy ảo.")
-    async def vps(self, ctx: commands.Context):
+    @commands.command(name='vps', description="VPS Info")
+    async def vps_command(self, ctx: commands.Context):
         # OS Version
         os_version = platform.platform()
 
@@ -210,120 +219,40 @@ class Utils(commands.Cog):
         )
         await ctx.reply(embed=embed)
 
-    @commands.command(name='abaduw', aliases=['duwdapoet'], description="Thông tin về AbaDuw.")
-    async def abaduw(self, ctx: commands.Context):
-        view = View()
-        tiktok = discord.ui.Button(label="TikTok",
-                                   style=discord.ButtonStyle.link,
-                                   url="https://tiktok.com/@duwdapoet",
-                                   emoji="<:tiktok:1170619432532451348>")
-        view.add_item(tiktok)
-        youtube = discord.ui.Button(label="Subscribe",
-                                    style=discord.ButtonStyle.link,
-                                    url="https://youtube.com/@abaduw",
-                                    emoji="<:yt:1162334665387032627>")
-        view.add_item(youtube)
-        playerduo = discord.ui.Button(label="PlayerDuo",
-                                      style=discord.ButtonStyle.link,
-                                      url="https://playerduo.net/6288c683e560b573774ae204",
-                                      emoji="<:playerduo:1170622166878920814>",
-                                      row=1)
-        view.add_item(playerduo)
-        await ctx.reply(view=view)
+    @commands.hybrid_command(name='userinfo', aliases=['uinfo', 'whois'], description="Get info about a member")
+    async def user_info_command(self, ctx: commands.Context, member: Optional[discord.Member] = None):
+        """
+        Get info about a member
 
-    @commands.command(name='abatom', aliases=['tomnaunuocdua', 'tomdayminh'], description="Thông tin về AbaTom.")
-    async def abatom(self, ctx: commands.Context):
-        view = View()
-        tiktok = discord.ui.Button(label="TikTok",
-                                   style=discord.ButtonStyle.link,
-                                   url="https://tiktok.com/@abadontom",
-                                   emoji="<:tiktok:1170619432532451348>")
-        view.add_item(tiktok)
-        youtube = discord.ui.Button(label="YouTube",
-                                    style=discord.ButtonStyle.link,
-                                    url="https://youtube.com/@dontom7048",
-                                    emoji="<:yt:1162334665387032627>")
-        view.add_item(youtube)
-        await ctx.reply(view=view)
-
-    @commands.command(name='thanhz', description="Thông tin về ThanhZ.")
-    async def thanhz(self, ctx: commands.Context):
-        view = View()
-        tiktok = discord.ui.Button(label="TikTok",
-                                   style=discord.ButtonStyle.link,
-                                   url="https://tiktok.com/@th4nhz",
-                                   emoji="<:tiktok:1170619432532451348>")
-        view.add_item(tiktok)
-        youtube = discord.ui.Button(label="YouTube",
-                                    style=discord.ButtonStyle.link,
-                                    url="https://youtube.com/thanhz/?sub_comfirmation=1",
-                                    emoji="<:yt:1162334665387032627>")
-        view.add_item(youtube)
-        await ctx.reply(view=view)
-
-    @commands.command(name='about', aliases=['forcalors', 'furina'], description="Thông tin về bot.")
-    async def about(self, ctx: commands.Context):
-        """Thông tin về bot."""
-        embed = discord.Embed()
-        embed.title = "— Thông tin về bot"
-        embed.color = discord.Color.blue()
-        embed.add_field(name="Lập trình:", value="`@_thanhz`", inline=False)
-        embed.add_field(name="Tester:", value="`@abaduw`, `@holymode`, `@trungtin1425`", inline=False)
-        await ctx.reply(embed=embed)
-
-    @commands.hybrid_command(name='premium', aliases=['vip'], description="Tính năng trả phí 😱.")
-    async def premium(self, ctx: commands.Context) -> None:
-        embed = discord.Embed(color=discord.Color.blue())
-        embed.title = "— Tính năng Premium"
-        embed.description = "Không có tính năng premium nào ở đây cả. Tuy nhiên, nếu bạn muốn donate cho chủ sở hữu của tôi để anh ấy không chết đói/khát lúc đang code, tôi rất cảm ơn sự giúp đỡ của bạn.\n||P/s: Ít thì cũng phải 5 quả trứng, nhiều thì 1 quả tên lửa.||"
-        view = TimeoutView().add_item(DonateSelect())
-        view.message = await ctx.send(embed=embed, view=view, ephemeral=True)
-
-    @commands.command(name='donate', aliases=['ungho', 'buymeacoffee'], description="Mua cho ThanhZ một ly café.")
-    async def donate(self, ctx: commands.Context) -> None:
-        embed = discord.Embed(color=discord.Color.blue())
-        embed.title = "— Ủng hộ tôi"
-        embed.description = "Chân thành cảm ơn bạn đã ủng hộ chủ sở hữu của tôi trên con đường này.\nHãy lựa chọn những cách ủng hộ ở menu bên dưới"
-        view = TimeoutView().add_item(DonateSelect())
-        view.message = await ctx.send(embed=embed, view=view, ephemeral=True)
-
-    @commands.hybrid_command(name='userinfo', aliases=['uinfo', 'whois'], description="Xem thông tin của một ai đó.")
-    @app_commands.describe(member="username, id người đó")
-    async def user_info(self, ctx: commands.Context, member: Optional[discord.Member] = None) -> None:
+        Parameters
+        -----------
+        ctx: `commands.Context`
+            commands.Context
+        member: `Optional[discord.Member]`
+            A member to get info from
+        """
         member = member or ctx.author
-        embed = discord.Embed(title="— Thông tin người dùng", color=discord.Color.blue())
-        embed.add_field(name="Tên hiển thị:", value=member.mention)
+        embed = FooterEmbed(title="— Member Info", color=Color.blue())
+        embed.add_field(name="Display Name:", value=member.mention)
         embed.add_field(name="Username:", value=member)
         embed.add_field(name="ID:", value=member.id)
-        embed.set_thumbnail(url=member.avatar.url)
-        embed.add_field(name="Ngày tạo tài khoản:",
-                        value="`  " + datetime.fromisoformat(str(member.created_at + timedelta(hours=7))).strftime(
-                            "%H:%M:%S  \n %d/%m/%Y") + " `")
-        embed.add_field(name="Ngày tham gia:",
-                        value="`  " + datetime.fromisoformat(str(member.joined_at + timedelta(hours=7))).strftime(
-                            "%H:%M:%S  \n %d/%m/%Y") + " `")
-        status = str(member.status)
-        if status == 'online':
-            member_status = ":green_circle: Đang Online"
-        elif status == 'offline':
-            member_status = ":black_circle: Đã Offline"
-        elif status == 'idle':
-            member_status = ":yellow_circle: Đang treo máy"
-        else:
-            member_status = ":red_circle: Đừng làm phiền"
-        embed.add_field(name="Trạng thái hoạt động: ", value=member_status)
-        roles = [role for role in reversed(member.roles) if role.name != '@everyone']
-        embed.add_field(name="Roles:", value=", ".join(role.mention for role in roles))
+        embed.set_thumbnail(url=member.display_avatar.url)
+        account_created = int(member.created_at.timestamp())
+        embed.add_field(name="Account Created:", value=f"<t:{account_created}>\n<t:{account_created}:R>")
+        server_joined = int(member.created_at.timestamp())
+        embed.add_field(name="Server Joined:", value=f"<t:{server_joined}>\n<t:{server_joined}:R>")
+        embed.add_field(name="Status: ", value=MemberStatus[str(member.status)].value)
+        embed.add_field(name="Roles:", value=", ".join(role.mention for role in reversed(member.roles) if role.name != '@everyone'))
         if member.activity:
-            embed.add_field(name="Trạng thái tùy chỉnh:",
-                            value=f"{member.activity.emoji if member.activity.emoji else ''} **{str.capitalize(member.activity.type.name)}**: {member.activity.name}" if member.activity.name != None else "Không có")
-        embed.set_footer(text="Coded by ThanhZ")
+            embed.add_field(
+                name="Activity:",
+                value=f"**{str.capitalize(member.activity.type.name)}**: `{member.activity.name}`"
+                if member.activity.name != None else "`None`"
+            )
         embed.timestamp = ctx.message.created_at
         await ctx.reply(embed=embed)
 
-    @commands.command(name='random',
-                      aliases=['rand'],
-                      description="Random số ngẫu nhiên.")
+    @commands.command(name='random', aliases=['rand'], description="Random số ngẫu nhiên.")
     async def random(self, ctx: commands.Context, number: Optional[int] = 1) -> None:
         embed = discord.Embed()
         if number == 1:
@@ -352,9 +281,7 @@ class Utils(commands.Cog):
         await ctx.send(embed=embed)
         await ctx.message.delete()
 
-    @commands.command(name='dice',
-                      aliases=['roll'],
-                      description="Tung xúc xắc.")
+    @commands.command(name='dice', aliases=['roll'], description="Tung xúc xắc.")
     async def dice(self, ctx: commands.Context, number: Optional[int] = 1) -> None:
         embed = discord.Embed()
         if number == 1:
@@ -371,9 +298,7 @@ class Utils(commands.Cog):
         await ctx.send(embed=embed)
         await ctx.message.delete()
 
-    @commands.command(name='flip',
-                      aliases=['coin', 'coinflip'],
-                      description="Tung đồng xu.")
+    @commands.command(name='flip', aliases=['coin', 'coinflip'], description="Tung đồng xu.")
     async def flip(self, ctx: commands.Context, number: Optional[int] = 1) -> None:
         embed = discord.Embed()
         if number == 1:
@@ -473,5 +398,5 @@ class Utils(commands.Cog):
         view.message = await ctx.reply(embed=view.embeds[0], view=view)
 
 
-async def setup(bot: "Furina"):
+async def setup(bot: Furina):
     await bot.add_cog(Utils(bot))

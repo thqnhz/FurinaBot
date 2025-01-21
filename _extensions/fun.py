@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import discord, random
 from discord.ext import commands
 from typing import TYPE_CHECKING
@@ -10,8 +12,8 @@ if TYPE_CHECKING:
 
 
 class Fun(commands.Cog):
-    """Lệnh funny hahaha XD."""
-    def __init__(self, bot: "Furina"):
+    """Funni Commands haha XD"""
+    def __init__(self, bot: Furina):
         self.bot = bot
 
     @commands.Cog.listener()
@@ -46,6 +48,7 @@ class Fun(commands.Cog):
                                   "vấn đề kĩ năng", "vấn đề kỹ năng"]):
             await message.channel.send("https://cdn.7tv.app/emote/63d806d6f3396825289f86b4/3x.webp")
 
+    @staticmethod
     def _random_lag_emote() -> str:
         emote = random.choice([
             'https://cdn.7tv.app/emote/60ae9173f39a7552b68f9730/4x.gif',
@@ -72,6 +75,6 @@ class Fun(commands.Cog):
         await ctx.send(embed=embed)
 
 
-async def setup(bot: "Furina"):
+async def setup(bot: Furina):
     await bot.add_cog(Fun(bot))
 
