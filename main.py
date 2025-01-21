@@ -1,4 +1,4 @@
-import aiohttp, asqlite, asyncio, discord
+import aiohttp, asqlite, asyncio, discord, subprocess
 from discord import Color
 from discord.ext import commands
 from typing import cast

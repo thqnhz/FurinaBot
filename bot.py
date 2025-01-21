@@ -1,6 +1,6 @@
-import asqlite, aiohttp, datetime, discord, os, platform, nltk, wavelink
+import asqlite, aiohttp,  datetime, discord, os, platform, nltk, wavelink
 from discord import Intents, Activity, ActivityType, Embed, app_commands
-from discord.ext.commands import Bot, when_mentioned_or
+from discord.ext.commands import Bot, when_mentioned_or, errors
 from nltk.corpus import wordnet
 from typing import List
 
@@ -75,7 +75,7 @@ class Furina(Bot):
                 try:
                     await self.load_extension(f"_extensions.{extension}")
                     print(f"Loaded extension: {extension}")
-                except discord.ext.commands.errors.NoEntryPointError:
+                except errors.NoEntryPointError:
                     print(f"Extension {extension} has no setup function so it cannot be loaded.")
                 except Exception as e:
                     print(f"An error occured when trying to load {extension}\n{e}")

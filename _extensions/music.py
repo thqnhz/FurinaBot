@@ -272,7 +272,9 @@ class Music(commands.Cog):
     async def cog_load(self) -> None:
         await self.refresh_node_connection()
 
+
     async def cog_check(self, ctx: commands.Context) -> bool:
+        return True
         embed = Embeds.error_embed("")
         if not self._is_connected(ctx):
             embed.description = "Bạn cần tham gia kênh thoại để sử dụng lệnh"
@@ -296,6 +298,7 @@ class Music(commands.Cog):
             node = Node(uri=LAVA_URI, password=LAVA_PW, heartbeat=5.0, inactive_player_timeout=None)
             await Pool.close()
             await Pool.connect(client=self.bot, nodes=[node])
+
     @staticmethod
     def _is_connected(ctx: commands.Context) -> bool:
         """Kiểm tra người dùng đã kết nối chưa."""
