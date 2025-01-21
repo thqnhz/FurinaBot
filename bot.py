@@ -1,4 +1,4 @@
-import aiosqlite, datetime, discord, os, platform, nltk, wavelink
+import asqlite, datetime, discord, os, platform, nltk, wavelink
 from discord import Intents, Activity, ActivityType, Embed, app_commands
 from discord.ext.commands import Bot, when_mentioned_or
 from nltk.corpus import wordnet
@@ -24,13 +24,13 @@ class Furina(Bot):
         self.tree.allowed_contexts = app_commands.AppCommandContext(dm_channel=False, guild=True)
 
     async def create_prefix_table(self) -> None:
-        async with aiosqlite.connect("config.db") as db:
+        async with asqlite.connect("config.db") as db:
             await db.execute(
                 """CREATE TABLE IF NOT EXISTS custom_prefixes
                    ( guild_id INT NOT NULL PRIMARY KEY, prefix TEXT NOT NULL )""")
             
     async def update_prefixes(self) -> None:
-        async with aiosqlite.connect("config.db") as db:
+        async with asqlite.connect("config.db") as db:
             prefixes = await db.execute_fetchall("""SELECT * FROM custom_prefixes""")
             self.prefixes = {prefix[0]: prefix[1] for prefix in prefixes}
             

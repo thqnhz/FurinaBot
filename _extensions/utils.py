@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import aiosqlite, platform, discord, random, psutil, wavelink, aiohttp
+import asqlite, platform, discord, random, psutil, wavelink, aiohttp
 from discord.ext import commands
 from discord import app_commands
 from enum import Enum
@@ -109,7 +109,7 @@ class Utils(commands.Cog):
     @commands.command(name="prefix", description="Set a custom prefix for your server")
     async def prefix_command(self, ctx: commands.Context, prefix: str):
         """Set a custom prefix or clear it with 'clear' or 'reset'"""
-        async with aiosqlite.connect("config.db") as db:
+        async with asqlite.connect("config.db") as db:
             if prefix in ['clear', 'reset', 'default']:
                 await db.execute(
                     f"""DELETE FROM custom_prefixes
