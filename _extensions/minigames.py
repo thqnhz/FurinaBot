@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio, discord, random, string
 from discord import app_commands, Embed, ButtonStyle
 from discord.ext import commands
-from typing import TYPE_CHECKING, List, Dict
+from typing import TYPE_CHECKING, List, Dict, Optional
 from collections import Counter
 
 from .utils import Utils
@@ -336,7 +336,7 @@ class Wordle(discord.ui.View):
 
     @discord.ui.button(label="Guess", emoji="\U0001f4dd")
     async def guess_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        modal = WordleModal()
+        modal = WordleModal(letters=len(self.word))
         await interaction.response.send_modal(modal)
         await modal.wait()
         if modal.guess.lower() not in self.bot.words:
@@ -350,7 +350,7 @@ class Wordle(discord.ui.View):
         self.embed.description += f"`{modal.guess}` {result} by {interaction.user.mention}\n"
         self.remaining_attempt_button.label = f"Attempts: {self.attempt}"
             
-        # nếu kết quả là 5 ký tự xanh hoặc hết lượt đoán
+        # if result is 5 green or no more attempts left
         if result == (":green_square:" * 5) or self.is_over:
             button.disabled = True
             self.embed.description += f"The word is: `{self.word}`"
@@ -376,9 +376,9 @@ class Wordle(discord.ui.View):
 
 
 class WordleModal(discord.ui.Modal):
-    def __init__(self):
-        super().__init__(timeout=None, title="Wordle")
-        self.text_input = discord.ui.TextInput(label="Type in your guess", min_length=5, max_length=5)
+    def __init__(self, letters: int = 5):
+        super().__init__(timeout=None, title=f"Wordle ({letters} LETTERS)")
+        self.text_input = discord.ui.TextInput(label="Type in your guess", min_length=letters, max_length=letters)
         self.add_item(self.text_input)
 
     async def on_submit(self, interaction: discord.Interaction):
@@ -397,13 +397,14 @@ class LookUpButton(discord.ui.Button):
         await interaction.followup.send(embed=view.embeds[0], view=view)
 
 
-class Minigames(commands.Cog):
+class Minigames(commands.GroupCog, group_name="minigame"):
     """Các Minigame bạn có thể chơi"""
-    def __init__(self, bot: "Furina"):
+    def __init__(self, bot: Furina):
         self.bot = bot
         self.words: List[str] = self.bot.words
 
     @commands.hybrid_command(name='tictactoe', aliases=['ttt', 'xo'], description="XO minigame")
+    @app_commands.allowed_installs(guilds=True, users=True)
     async def tic_tac_toe(self, ctx: commands.Context):
         view: TicTacToe = TicTacToe()
         view.message = await ctx.reply(embed=view.embed, view=view)
@@ -416,9 +417,19 @@ class Minigames(commands.Cog):
 
     @commands.hybrid_command(name='wordle', description="Wordle minigame")
     @app_commands.allowed_installs(guilds=True, users=True)
-    async def wordle(self, ctx: commands.Context):
+    async def wordle(self, ctx: commands.Context, letters: Optional[app_commands.Range[int, 3, 8]] = 5):
+        """
+        Wordle minigame
+
+        Parameters
+        -----------
+        ctx: `commands.Context`
+            Context
+        letters: `app_commands.Range[int, 3, 8] = 5`
+            Number of letters for this game (3-8), default to 5
+        """
         word: str = random.choice(self.words)
-        while len(word) != 5 or any(char not in string.ascii_letters for char in word):
+        while len(word) != letters or any(char not in string.ascii_letters for char in word):
             word = random.choice(self.words)
         view = Wordle(bot=self.bot, word=word.upper())
         view.message = await ctx.reply(embed=view.embed, view=view)
