@@ -34,6 +34,7 @@ class Furina(Bot):
         discord.SyncWebhook.from_url(DEBUG_WEBHOOK).send(embed=embed)
 
     async def setup_hook(self) -> None:
+        nltk.download("wordnet")
         nltk.download("wordnet2022")
         self.words: List[str] = list(wordnet2022.words())
         
