@@ -1,7 +1,7 @@
 import datetime, discord, os, platform, nltk, wavelink
 from discord import Intents, Activity, ActivityType, Embed, app_commands
 from discord.ext.commands import Bot, when_mentioned_or
-from nltk.corpus import wordnet
+from nltk.corpus import wordnet2022
 from typing import List
 
 from settings import PREFIX, ACTIVITY_NAME, DEBUG_WEBHOOK
@@ -34,8 +34,8 @@ class Furina(Bot):
         discord.SyncWebhook.from_url(DEBUG_WEBHOOK).send(embed=embed)
 
     async def setup_hook(self) -> None:
-        nltk.download("wordnet")
-        self.words: List[str] = list(wordnet.words())
+        nltk.download("wordnet2022")
+        self.words: List[str] = list(wordnet2022.words())
         
         for filename in os.listdir("./_extensions"):
             if filename.endswith(".py"):
