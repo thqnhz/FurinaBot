@@ -447,7 +447,7 @@ class Wordle(discord.ui.View):
                 self.available[letter_index] = WordleLetterStatus.CORRECT
 
         if correct_count == len(self.word):
-            self._is_over == True
+            self._is_over = True
             self.update_available_characters()
             return "".join(result), True
                 
@@ -500,14 +500,14 @@ class Wordle(discord.ui.View):
 
     @discord.ui.button(label="Guess", emoji="\U0001f4dd")
     async def guess_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.is_over:
+            return await interaction.followup.send("The game is over, your guess didn't count.", ephemeral=True)
+        
         modal = WordleModal(letters=len(self.word))
         await interaction.response.send_modal(modal)
         await modal.wait()
         if modal.guess.lower() not in self.bot.words:
             return await interaction.followup.send(f"`{modal.guess}` is not a real word!", ephemeral=True)
-
-        if self.is_over:
-            return await interaction.followup.send("The game is over, your guess didn't count.", ephemeral=True)
 
         self.attempt -= 1 # update the attempt property as soon as possible so self.is_over is updated
         result, win = self.check_guess(modal.guess)
