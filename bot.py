@@ -66,7 +66,9 @@ class Furina(Bot):
         await self.create_prefix_table()
         await self.update_prefixes()
 
-        nltk.download(info_or_id="wordnet2022")
+        nltk.download("wordnet")
+        nltk.download("wordnet2022")
+
         self.words: List[str] = list(wordnet2022.words())
         
         for filename in os.listdir("./_extensions"):
