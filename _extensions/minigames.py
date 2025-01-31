@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import asyncio, discord, random, string
+import ast, asyncio, discord
 from discord import app_commands, Embed, ButtonStyle
 from discord.ext import commands
 from enum import Enum
@@ -236,157 +236,157 @@ WORDLE_EMOJIS = {
     "A": {
         WordleLetterStatus.UNUSED: "<:A_WHITE:1312797015683371078>",
         WordleLetterStatus.INCORRECT: "<:A_BLACK:1312800796206960762>",
-        WordleLetterStatus.WRONG_POS: "<:A_YELLOW:1333452077698912318>",
+        WordleLetterStatus.WRONG_POS: "<:A_YELLOW:1334893955900510238>",
         WordleLetterStatus.CORRECT: "<:A_GREEN:1333452875770363946>"
     },
     "B": {
         WordleLetterStatus.UNUSED: "<:B_WHITE:1312797215781032026>",
         WordleLetterStatus.INCORRECT: "<:B_BLACK:1312800814397657139>",
-        WordleLetterStatus.WRONG_POS: "<:B_YELLOW:1333452116152418355>",
+        WordleLetterStatus.WRONG_POS: "<:B_YELLOW:1334893986380517466>",
         WordleLetterStatus.CORRECT: "<:B_GREEN:1333452899333967925>"
     },
     "C": {
         WordleLetterStatus.UNUSED: "<:C_WHITE:1312798886703927356>",
         WordleLetterStatus.INCORRECT: "<:C_BLACK:1312800832898469920>",
-        WordleLetterStatus.WRONG_POS: "<:C_YELLOW:1333452149987868805>",
+        WordleLetterStatus.WRONG_POS: "<:C_YELLOW:1334894020433940573>",
         WordleLetterStatus.CORRECT: "<:C_GREEN:1333452926395486218>"
     },
     "D": {
         WordleLetterStatus.UNUSED: "<:D_WHITE:1312798918722977913>",
         WordleLetterStatus.INCORRECT: "<:D_BLACK:1312800855610621962>",
-        WordleLetterStatus.WRONG_POS: "<:D_YELLOW:1333452224637964378>",
+        WordleLetterStatus.WRONG_POS: "<:D_YELLOW:1334894047482871890>",
         WordleLetterStatus.CORRECT: "<:D_GREEN:1333452950265401416>"
     },
     "E": {
         WordleLetterStatus.UNUSED: "<:E_WHITE:1312798955439919134>",
         WordleLetterStatus.INCORRECT: "<:E_BLACK:1312800873776414720>",
-        WordleLetterStatus.WRONG_POS: "<:E_YELLOW:1333452273610788925>",
+        WordleLetterStatus.WRONG_POS: "<:E_YELLOW:1334894071344402514>",
         WordleLetterStatus.CORRECT: "<:E_GREEN:1333452970964291627>"
     },
     "F": {
         WordleLetterStatus.UNUSED: "<:F_WHITE:1312798979821666325>",
         WordleLetterStatus.INCORRECT: "<:F_BLACK:1312800893024079992>",
-        WordleLetterStatus.WRONG_POS: "<:F_YELLOW:1333452303361118218>",
+        WordleLetterStatus.WRONG_POS: "<:F_YELLOW:1334894098456379442>",
         WordleLetterStatus.CORRECT: "<:F_GREEN:1333453018116526111>"
     },
     "G": {
         WordleLetterStatus.UNUSED: "<:G_WHITE:1312799003821477970>",
         WordleLetterStatus.INCORRECT: "<:G_BLACK:1312800908677222400>",
-        WordleLetterStatus.WRONG_POS: "<:G_YELLOW:1333452334063292527>",
+        WordleLetterStatus.WRONG_POS: "<:G_YELLOW:1334894123139993711>",
         WordleLetterStatus.CORRECT: "<:G_GREEN:1333453039939354666>"
     },
     "H": {
         WordleLetterStatus.UNUSED: "<:H_WHITE:1312799031583309865>",
         WordleLetterStatus.INCORRECT: "<:H_BLACK:1312800924611248221>",
-        WordleLetterStatus.WRONG_POS: "<:H_YELLOW:1333452369928654980>",
+        WordleLetterStatus.WRONG_POS: "<:H_YELLOW:1334894146867167272>",
         WordleLetterStatus.CORRECT: "<:H_GREEN:1333453063738101842>"
     },
     "I": {
         WordleLetterStatus.UNUSED: "<:I_WHITE:1312799057436999740>",
         WordleLetterStatus.INCORRECT: "<:I_BLACK:1312800943183626333>",
-        WordleLetterStatus.WRONG_POS: "<:I_YELLOW:1333452399670591558>",
+        WordleLetterStatus.WRONG_POS: "<:I_YELLOW:1334894174021091351>",
         WordleLetterStatus.CORRECT: "<:I_GREEN:1333453087024742480>"
     },
     "J": {
         WordleLetterStatus.UNUSED: "<:J_WHITE:1312799083651399731>",
         WordleLetterStatus.INCORRECT: "<:J_BLACK:1312800980621852712>",
-        WordleLetterStatus.WRONG_POS: "<:J_YELLOW:1333452480645697546>",
+        WordleLetterStatus.WRONG_POS: "<:J_YELLOW:1334894198180151408>",
         WordleLetterStatus.CORRECT: "<:J_GREEN:1333453107300012184>"
     },
     "K": {
         WordleLetterStatus.UNUSED: "<:K_WHITE:1312799111958892616>",
         WordleLetterStatus.INCORRECT: "<:K_BLACK:1312800997696995389>",
-        WordleLetterStatus.WRONG_POS: "<:K_YELLOW:1333452507556483145>",
+        WordleLetterStatus.WRONG_POS: "<:K_YELLOW:1334894217129885829>",
         WordleLetterStatus.CORRECT: "<:K_GREEN:1333453128858730548>"
     },
     "L": {
         WordleLetterStatus.UNUSED: "<:L_WHITE:1312799137858846761>",
         WordleLetterStatus.INCORRECT: "<:L_BLACK:1312801016915296326>",
-        WordleLetterStatus.WRONG_POS: "<:L_YELLOW:1333452531245781012>",
+        WordleLetterStatus.WRONG_POS: "<:L_YELLOW:1334894246490144860>",
         WordleLetterStatus.CORRECT: "<:L_GREEN:1333453152736907324>"
     },
     "M": {
         WordleLetterStatus.UNUSED: "<:M_WHITE:1312799162508640306>",
         WordleLetterStatus.INCORRECT: "<:M_BLACK:1312801033100988507>",
-        WordleLetterStatus.WRONG_POS: "<:M_YELLOW:1333452560073490515>",
+        WordleLetterStatus.WRONG_POS: "<:M_YELLOW:1334894270360064083>",
         WordleLetterStatus.CORRECT: "<:M_GREEN:1333453178838057081>"
     },
     "N": {
         WordleLetterStatus.UNUSED: "<:N_WHITE:1312799180506398811>",
         WordleLetterStatus.INCORRECT: "<:N_BLACK:1312801779452350554>",
-        WordleLetterStatus.WRONG_POS: "<:N_YELLOW:1333452583314128968>",
+        WordleLetterStatus.WRONG_POS: "<:N_YELLOW:1334894289548738601>",
         WordleLetterStatus.CORRECT: "<:N_GREEN:1333453201772380260>"
     },
     "O": {
         WordleLetterStatus.UNUSED: "<:O_WHITE:1312799196969042032>",
         WordleLetterStatus.INCORRECT: "<:O_BLACK:1312801794438467634>",
-        WordleLetterStatus.WRONG_POS: "<:O_YELLOW:1333452606164697149>",
+        WordleLetterStatus.WRONG_POS: "<:O_YELLOW:1334894319110455326>",
         WordleLetterStatus.CORRECT: "<:O_GREEN:1333453225969582100>"
     },
     "P": {
         WordleLetterStatus.UNUSED: "<:P_WHITE:1312799212416532580>",
         WordleLetterStatus.INCORRECT: "<:P_BLACK:1312801811891224626>",
-        WordleLetterStatus.WRONG_POS: "<:P_YELLOW:1333452628893499423>",
+        WordleLetterStatus.WRONG_POS: "<:P_YELLOW:1334894345630908597>",
         WordleLetterStatus.CORRECT: "<:P_GREEN:1333453251860889732>"
     },
     "Q": {
         WordleLetterStatus.UNUSED: "<:Q_WHITE:1312799230544314428>",
         WordleLetterStatus.INCORRECT: "<:Q_BLACK:1312801828680761406>",
-        WordleLetterStatus.WRONG_POS: "<:Q_YELLOW:1333452651165126697>",
+        WordleLetterStatus.WRONG_POS: "<:Q_YELLOW:1334894367831359742>",
         WordleLetterStatus.CORRECT: "<:Q_GREEN:1333453271448162435>"
     },
     "R": {
         WordleLetterStatus.UNUSED: "<:R_WHITE:1312799249427075142>",
         WordleLetterStatus.INCORRECT: "<:R_BLACK:1312801845491662879>",
-        WordleLetterStatus.WRONG_POS: "<:R_YELLOW:1333452671268552808>",
+        WordleLetterStatus.WRONG_POS: "<:R_YELLOW:1334894389478162493>",
         WordleLetterStatus.CORRECT: "<:R_GREEN:1333453294802047112>"
     },
     "S": {
         WordleLetterStatus.UNUSED: "<:S_WHITE:1312799268096053298>",
         WordleLetterStatus.INCORRECT: "<:S_BLACK:1312801865288777748>",
-        WordleLetterStatus.WRONG_POS: "<:S_YELLOW:1333452692483215360>",
+        WordleLetterStatus.WRONG_POS: "<:S_YELLOW:1334894410403414139>",
         WordleLetterStatus.CORRECT: "<:S_GREEN:1333453317812256828>"
     },
     "T": {
         WordleLetterStatus.UNUSED: "<:T_WHITE:1312799286022639717>",
         WordleLetterStatus.INCORRECT: "<:T_BLACK:1312801885723295834>",
-        WordleLetterStatus.WRONG_POS: "<:T_YELLOW:1333452711932330049>",
+        WordleLetterStatus.WRONG_POS: "<:T_YELLOW:1334894434231259177>",
         WordleLetterStatus.CORRECT: "<:T_GREEN:1333453338209161326>"
     },
     "U": {
         WordleLetterStatus.UNUSED: "<:U_WHITE:1312799302397071432>",
         WordleLetterStatus.INCORRECT: "<:U_BLACK:1312801903226392607>",
-        WordleLetterStatus.WRONG_POS: "<:U_YELLOW:1333452732849197206>",
+        WordleLetterStatus.WRONG_POS: "<:U_YELLOW:1334894456419127326>",
         WordleLetterStatus.CORRECT: "<:U_GREEN:1333453360862330972>"
     },
     "V": {
         WordleLetterStatus.UNUSED: "<:V_WHITE:1312799321208651857>",
         WordleLetterStatus.INCORRECT: "<:V_BLACK:1312801919307219035>",
-        WordleLetterStatus.WRONG_POS: "<:V_YELLOW:1333452754043011114>",
+        WordleLetterStatus.WRONG_POS: "<:V_YELLOW:1334894482386190336>",
         WordleLetterStatus.CORRECT: "<:V_GREEN:1333453386342994033>"
     },
     "W": {
         WordleLetterStatus.UNUSED: "<:W_WHITE:1312799341068419102>",
         WordleLetterStatus.INCORRECT: "<:W_BLACK:1312801939075108975>",
-        WordleLetterStatus.WRONG_POS: "<:W_YELLOW:1333452777191636992>",
+        WordleLetterStatus.WRONG_POS: "<:W_YELLOW:1334894496412078223>",
         WordleLetterStatus.CORRECT: "<:W_GREEN:1333453407163387935>"
     },
     "X": {
         WordleLetterStatus.UNUSED: "<:X_WHITE:1312799359615893664>",
         WordleLetterStatus.INCORRECT: "<:X_BLACK:1312801955760050196>",
-        WordleLetterStatus.WRONG_POS: "<:X_YELLOW:1333452806312431647>",
+        WordleLetterStatus.WRONG_POS: "<:X_YELLOW:1334894517458964543>",
         WordleLetterStatus.CORRECT: "<:X_GREEN:1333453429149925448>"
     },
     "Y": {
         WordleLetterStatus.UNUSED: "<:Y_WHITE:1312799375399063553>",
         WordleLetterStatus.INCORRECT: "<:Y_BLACK:1312801971371114607>",
-        WordleLetterStatus.WRONG_POS: "<:Y_YELLOW:1333452827028230205>",
+        WordleLetterStatus.WRONG_POS: "<:Y_YELLOW:1334894537054752838>",
         WordleLetterStatus.CORRECT: "<:Y_GREEN:1333453448796180593>"
     },
     "Z": {
         WordleLetterStatus.UNUSED: "<:Z_WHITE:1312799391840604222>",
         WordleLetterStatus.INCORRECT: "<:Z_BLACK:1312801987074719844>",
-        WordleLetterStatus.WRONG_POS: "<:Z_YELLOW:1333452851745394709>",
+        WordleLetterStatus.WRONG_POS: "<:Z_YELLOW:1334894554200936498>",
         WordleLetterStatus.CORRECT: "<:Z_GREEN:1333453471612932210>"
     }
 }
@@ -401,6 +401,7 @@ class Wordle(discord.ui.View):
         self.embed = Embed(title=f"WORDLE ({len(word)} LETTERS)", description="").set_footer(text="Coded by ThanhZ")
         self.alphabet: str = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
         self.message: discord.Message
+        self._is_over = False
 
         # a list to store the status of the letters in alphabetical order, init with 26 0s
         self.available: List[WordleLetterStatus] = [WordleLetterStatus.UNUSED]*26
@@ -411,7 +412,7 @@ class Wordle(discord.ui.View):
     @property
     def is_over(self) -> bool:
         """Is the game over or not"""
-        return self.attempt == 0
+        return self.attempt == 0 or self._is_over
 
     def get_letter_emoji(self, letter: str, status: WordleLetterStatus) -> str:
         return WORDLE_EMOJIS[letter][status]
@@ -446,6 +447,7 @@ class Wordle(discord.ui.View):
                 self.available[letter_index] = WordleLetterStatus.CORRECT
 
         if correct_count == len(self.word):
+            self._is_over == True
             self.update_available_characters()
             return "".join(result), True
                 
@@ -571,10 +573,10 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         view: TicTacToe = TicTacToe()
         view.message = await ctx.reply(embed=view.embed, view=view)
 
-    @commands.hybrid_command(name='rockpaperscissor', aliases=['keobuabao'], description="Kéo Búa Bao minigame")
+    @commands.hybrid_command(name='rockpaperscissor', aliases=['keobuabao'], description="Rock Paper Scissor minigame")
     @app_commands.allowed_installs(guilds=True, users=True)
     async def keo_bua_bao(self, ctx: commands.Context):
-        view: RockPaperScissor = RockPaperScissor()
+        view = RockPaperScissor()
         view.message = await ctx.reply(embed=view.embed, view=view)
 
     @commands.hybrid_command(name='wordle', description="Wordle minigame")
@@ -590,9 +592,9 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         letters: `app_commands.Range[int, 3, 8] = 5`
             Number of letters for this game (3-8), default to 5
         """
-        word: str = random.choice(self.words)
-        while len(word) != letters or any(char not in string.ascii_letters for char in word):
-            word = random.choice(self.words)
+        await ctx.defer()
+        async with self.bot.cs.get(f"https://random-word-api.vercel.app/api?length={letters}") as response:
+            word: str = ast.literal_eval(await response.text())[0]
         view = Wordle(bot=self.bot, word=word.upper())
         view.message = await ctx.reply(embed=view.embed, view=view)
 
