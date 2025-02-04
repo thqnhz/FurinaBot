@@ -1,9 +1,8 @@
-import discord, os, platform, nltk, wavelink
+import discord, os, platform, wavelink
 from aiohttp import ClientSession
 from asqlite import Pool
 from discord import Intents, Activity, ActivityType, Embed, app_commands, utils
 from discord.ext.commands import Bot, when_mentioned_or, errors
-from nltk.corpus import wordnet2022
 from typing import List
 
 from settings import DEFAULT_PREFIX, ACTIVITY_NAME, DEBUG_WEBHOOK
@@ -68,11 +67,6 @@ class Furina(Bot):
         await self.create_prefix_table()
         await self.update_prefixes()
 
-        nltk.download("wordnet")
-        nltk.download("wordnet2022")
-
-        self.words: List[str] = list(wordnet2022.words())
-        
         for filename in os.listdir("./_extensions"):
             if filename.endswith(".py"):
                 extension = filename[:-3]
