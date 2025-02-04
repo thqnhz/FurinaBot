@@ -1,13 +1,14 @@
-import asqlite, aiohttp,  datetime, discord, os, platform, nltk, wavelink
-from discord import Intents, Activity, ActivityType, Embed, app_commands
+import discord, os, platform, wavelink
+from aiohttp import ClientSession
+from asqlite import Pool
+from discord import Intents, Activity, ActivityType, Embed, app_commands, utils
 from discord.ext.commands import Bot, when_mentioned_or, errors
-from nltk.corpus import wordnet2022
 from typing import List
 
 from settings import DEFAULT_PREFIX, ACTIVITY_NAME, DEBUG_WEBHOOK
 
 class Furina(Bot):
-    def __init__(self, *, pool: asqlite.Pool, client_session: aiohttp.ClientSession) -> None:
+    def __init__(self, *, pool: Pool, client_session: ClientSession) -> None:
         super().__init__(
             command_prefix     = self.get_pre,
             case_insensitive   = True,
@@ -56,7 +57,7 @@ class Furina(Bot):
                 name="BOT IS READY!",
                 icon_url=self.user.display_avatar.url
             )
-            embed.timestamp = datetime.datetime.now()
+            embed.timestamp = utils.utcnow()
             discord.SyncWebhook.from_url(DEBUG_WEBHOOK).send(embed=embed)
         except ValueError:
             print("Cannot get the Webhook url for on_ready events."
@@ -66,11 +67,6 @@ class Furina(Bot):
         await self.create_prefix_table()
         await self.update_prefixes()
 
-        nltk.download("wordnet")
-        nltk.download("wordnet2022")
-
-        self.words: List[str] = list(wordnet2022.words())
-        
         for filename in os.listdir("./_extensions"):
             if filename.endswith(".py"):
                 extension = filename[:-3]
