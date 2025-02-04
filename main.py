@@ -7,12 +7,15 @@ from bot import Furina
 from settings import TOKEN
 from _classes.embeds import FooterEmbed
 
+from keep_alive import keep_alive
+
 async def main():
     discord.utils.setup_logging()
 
     async with aiohttp.ClientSession() as client_session, asqlite.create_pool("config.db") as pool:
         async with Furina(pool=pool, client_session=client_session) as bot:
             bot.add_command(sync)
+            keep_alive()
             await bot.start(TOKEN)
 
 @commands.command(name="sync", hidden=True, description="Sync app commands.")
