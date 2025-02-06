@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import discord, os, platform, wavelink
 from aiohttp import ClientSession
 from asqlite import Pool
@@ -74,7 +76,7 @@ class Furina(Bot):
             discord.SyncWebhook.from_url(DEBUG_WEBHOOK).send(embed=embed)
         except ValueError:
             print("Cannot get the Webhook url for on_ready events."
-                  "If you don't want to get a webhook message when the bot is ready, please ignore this.")
+                  "If you don't want to get a webhook message when the bot is ready, please ignore this")
 
     async def setup_hook(self) -> None:
         await self.create_prefix_table()
@@ -88,7 +90,9 @@ class Furina(Bot):
                     await self.load_extension(f"_extensions.{extension}")
                     print(f"Loaded extension: {extension}")
                 except errors.NoEntryPointError:
-                    print(f"Extension {extension} has no setup function so it cannot be loaded.")
+                    print(f"Extension {extension} has no setup function so it cannot be loaded")
                 except Exception as e:
                     print(f"An error occured when trying to load {extension}\n{e}")
+        await self.load_extension("jishaku")
+        print("Loaded Jishaku extension")
 

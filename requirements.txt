@@ -2,6 +2,7 @@ aiohttp==3.10.10
 asqlite==2.0.0
 deep-translator==1.11.4
 discord.py==2.4.0
+jishaku==2.6.0
 psutil==6.1.0
 python-dotenv==1.0.1
 wavelink==3.4.1
