@@ -93,9 +93,7 @@ async def ensure_voice_connection(ctx: commands.Context | discord.Interaction) -
             interaction = ctx
             return await interaction.user.voice.channel.connect(cls=Player, self_deaf=True)
     except wavelink.exceptions.ChannelTimeoutException:
-        await ctx.channel.send("Bot không kết nối được với kênh thoại, đang thử kết nối lại với Lavalink...", delete_after=10.0)
-        bot: "Furina" = ctx.bot if isinstance(ctx, commands.Context) else ctx.client
-        await bot.refresh_node_connection()
+        await ctx.channel.send("Bot không kết nối được với kênh thoại...", delete_after=10.0)
 
 async def add_to_queue(ctx: commands.Context | discord.Interaction, data: Playlist | Playable):
     msg = await loading_embed_reply(ctx)
@@ -272,6 +270,7 @@ class Music(commands.Cog):
     async def cog_load(self) -> None:
         await self.refresh_node_connection()
 
+
     async def cog_check(self, ctx: commands.Context) -> bool:
         embed = Embeds.error_embed("")
         if not self._is_connected(ctx):
@@ -296,6 +295,7 @@ class Music(commands.Cog):
             node = Node(uri=LAVA_URI, password=LAVA_PW, heartbeat=5.0, inactive_player_timeout=None)
             await Pool.close()
             await Pool.connect(client=self.bot, nodes=[node])
+
     @staticmethod
     def _is_connected(ctx: commands.Context) -> bool:
         """Kiểm tra người dùng đã kết nối chưa."""
