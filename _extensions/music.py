@@ -272,7 +272,6 @@ class Music(commands.Cog):
 
 
     async def cog_check(self, ctx: commands.Context) -> bool:
-        return True
         embed = Embeds.error_embed("")
         if not self._is_connected(ctx):
             embed.description = "Bạn cần tham gia kênh thoại để sử dụng lệnh"

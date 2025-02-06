@@ -34,34 +34,6 @@ class Hidden(commands.Cog):
     def __init__(self, bot: Furina):
         self.bot = bot
 
-    @commands.command(hidden=True, aliases=['ext', 'e'], description="Các hành động liên quan đến extension")
-    @commands.is_owner()
-    async def extension(self, ctx: commands.Context, action: Literal['l', 'u', 'r'], extension_name: str) -> None:
-        embed: FooterEmbed = FooterEmbed(title="— Thành công!", color=Color.green())
-        avatar_url = ctx.author.avatar.url
-        embed.set_thumbnail(url=avatar_url)
-
-        action_mapping = {
-            'l': self.bot.load_extension,
-            'u': self.bot.unload_extension,
-            'r': self.bot.reload_extension
-        }
-        action_fullname_mapping = {
-            'l': "load",
-            'u': "unload",
-            'r': "reload"
-        }
-
-        try:
-            method = action_mapping.get(action)
-            action = action_fullname_mapping.get(action)
-            await method(f'_extensions.{extension_name}')
-            embed.description = f"Đã {action} extension {extension_name}"
-        except Exception as e:
-            embed = ErrorEmbed(f"{e}")
-        await ctx.reply(embed=embed, delete_after=5)
-        await ctx.message.delete()
-
     @commands.command(hidden=True, name='reboot', aliases=['restart'], description="Khởi động lại bot.")
     @commands.is_owner()
     async def reboot(self, ctx: commands.Context) -> None:
