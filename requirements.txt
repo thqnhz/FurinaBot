@@ -1,4 +1,4 @@
-aiohttp==3.10.10
+aiohttp==3.11.12
 asqlite==2.0.0
 deep-translator==1.11.4
 discord.py==2.4.0
