@@ -1,5 +1,6 @@
 from __future__ import annotations
 import aiohttp, asqlite, asyncio, discord
+from keep_alive import keep_alive
 
 from bot import Furina
 from settings import TOKEN
