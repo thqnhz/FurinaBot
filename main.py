@@ -8,6 +8,7 @@ async def main():
     discord.utils.setup_logging()
     async with aiohttp.ClientSession() as client_session, asqlite.create_pool("config.db") as pool:
         async with Furina(pool=pool, client_session=client_session) as bot:
+            keep_alive()
             await bot.start(TOKEN)
 
 asyncio.run(main())
