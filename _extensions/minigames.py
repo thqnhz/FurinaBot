@@ -4,7 +4,7 @@ import ast, asyncio, discord
 from discord import app_commands, Embed, ButtonStyle
 from discord.ext import commands
 from enum import Enum
-from typing import TYPE_CHECKING, List, Tuple, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 from collections import Counter
 
 from .utils import Utils
@@ -14,81 +14,91 @@ if TYPE_CHECKING:
     from bot import Furina
 
 
-class RockPaperScissorButton(discord.ui.Button):
+class RPSButton(discord.ui.Button):
+    LABEL_TO_NUMBER = {
+        "Rock": -1,
+        "Paper": 0,
+        "Scissor": 1
+    }
+    LABELS = ["Rock",   "Paper",  "Scissor"]
+    EMOJIS = ["\u270a", "\u270b", "\u270c"]
     def __init__(self, number: int):
-        super().__init__()
-        if number == 0:
-            self.label = 'Rock'
-            self.emoji = '\u270a'
-        elif number == 1:
-            self.label = 'Paper'
-            self.emoji = '\u270b'
-        else:
-            self.label = 'Scissor'
-            self.emoji = '\u270c'
-        self.style = ButtonStyle.secondary
+        super().__init__(
+            style=ButtonStyle.secondary,
+            label=self.LABELS[number],
+            emoji=self.EMOJIS[number]
+        )
 
-    def converter(self) -> int:
-        if self.label == "Rock":
-            return -1
-        elif self.label == "Paper":
-            return 0
-        else:
-            return 1
+    async def add_player(self, *, view: RPSView, interaction: discord.Interaction) -> int:
+        """
+        Add the player to the view and update the embed
+
+        Returns
+        -----------
+        `int`
+            - Number of players in the game
+        """
+        view.players[interaction.user] = self.LABEL_TO_NUMBER[self.label]
+        view.embed.add_field(name=f"Player {len(view.players)}", value=interaction.user.mention)
+        await interaction.response.edit_message(embed=view.embed, view=view)
+        return len(view.players)
 
     async def callback(self, interaction: discord.Interaction):
         assert self.view is not None
-        view: RockPaperScissor = self.view
-        if view.move == 0:
-            view.player_one = interaction.user
-            view.embed.add_field(name="Player 1", value=interaction.user.mention)
-            view.move += 1
-            await interaction.response.edit_message(embed=view.embed, view=view)
-            view.moves.append(self.converter())
-        else:
-            if interaction.user == view.player_one:
-                return await interaction.response.send_message("You can't play with yourself!\n-# || Or can you? Hello Michael, Vsauce here||", ephemeral=True)
-            view.player_two = interaction.user
-            view.embed.add_field(name="Player 2", value=interaction.user.mention, inline=False)
-            await interaction.response.edit_message(embed=view.embed, view=view)
-            view.moves.append(self.converter())
-            for child in view.children:
-                child.disabled = True
-            view.stop()
-            winner: int | discord.User = view.check_winner()
+        view: RPSView = self.view
+
+        if interaction.user in view.players:
+            return await interaction.response.send_message("You can't play with yourself!\n"
+                                                           "-# || Or can you? Hello Michael, Vsauce here||",
+                                                           ephemeral=True)
+
+        players_count = await self.add_player(view=view, interaction=interaction)
+        if players_count == 2:
+            winner = view.check_winner()
             if isinstance(winner, int):
                 view.embed.description = "### Draw!"
             else:
                 view.embed.description = f"### {winner.mention} WON!"
             await interaction.edit_original_response(embed=view.embed, view=view)
+            
 
-
-class RockPaperScissor(discord.ui.View):
+class RPSView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=300)
-        self.move: int = 0
-        self.player_one: discord.User | None = None
-        self.moves: List[int] = []
-        self.player_two: discord.User | None = None
+        # A dict to store players and their move
+        self.players: Dict[discord.User, int] = {}
         for i in range(3):
-            self.add_item(RockPaperScissorButton(i))
-        self.embed: Embed = Embed().set_author(name="Rock Paper Scissor")
+            self.add_item(RPSButton(i))
+        self.embed = Embed().set_author(name="Rock Paper Scissor")
 
     def check_winner(self) -> discord.User | int:
-        # Check Hòa
-        if self.moves[0] == self.moves[1]:
-            return 0
+        """
+        Check the winner of the game
 
-        result: int = self.moves[1] - self.moves[0]
-        if result == 1 or result == -2:
-            # Check player two thắng
-            return self.player_two
-        return self.player_one
+        Returns
+        -----------
+        `discord.User | int`
+            - If the result is 0, it's a draw
+            - Else it's the discord.User who won
+        """
+        self.disable_buttons()
+        players = list(self.players.keys())
+        moves   = list(self.players.values())
+        # Draw
+        if moves[0] == moves[1]:
+            return 0
+        # If the result is 1, player 2 wins, else player 1 wins
+        result = (moves[1] - moves[0]) % 3
+        return players[1] if result == 1 else players[0]
+
+    def disable_buttons(self) -> None:
+        """Disable all the buttons in the view"""
+        self.stop()
+        for button in self.children:
+            button.disabled = True
 
     async def on_timeout(self) -> None:
-        for child in self.children:
-            child.disabled = True
-
+        self.disable_buttons()
         self.embed.set_footer(text="Timed out due to inactive. You have no enemies")
         await self.message.edit(embed=self.embed, view=self)
 
@@ -503,6 +513,9 @@ class Wordle(discord.ui.View):
         modal = WordleModal(letters=len(self.word))
         await interaction.response.send_modal(modal)
         await modal.wait()
+        if modal.guess == "":
+            return
+
         if self.is_over:
             return await interaction.followup.send("The game is over, your guess didn't count.", ephemeral=True)
         
@@ -576,7 +589,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
     @commands.hybrid_command(name='rockpaperscissor', aliases=['keobuabao'], description="Rock Paper Scissor minigame")
     @app_commands.allowed_installs(guilds=True, users=True)
     async def keo_bua_bao(self, ctx: commands.Context):
-        view = RockPaperScissor()
+        view = RPSView()
         view.message = await ctx.reply(embed=view.embed, view=view)
 
     @commands.hybrid_command(name='wordle', description="Wordle minigame")
