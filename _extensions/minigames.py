@@ -434,26 +434,26 @@ class Wordle(discord.ui.View):
         Parameters
         -----------
         guess: `str`
-            User's input
+            - User's input
         
         Returns
         -----------
         `tuple[str, bool]`
-            A `string` of emojis to represent the result, consists of :green_square: for correct,
-            :yellow_square: for wrong pos and :black_large_square: for incorrect and a bool indicates
-            if the guess is correct
+            - A `string` of emojis to represent the result, consists of :green_square: for correct,
+              :yellow_square: for wrong pos and :black_large_square: for incorrect and a `bool` indicates
+              if the guess is correct
         """
         result = [""] * len(self.word)
         word_counter = Counter(self.word)
 
         # correct square
         correct_count: int = 0
-        for i in range(len(self.word)):
-            if guess[i] == self.word[i]:
+        for i, char in enumerate(guess):
+            if char == self.word[i]:
                 correct_count += 1
-                result[i] = self.get_letter_emoji(guess[i], WordleLetterStatus.CORRECT)
-                word_counter[guess[i]] -= 1
-                letter_index = self.ALPHABET.index(guess[i])
+                result[i] = self.get_letter_emoji(char, WordleLetterStatus.CORRECT)
+                word_counter[char] -= 1
+                letter_index = self.ALPHABET.index(char)
                 self.available[letter_index] = WordleLetterStatus.CORRECT
 
         if correct_count == len(self.word):
@@ -462,15 +462,15 @@ class Wordle(discord.ui.View):
             return "".join(result), True
                 
         # wrong position square or wrong letter square
-        for i in range(len(self.word)):
+        for i, char in enumerate(guess):
             # if the square is already correct, don't change it
-            if result[i] != "":
+            if result[i]:
                 continue
 
-            letter_index = self.ALPHABET.index(guess[i])
-            if guess[i] in word_counter and word_counter[guess[i]] > 0:
-                result[i] = self.get_letter_emoji(guess[i], WordleLetterStatus.WRONG_POS)
-                word_counter[guess[i]] -= 1
+            letter_index = self.ALPHABET.index(char)
+            if word_counter[char] > 0:
+                result[i] = self.get_letter_emoji(char, WordleLetterStatus.WRONG_POS)
+                word_counter[char] -= 1
 
                 # status priority: correct (3) > wrong pos (2) > wrong letter (1) > not yet guessed (0)
                 # so if the status of the current pos is already correct, don't change it
