@@ -481,7 +481,7 @@ class Wordle(discord.ui.View):
 
                 # as above, wrong letter can only replace not yet guessed square
                 # so we need to check if the value is lower than wrong pos (2)
-                if self.available[letter_index].value < WordleLetterStatus.WRONG_POS.value:
+                if self.available[letter_index].value[0] < WordleLetterStatus.WRONG_POS.value[0]:
                         self.available[letter_index] = WordleLetterStatus.INCORRECT
 
         self.update_available_characters()
@@ -555,8 +555,8 @@ class Wordle(discord.ui.View):
 
 class WordleModal(discord.ui.Modal):
     def __init__(self, letters: int):
-        super().__init__(timeout=60, title=f"Wordle ({letters} LETTERS)")
-        self.text_input = discord.ui.TextInput(label="Type in your guess", min_length=letters, max_length=letters)
+        super().__init__(timeout=180, title=f"Wordle ({letters} LETTERS)")
+        self.text_input = discord.ui.TextInput(label="Type in your guess", placeholder="...", min_length=letters, max_length=letters)
         self.add_item(self.text_input)
 
     async def on_submit(self, interaction: discord.Interaction):
