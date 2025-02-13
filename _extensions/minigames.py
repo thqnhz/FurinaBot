@@ -403,13 +403,13 @@ WORDLE_EMOJIS = {
 
 
 class Wordle(discord.ui.View):
+    alphabet: str = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
     def __init__(self, *, bot: Furina, word: str):
         super().__init__(timeout=None)
         self.word = word
         self.bot = bot
         self.attempt: int = 6
         self.embed = Embed(title=f"WORDLE ({len(word)} LETTERS)", description="").set_footer(text="Coded by ThanhZ")
-        self.alphabet: str = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
         self.message: discord.Message
         self._is_over = False
 
@@ -554,14 +554,18 @@ class Wordle(discord.ui.View):
 
 
 class WordleModal(discord.ui.Modal):
-    def __init__(self, letters: int = 5):
-        super().__init__(timeout=None, title=f"Wordle ({letters} LETTERS)")
+    def __init__(self, letters: int):
+        super().__init__(timeout=60, title=f"Wordle ({letters} LETTERS)")
         self.text_input = discord.ui.TextInput(label="Type in your guess", min_length=letters, max_length=letters)
         self.add_item(self.text_input)
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer()
-        self.guess = self.text_input.value.upper()
+        self.guess = self.text_input.value
+
+    async def on_timeout(self) -> None:
+        self.guess = ""
+        self.stop()
 
 
 class LookUpButton(discord.ui.Button):
