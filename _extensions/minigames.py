@@ -403,7 +403,7 @@ WORDLE_EMOJIS = {
 
 
 class Wordle(discord.ui.View):
-    alphabet: str = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
     def __init__(self, *, bot: Furina, word: str):
         super().__init__(timeout=None)
         self.word = word
@@ -453,7 +453,7 @@ class Wordle(discord.ui.View):
                 correct_count += 1
                 result[i] = self.get_letter_emoji(guess[i], WordleLetterStatus.CORRECT)
                 word_counter[guess[i]] -= 1
-                letter_index = self.alphabet.index(guess[i])
+                letter_index = self.ALPHABET.index(guess[i])
                 self.available[letter_index] = WordleLetterStatus.CORRECT
 
         if correct_count == len(self.word):
@@ -467,7 +467,7 @@ class Wordle(discord.ui.View):
             if result[i] != "":
                 continue
 
-            letter_index = self.alphabet.index(guess[i])
+            letter_index = self.ALPHABET.index(guess[i])
             if guess[i] in word_counter and word_counter[guess[i]] > 0:
                 result[i] = self.get_letter_emoji(guess[i], WordleLetterStatus.WRONG_POS)
                 word_counter[guess[i]] -= 1
@@ -500,7 +500,7 @@ class Wordle(discord.ui.View):
         for row in keyboard_layout:
             available += ' '*tab*2 # half space blank unicode character
             for letter in row:
-                letter_index = self.alphabet.index(letter)
+                letter_index = self.ALPHABET.index(letter)
                 status = self.available[letter_index]
                 available += self.get_letter_emoji(letter, status)
             available += "\n"
