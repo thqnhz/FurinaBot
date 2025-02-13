@@ -561,7 +561,7 @@ class WordleModal(discord.ui.Modal):
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer()
-        self.guess = self.text_input.value
+        self.guess = self.text_input.value.upper()
 
     async def on_timeout(self) -> None:
         self.guess = ""
