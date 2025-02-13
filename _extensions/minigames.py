@@ -403,13 +403,13 @@ WORDLE_EMOJIS = {
 
 
 class Wordle(discord.ui.View):
-    ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
     def __init__(self, *, bot: Furina, word: str):
         super().__init__(timeout=None)
         self.word = word
         self.bot = bot
         self.attempt: int = 6
         self.embed = Embed(title=f"WORDLE ({len(word)} LETTERS)", description="").set_footer(text="Coded by ThanhZ")
+        self.ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
         self.message: discord.Message
         self._is_over = False
 
