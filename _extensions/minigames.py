@@ -403,13 +403,13 @@ WORDLE_EMOJIS = {
 
 
 class Wordle(discord.ui.View):
+    ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
     def __init__(self, *, bot: Furina, word: str):
         super().__init__(timeout=None)
         self.word = word
         self.bot = bot
         self.attempt: int = 6
         self.embed = Embed(title=f"WORDLE ({len(word)} LETTERS)", description="").set_footer(text="Coded by ThanhZ")
-        self.ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
         self.message: discord.Message
         self._is_over = False
 
@@ -425,9 +425,10 @@ class Wordle(discord.ui.View):
         return self.attempt == 0 or self._is_over
 
     def get_letter_emoji(self, letter: str, status: WordleLetterStatus) -> str:
+        """Get the emoji for the letter based on the status"""
         return WORDLE_EMOJIS[letter][status]
     
-    def check_guess(self, guess: str) -> Tuple[str, bool]:
+    def check_guess(self, guess: str) -> str:
         """
         Check the user's input and update the availabilities afterward
         
@@ -438,54 +439,53 @@ class Wordle(discord.ui.View):
         
         Returns
         -----------
-        `tuple[str, bool]`
-            - A `string` of emojis to represent the result, consists of :green_square: for correct,
-              :yellow_square: for wrong pos and :black_large_square: for incorrect and a `bool` indicates
-              if the guess is correct
+        `str`
+            - A string of emojis to represent the result, consists of `<:X_Y:ID>`s where X = letter, Y = status and ID = emoji id
         """
+        result, word_counter = self.check_green_square(guess)
+        # using all() to check if the result is all green squares
+        if all("GREEN" in letter for letter in result):
+            self._is_over = True
+        else: 
+            result = self.check_yellow_black_square(guess, result=result, word_counter=word_counter)
+        self.update_available_characters()
+        return "".join(result)
+        
+    def check_green_square(self, guess: str) -> Tuple[List[str], Counter]:
+        """Check the correct letters in the guess"""
         result = [""] * len(self.word)
         word_counter = Counter(self.word)
-
-        # correct square
-        correct_count: int = 0
         for i, char in enumerate(guess):
             if char == self.word[i]:
-                correct_count += 1
                 result[i] = self.get_letter_emoji(char, WordleLetterStatus.CORRECT)
                 word_counter[char] -= 1
                 letter_index = self.ALPHABET.index(char)
                 self.available[letter_index] = WordleLetterStatus.CORRECT
-
-        if correct_count == len(self.word):
-            self._is_over = True
-            self.update_available_characters()
-            return "".join(result), True
-                
-        # wrong position square or wrong letter square
+        return result, word_counter
+    
+    def check_yellow_black_square(self, guess: str, *, result: List[str], word_counter: Counter) -> List[str]:
+        """Check the wrong position and incorrect letters in the guess"""
         for i, char in enumerate(guess):
             # if the square is already correct, don't change it
-            if result[i]:
+            if "GREEN" in result[i]:
                 continue
 
             letter_index = self.ALPHABET.index(char)
-            if word_counter[char] > 0:
+            if char in self.word and word_counter[char] > 0:
                 result[i] = self.get_letter_emoji(char, WordleLetterStatus.WRONG_POS)
                 word_counter[char] -= 1
 
-                # status priority: correct (3) > wrong pos (2) > wrong letter (1) > not yet guessed (0)
+                # status priority: green (3) > yellow (2) > black (1) > white (0)
                 # so if the status of the current pos is already correct, don't change it
                 if self.available[letter_index] != WordleLetterStatus.CORRECT:
                     self.available[letter_index] = WordleLetterStatus.WRONG_POS
             else:
                 result[i] = self.get_letter_emoji(guess[i], WordleLetterStatus.INCORRECT)
 
-                # as above, wrong letter can only replace not yet guessed square
-                # so we need to check if the value is lower than wrong pos (2)
-                if self.available[letter_index].value[0] < WordleLetterStatus.WRONG_POS.value[0]:
+                # as above, black square can only replace white square
+                if self.available[letter_index] == WordleLetterStatus.UNUSED:
                         self.available[letter_index] = WordleLetterStatus.INCORRECT
-
-        self.update_available_characters()
-        return "".join(result), False
+        return result
 
     def update_available_characters(self):
         """Update letters availability"""
@@ -524,17 +524,17 @@ class Wordle(discord.ui.View):
                 return await interaction.followup.send(f"`{modal.guess}` is not a real word!", ephemeral=True)
 
         self.attempt -= 1 # update the attempt property as soon as possible so self.is_over is updated
-        result, win = self.check_guess(modal.guess)
+        result = self.check_guess(modal.guess)
         self.embed.description += f"{result} by {interaction.user.mention}\n"
         self.remaining_attempt_button.label = f"Attempts: {self.attempt}"
             
         # if win is True or no more attempts left
-        if win or self.is_over:
+        if self.is_over:
             button.disabled = True
             self.embed.description += f"### The word is: `{self.word}`"
             self.add_item(LookUpButton(self.word))
 
-            if win:
+            if self.attempt > 0:
                 button.style = ButtonStyle.success
                 button.label = "You WON!"
             else:
