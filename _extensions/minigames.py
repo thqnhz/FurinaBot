@@ -409,7 +409,7 @@ class Wordle(discord.ui.View):
         self.word = word
         self.bot = bot
         self.attempt: int = 6
-        self.embed = Embed(title=f"WORDLE ({len(word)} LETTERS)", description="").set_footer(text="Coded by ThanhZ")
+        self.embed = Embed(title=f"WORDLE ({len(word)} LETTERS)", description="", color=0x2F3136).set_footer(text="Coded by ThanhZ")
         self.message: discord.Message
         self._is_over = False
 
