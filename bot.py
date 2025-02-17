@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import discord, os, platform, wavelink
+import discord, logging, os, platform, wavelink
 from aiohttp import ClientSession
 from asqlite import Pool
 from discord import Intents, Activity, ActivityType, Embed, app_commands, utils
@@ -62,6 +62,7 @@ class Furina(Bot):
         return when_mentioned_or(prefix)(self, message)
 
     async def on_ready(self) -> None:
+        logging.info(f"Logged in as {self.user.name}")
         print(f"Logged in as {self.user.name}")
         print(f"discord.py version {discord.__version__}")
         print(f"Wavelink version {wavelink.__version__}")
@@ -88,11 +89,15 @@ class Furina(Bot):
                 extension = filename[:-3]
                 try:
                     await self.load_extension(f"_extensions.{extension}")
+                    logging.info(f"Loaded extension: {extension}")
                     print(f"Loaded extension: {extension}")
                 except errors.NoEntryPointError:
+                    logging.error(f"Extension {extension} has no setup function so it cannot be loaded")
                     print(f"Extension {extension} has no setup function so it cannot be loaded")
                 except Exception as e:
+                    logging.error(f"An error occured when trying to load {extension}\n{e}")
                     print(f"An error occured when trying to load {extension}\n{e}")
         await self.load_extension("jishaku")
+        logging.info("Loaded Jishaku extension")
         print("Loaded Jishaku extension")
 
