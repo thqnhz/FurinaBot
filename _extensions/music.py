@@ -294,7 +294,7 @@ class Music(commands.Cog):
             def run_lavalink():
                 try:
                     subprocess.run(["java", "-jar", "Lavalink.jar"], cwd="./")
-                except subprocess.CalledProcessError as e:
+                except Exception as e:
                     logging.error(f"Error starting Lavalink: {e}")
                     print(f"Error starting Lavalink: {e}")
                     raise e
