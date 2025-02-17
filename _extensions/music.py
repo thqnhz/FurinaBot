@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import asyncio, discord, subprocess, textwrap, threading, wavelink
+import asyncio, discord, logging, subprocess, textwrap, threading, wavelink
 from discord.ext import commands
 from discord import app_commands, ui, Color, ButtonStyle, Embed, Message
 from typing import TYPE_CHECKING, List, cast
@@ -292,11 +292,16 @@ class Music(commands.Cog):
     def start_lavalink(self):
         try:
             def run_lavalink():
-                subprocess.run(["java", "-jar", "Lavalink.jar"], cwd="./")
+                try:
+                    subprocess.run(["java", "-jar", "Lavalink.jar"], cwd="./")
+                except subprocess.CalledProcessError as e:
+                    logging.error(f"Error starting Lavalink: {e}")
+                    print(f"Error starting Lavalink: {e}")
+                    raise e
             thread = threading.Thread(target=run_lavalink, daemon=True)
             thread.start()
         except Exception as e:
-            print(f"Error starting Lavalink: {e}")
+            pass
 
     async def cog_check(self, ctx: commands.Context) -> bool:
         embed = Embeds.error_embed("")
