@@ -24,3 +24,5 @@ MUSIC_CHANNEL = 1089851760425848923
 MUSIC_WEBHOOK = os.getenv("MUSIC_WEBHOOK")
 LAVA_URI = "http://localhost:1710"
 LAVA_PW = "thanhz"
+BACKUP_LL = os.getenv("BACKUP_LL")
+BACKUP_LL_PW = os.getenv("BACKUP_LL_PW")
