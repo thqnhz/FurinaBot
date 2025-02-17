@@ -290,14 +290,21 @@ class Music(commands.Cog):
                     print("Lavalink.jar downloaded")
 
     def start_lavalink(self):
+        def run_lavalink():
+            try:
+                subprocess.run(["java", "-jar", "Lavalink.jar"], cwd="./")
+            except FileNotFoundError as e:
+                logging.error(f"Java is not installed or not in PATH: {e}")
+                print(f"Java is not installed or not in PATH: {e}")
+                raise e
+            except subprocess.CalledProcessError as e:
+                logging.error(f"Error starting Lavalink: {e}")
+                print(f"Error starting Lavalink: {e}")
+                raise e
+            except Exception as e:
+                logging.error(f"An error occured when starting Lavalink: {e}")
+                print(f"An error occured when starting Lavalink: {e}")
         try:
-            def run_lavalink():
-                try:
-                    subprocess.run(["java", "-jar", "Lavalink.jar"], cwd="./")
-                except Exception as e:
-                    logging.error(f"Error starting Lavalink: {e}")
-                    print(f"Error starting Lavalink: {e}")
-                    raise e
             thread = threading.Thread(target=run_lavalink, daemon=True)
             thread.start()
         except Exception as e:
