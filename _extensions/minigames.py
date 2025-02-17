@@ -404,14 +404,16 @@ WORDLE_EMOJIS = {
 
 class Wordle(discord.ui.View):
     ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-    def __init__(self, *, bot: Furina, word: str):
+    def __init__(self, *, bot: Furina, word: str, owner: discord.User):
         super().__init__(timeout=None)
         self.word = word
         self.bot = bot
+        self.owner = owner
         self.attempt: int = 6
         self.embed = Embed(title=f"WORDLE ({len(word)} LETTERS)", description="", color=0x2F3136).set_footer(text="Coded by ThanhZ")
-        self.message: discord.Message
-        self._is_over = False
+        self.helped_guess: WordleHelpGuessSelect = WordleHelpGuessSelect()
+        self.selected_guess: Optional[str] = None
+        self.is_winning = False
 
         # a list to store the status of the letters in alphabetical order, init with 26 0s
         self.available: List[WordleLetterStatus] = [WordleLetterStatus.UNUSED]*26
@@ -422,7 +424,7 @@ class Wordle(discord.ui.View):
     @property
     def is_over(self) -> bool:
         """Is the game over or not"""
-        return self.attempt == 0 or self._is_over
+        return self.attempt == 0 or self.is_winning
 
     def get_letter_emoji(self, letter: str, status: WordleLetterStatus) -> str:
         """Get the emoji for the letter based on the status"""
@@ -445,7 +447,7 @@ class Wordle(discord.ui.View):
         result, word_counter = self.check_green_square(guess)
         # using all() to check if the result is all green squares
         if all("GREEN" in letter for letter in result):
-            self._is_over = True
+            self.is_winning = True
         else: 
             result = self.check_yellow_black_square(guess, result=result, word_counter=word_counter)
         self.update_available_characters()
@@ -510,34 +512,66 @@ class Wordle(discord.ui.View):
 
     @discord.ui.button(label="Guess", emoji="\U0001f4dd")
     async def guess_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        modal = WordleModal(letters=len(self.word))
-        await interaction.response.send_modal(modal)
-        await modal.wait()
-        if modal.guess == "":
-            return
-
-        if self.is_over:
-            return await interaction.followup.send("The game is over, your guess didn't count.", ephemeral=True)
+        if self.selected_guess:
+            await interaction.response.defer()
+            selected_guess = self.selected_guess
+            guess = selected_guess.split()[0]
+            guesser = selected_guess.split()[1]
+            self.selected_guess = None
+        else:
+            modal = WordleModal(letters=len(self.word))
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+            if modal.guess == "":
+                return
+            guess = modal.guess
+            guesser = interaction.user.mention
+            async with self.bot.cs.get(f"https://api.dictionaryapi.dev/api/v2/entries/en/{guess.lower()}") as response:
+                if response.status != 200:
+                    return await interaction.followup.send(f"`{guess}` is not a real word!", ephemeral=True)
         
-        async with self.bot.cs.get(f"https://api.dictionaryapi.dev/api/v2/entries/en/{modal.guess.lower()}") as response:
-            if response.status != 200:
-                return await interaction.followup.send(f"`{modal.guess}` is not a real word!", ephemeral=True)
+        try:
+            for option in self.helped_guess.options:
+                if option.label.lower() == guess.lower():
+                    self.helped_guess.options.remove(option)
+                    break
+            if len(self.helped_guess.options) == 0:
+                self.remove_item(self.helped_guess)
+        except ValueError:
+            pass
 
-        self.attempt -= 1 # update the attempt property as soon as possible so self.is_over is updated
-        result = self.check_guess(modal.guess)
-        self.embed.description += f"{result} by {interaction.user.mention}\n"
+        # if the guess is not from the command runner
+        if interaction.user != self.owner:
+            if len(self.helped_guess.options) < 25:
+                self.add_item(self.helped_guess) if self.helped_guess not in self.children else None
+                self.helped_guess.append_option(
+                    discord.SelectOption(label=guess.capitalize(), 
+                                            value=f"{guess.upper()} {interaction.user.mention}", 
+                                            description=f"by {interaction.user.display_name}")
+                )
+                return await interaction.edit_original_response(f"Added `{guess}` to help guess list", view=self)
+            else:
+                return await interaction.followup.send("There are already enough help guesses. Try again later", ephemeral=True)
+
+        self.attempt -= 1
+        result = self.check_guess(guess)
+        self.embed.description += f"{result} by {guesser}\n"
         self.remaining_attempt_button.label = f"Attempts: {self.attempt}"
             
-        # if win is True or no more attempts left
+        # if is_winning is True or attempt is 0
         if self.is_over:
             button.disabled = True
             self.embed.description += f"### The word is: `{self.word}`"
             self.add_item(LookUpButton(self.word))
-
-            if self.attempt > 0:
+            for child in self.children:
+                if isinstance(child, WordleHelpGuessSelect):
+                    self.remove_item(child)
+            if self.is_winning:
+                self.embed.color = discord.Color.green()
                 button.style = ButtonStyle.success
                 button.label = "You WON!"
             else:
+                self.embed.color = discord.Color.red()
                 button.style = ButtonStyle.danger
                 button.label = "You Lost!"
         await interaction.edit_original_response(embed=self.embed, view=self)
@@ -551,7 +585,6 @@ class Wordle(discord.ui.View):
     @discord.ui.button(label="Attempts: 6", emoji="\U0001f4ad", disabled=True)
     async def remaining_attempt_button(self, _: discord.Interaction, _b: discord.ui.Button):
         pass
-
 
 class WordleModal(discord.ui.Modal):
     def __init__(self, letters: int):
@@ -570,7 +603,7 @@ class WordleModal(discord.ui.Modal):
 
 class LookUpButton(discord.ui.Button):
     def __init__(self, word: str):
-        super().__init__(style=ButtonStyle.secondary, label="Look Up", emoji="\U0001f310")
+        super().__init__(style=ButtonStyle.secondary, label="Look Up", emoji="\U0001f310", row=0)
         self.word = word
 
     async def callback(self, interaction: discord.Interaction):
@@ -578,6 +611,20 @@ class LookUpButton(discord.ui.Button):
         view = await Utils.dictionary_call(self.word)
         await interaction.followup.send(embed=view.embeds[0], view=view)
 
+
+class WordleHelpGuessSelect(discord.ui.Select):
+    def __init__(self):
+        super().__init__(placeholder="Select a helped guess", options=[], min_values=1, max_values=1, row=1)
+
+    def append_option(self, option: discord.SelectOption):
+        self.options.append(option)
+
+    async def callback(self, interaction: discord.Interaction):
+        assert self.view is not None
+        view: Wordle = self.view
+        await interaction.response.defer()
+        if interaction.user == view.owner:
+            view.selected_guess = self.values[0]
 
 class Minigames(commands.GroupCog, group_name="minigame"):
     """Các Minigame bạn có thể chơi"""
@@ -596,24 +643,24 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         view = RPSView()
         view.message = await ctx.reply(embed=view.embed, view=view)
 
-    @commands.hybrid_command(name='wordle', description="Wordle minigame")
+    @app_commands.command(name='wordle', description="Wordle minigame")
     @app_commands.allowed_installs(guilds=True, users=True)
-    async def wordle(self, ctx: commands.Context, letters: Optional[app_commands.Range[int, 3, 8]] = 5):
+    async def wordle(self, interaction: discord.Interaction, letters: Optional[app_commands.Range[int, 3, 8]] = 5):
         """
         Wordle minigame
 
         Parameters
         -----------
-        ctx: `commands.Context`
-            Context
+        interaction: `discord.Interaction`
+            - The interaction object
         letters: `app_commands.Range[int, 3, 8] = 5`
-            Number of letters for this game (3-8), default to 5
+            - Number of letters for this game (3-8), default to 5
         """
-        await ctx.defer()
+        await interaction.response.defer()
         async with self.bot.cs.get(f"https://random-word-api.vercel.app/api?length={letters}") as response:
             word: str = ast.literal_eval(await response.text())[0]
-        view = Wordle(bot=self.bot, word=word.upper())
-        view.message = await ctx.reply(embed=view.embed, view=view)
+        view = Wordle(bot=self.bot, word=word.upper(), owner=interaction.user)
+        await interaction.followup.send(embed=view.embed, view=view)
 
 
 async def setup(bot: Furina):
