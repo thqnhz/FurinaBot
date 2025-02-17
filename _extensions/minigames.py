@@ -549,7 +549,7 @@ class Wordle(discord.ui.View):
                                             value=f"{guess.upper()} {interaction.user.mention}", 
                                             description=f"by {interaction.user.display_name}")
                 )
-                return await interaction.edit_original_response(content=f"Added `{guess}` to help guess list", view=self)
+                return await interaction.followup.send(f"Added `{guess}` to help guess list", view=self, ephemeral=True)
             else:
                 return await interaction.followup.send("There are already enough help guesses. Try again later", ephemeral=True)
 
