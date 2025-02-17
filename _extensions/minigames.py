@@ -617,9 +617,6 @@ class WordleHelpGuessSelect(discord.ui.Select):
     def __init__(self):
         super().__init__(placeholder="Select a helped guess", options=[], min_values=1, max_values=1, row=1)
 
-    def append_option(self, option: discord.SelectOption):
-        self.options.append(option)
-
     async def callback(self, interaction: discord.Interaction):
         assert self.view is not None
         view: Wordle = self.view
