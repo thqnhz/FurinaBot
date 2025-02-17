@@ -34,17 +34,6 @@ class Hidden(commands.Cog):
     def __init__(self, bot: Furina):
         self.bot = bot
 
-    @commands.command(hidden=True, name='reboot', aliases=['restart'], description="Khởi động lại bot.")
-    @commands.is_owner()
-    async def reboot(self, ctx: commands.Context) -> None:
-        embed = LoadingEmbed(author_name="Đang khởi động lại...")
-        msg = await ctx.reply(embed=embed)
-        try:
-            subprocess.run(REBOOT_CMD, shell=True)
-        except Exception as e:
-            embed = ErrorEmbed(f"Có lỗi xảy ra khi khởi động lại: {e}")
-            await msg.edit(embed=embed, delete_after=5)
-
     @commands.command(hidden=True, name='logs', aliases=['log'], description="Lấy nhật ký từ console.")
     @commands.is_owner()
     async def logs(self, ctx: commands.Context, number: int = 15) -> None:
