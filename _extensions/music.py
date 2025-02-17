@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import discord, wavelink, textwrap
+import asyncio, discord, subprocess, textwrap, threading, wavelink
 from discord.ext import commands
 from discord import app_commands, ui, Color, ButtonStyle, Embed, Message
 from typing import TYPE_CHECKING, List, cast
@@ -268,8 +268,29 @@ class Music(commands.Cog):
         self.webhook = discord.SyncWebhook.from_url(MUSIC_WEBHOOK)
 
     async def cog_load(self) -> None:
+        await self.get_lavalink_jar()
+        self.start_lavalink()
+        await asyncio.sleep(10)
         await self.refresh_node_connection()
 
+    async def get_lavalink_jar(self) -> None:
+        async with self.bot.cs.get("https://api.github.com/repos/lavalink-devs/Lavalink/releases/latest") as response:
+            release_info = await response.json()
+            jar_info = next(
+                (asset for asset in release_info["assets"] if asset["name"] == "Lavalink.jar"),
+                None
+            )
+            jar_url = jar_info["browser_download_url"]
+            async with self.bot.cs.get(jar_url) as jar:
+                with open("./Lavalink.jar", "wb") as f:
+                    f.write(await jar.read())
+                    print("Lavalink.jar downloaded")
+
+    def start_lavalink(self):
+        def run_lavalink():
+            subprocess.run(["java", "-jar", "Lavalink.jar"], cwd="./")
+        thread = threading.Thread(target=run_lavalink, daemon=True)
+        thread.start()
 
     async def cog_check(self, ctx: commands.Context) -> bool:
         embed = Embeds.error_embed("")
@@ -295,6 +316,7 @@ class Music(commands.Cog):
             node = Node(uri=LAVA_URI, password=LAVA_PW, heartbeat=5.0, inactive_player_timeout=None)
             await Pool.close()
             await Pool.connect(client=self.bot, nodes=[node])
+            print(f"Connected to \"{node.uri}\"")
 
     @staticmethod
     def _is_connected(ctx: commands.Context) -> bool:
