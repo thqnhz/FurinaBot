@@ -276,12 +276,12 @@ class Music(commands.Cog):
     async def get_lavalink_jar(self) -> None:
         async with self.bot.cs.get("https://api.github.com/repos/lavalink-devs/Lavalink/releases/latest") as response:
             release_info = await response.json()
-            jar_info = next(
-                (asset for asset in release_info["assets"] if asset["name"] == "Lavalink.jar"),
-                None
-            )
-            if jar_info is None:
-                print("Cannot find Lavalink.jar from github repo")
+            try:
+                jar_info = next(
+                    (asset for asset in release_info["assets"] if asset["name"] == "Lavalink.jar"),
+                    None
+                )
+            except KeyError:
                 return
             jar_url = jar_info["browser_download_url"]
             async with self.bot.cs.get(jar_url) as jar:
