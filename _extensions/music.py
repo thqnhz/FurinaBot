@@ -280,6 +280,9 @@ class Music(commands.Cog):
                 (asset for asset in release_info["assets"] if asset["name"] == "Lavalink.jar"),
                 None
             )
+            if jar_info is None:
+                print("Cannot find Lavalink.jar from github repo")
+                return
             jar_url = jar_info["browser_download_url"]
             async with self.bot.cs.get(jar_url) as jar:
                 with open("./Lavalink.jar", "wb") as f:
@@ -315,8 +318,11 @@ class Music(commands.Cog):
         except wavelink.InvalidNodeException:
             node = Node(uri=LAVA_URI, password=LAVA_PW, heartbeat=5.0, inactive_player_timeout=None)
             await Pool.close()
-            await Pool.connect(client=self.bot, nodes=[node])
-            print(f"Connected to \"{node.uri}\"")
+            try:
+                await Pool.connect(client=self.bot, nodes=[node])
+                print(f"Connected to \"{node.uri}\"")
+            except wavelink.NodeException:
+                node = Node(uri=BACKUP_LL, password=BACKUP_LL_PW, heartbeat=5.0, inactive_player_timeout=None)
 
     @staticmethod
     def _is_connected(ctx: commands.Context) -> bool:
