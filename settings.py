@@ -24,9 +24,3 @@ MUSIC_CHANNEL = 1089851760425848923
 MUSIC_WEBHOOK = os.getenv("MUSIC_WEBHOOK")
 LAVA_URI = "http://localhost:1710"
 LAVA_PW = "thanhz"
-
-# Edit this if your logs file location is different, since I'm using pm2 and host the bot on AWS
-# the logs file is at /home/ubuntu/.pm2/logs/{instance_name}-error.log
-LOG_FILE = f"/home/ubuntu/.pm2/logs/furina-error.log"
-
-

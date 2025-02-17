@@ -3,7 +3,7 @@ from __future__ import annotations
 import discord, io, subprocess
 from discord.ext import commands
 from discord import app_commands, Embed, Color
-from typing import TYPE_CHECKING, Literal, Optional
+from typing import TYPE_CHECKING, Optional, Tuple
 
 
 from settings import *
@@ -34,27 +34,40 @@ class Hidden(commands.Cog):
     def __init__(self, bot: Furina):
         self.bot = bot
 
-    @commands.command(hidden=True, name='logs', aliases=['log'], description="Lấy nhật ký từ console.")
-    @commands.is_owner()
-    async def logs(self, ctx: commands.Context, number: int = 15) -> None:
-        process = subprocess.Popen(
-            ['tail', LOG_FILE, f'-n {number}'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
-        output, errors = process.communicate()
+    @staticmethod
+    def get_logs(dir: str, lines: int = 15) -> Tuple[Embed, Optional[discord.File]]:
+        try:
+            with open(dir, 'r', encoding='utf-8') as file:
+                log_lines = file.readlines()[-lines:]
+                output = ''.join(log_lines)
+                errors = None
+        except Exception as e:
+            output = ""
+            errors = str(e)
+
         file = None
 
-        if process.returncode == 0:
-            embed = FooterEmbed(title=f"Nhật ký lỗi gần đây nhất của Furina ({number} dòng)",
+        if not errors:
+            embed = FooterEmbed(title=f"Nhật ký lỗi gần đây nhất của Furina ({lines} dòng)",
                                 description="")
-            if len(output) < 4096 and number < 30:
-                embed.description = f"```prolog\n{output}\n```"
+            if len(output) < 4096 and lines < 30:
+                embed.description = f"```log\n{output}\n```"
             else:
-                file = discord.File(fp=io.StringIO(output), filename=f'logs-{number}lines.log')
+                file = discord.File(fp=io.StringIO(output), filename=f'logs-{lines}lines.log')
         else:
             embed = ErrorEmbed(description=f"Có lỗi xảy ra khi lấy nhật ký: {errors}")
+        return embed, file
+
+    @commands.command(hidden=True, name='logs', aliases=['log'], description="Get the bot's logs")
+    @commands.is_owner()
+    async def logs(self, ctx: commands.Context, number: int = 15) -> None:
+        embed, file = self.get_logs("./logs/furina.log", number)
+        await ctx.reply(embed=embed, file=file)
+
+    @commands.command(hidden=True, name='lavalogs', description="Get the lavalink's logs")
+    @commands.is_owner()
+    async def lavalogs(self, ctx: commands.Context, number: int = 15) -> None:
+        embed, file = self.get_logs("./logs/spring.log", number)
         await ctx.reply(embed=embed, file=file)
 
     @app_commands.command(name='embed', description="Gửi một embed.")
