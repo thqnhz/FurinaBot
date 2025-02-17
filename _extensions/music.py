@@ -290,10 +290,13 @@ class Music(commands.Cog):
                     print("Lavalink.jar downloaded")
 
     def start_lavalink(self):
-        def run_lavalink():
-            subprocess.run(["java", "-jar", "Lavalink.jar"], cwd="./")
-        thread = threading.Thread(target=run_lavalink, daemon=True)
-        thread.start()
+        try:
+            def run_lavalink():
+                subprocess.run(["java", "-jar", "Lavalink.jar"], cwd="./")
+            thread = threading.Thread(target=run_lavalink, daemon=True)
+            thread.start()
+        except Exception as e:
+            print(f"Error starting Lavalink: {e}")
 
     async def cog_check(self, ctx: commands.Context) -> bool:
         embed = Embeds.error_embed("")
