@@ -164,7 +164,7 @@ class Utils(commands.Cog):
             embed = discord.Embed()
             embed.description = (f"- **__Name:__** `{command.qualified_name}`\n"
                                  f"- **__Description:__** {command.description}\n"
-                                 f"- **__How to use:__** `{command.qualified_name} {command.signature}`"
+                                 f"- **__How to use:__** `{ctx.prefix}{command.qualified_name} {command.signature}`"
             )
             embed.set_footer(text="Aliases: " + ", ".join(alias for alias in command.aliases)) if command.aliases else None
             await ctx.reply(embed=embed)
