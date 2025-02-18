@@ -84,19 +84,18 @@ class Furina(Bot):
         await self.update_prefixes()
 
         # loads the extensions
-        for filename in os.listdir("./_extensions"):
-            if filename.endswith(".py"):
-                extension = filename[:-3]
-                try:
-                    await self.load_extension(f"_extensions.{extension}")
-                    logging.info(f"Loaded extension: {extension}")
-                    print(f"Loaded extension: {extension}")
-                except errors.NoEntryPointError:
-                    logging.error(f"Extension {extension} has no setup function so it cannot be loaded")
-                    print(f"Extension {extension} has no setup function so it cannot be loaded")
-                except Exception as e:
-                    logging.error(f"An error occured when trying to load {extension}\n{e}")
-                    print(f"An error occured when trying to load {extension}\n{e}")
+        from _extensions import EXTENSIONS
+        for extension in EXTENSIONS:
+            try:
+                await self.load_extension(f"{extension}")
+                logging.info(f"Loaded extension: {extension}")
+                print(f"Loaded extension: {extension}")
+            except errors.NoEntryPointError:
+                logging.error(f"Extension {extension} has no setup function so it cannot be loaded")
+                print(f"Extension {extension} has no setup function so it cannot be loaded")
+            except Exception as e:
+                logging.error(f"An error occured when trying to load {extension}\n{e}")
+                print(f"An error occured when trying to load {extension}\n{e}")
         await self.load_extension("jishaku")
         logging.info("Loaded Jishaku extension")
         print("Loaded Jishaku extension")
