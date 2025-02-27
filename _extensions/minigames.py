@@ -255,7 +255,7 @@ class Wordle(discord.ui.View):
         self.owner = owner
         self.solo = solo
         self.attempt: int = 6
-        self.embed = Embed(title=f"WORDLE ({len(word)} LETTERS)", description="", color=0x2F3136).set_footer(text="Coded by ThanhZ")
+        self.embed = Embed(title=f"WORDLE ({len(word)} LETTERS)", description="", color=0x2F3136).set_footer(text="Coded by ThanhZ | v0.2.0-beta")
         self.helped_guess: WordleHelpGuessSelect = WordleHelpGuessSelect()
         self.selected_guess: Optional[str] = None
         self.is_winning = False
