@@ -248,11 +248,12 @@ WORDLE_EMOJIS: Dict[str, Dict[WordleLetterStatus, str]]
 
 class Wordle(discord.ui.View):
     ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-    def __init__(self, *, bot: Furina, word: str, owner: discord.User):
+    def __init__(self, *, bot: Furina, word: str, owner: discord.User, solo: bool):
         super().__init__(timeout=None)
         self.word = word
         self.bot = bot
         self.owner = owner
+        self.solo = solo
         self.attempt: int = 6
         self.embed = Embed(title=f"WORDLE ({len(word)} LETTERS)", description="", color=0x2F3136).set_footer(text="Coded by ThanhZ")
         self.helped_guess: WordleHelpGuessSelect = WordleHelpGuessSelect()
@@ -385,7 +386,7 @@ class Wordle(discord.ui.View):
             pass
 
         # if the guess is not from the command runner
-        if interaction.user != self.owner:
+        if interaction.user != self.owner and self.solo:
             if len(self.helped_guess.options) < 25:
                 self.add_item(self.helped_guess) if self.helped_guess not in self.children else None
                 self.helped_guess.append_option(
@@ -527,7 +528,10 @@ class Minigames(commands.GroupCog, group_name="minigame"):
 
     @app_commands.command(name='wordle', description="Wordle minigame")
     @app_commands.allowed_installs(guilds=True, users=True)
-    async def wordle(self, interaction: discord.Interaction, letters: Optional[app_commands.Range[int, 3, 8]] = 5):
+    async def wordle(self,
+                     interaction: discord.Interaction,
+                     letters: app_commands.Range[int, 3, 8] = 5,
+                     solo: bool = True):
         """
         Wordle minigame
 
@@ -541,7 +545,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         await interaction.response.defer()
         async with self.bot.cs.get(f"https://random-word-api.vercel.app/api?length={letters}") as response:
             word: str = ast.literal_eval(await response.text())[0]
-        view = Wordle(bot=self.bot, word=word.upper(), owner=interaction.user)
+        view = Wordle(bot=self.bot, word=word.upper(), owner=interaction.user, solo=solo)
         await interaction.followup.send(embed=view.embed, view=view)
 
 
