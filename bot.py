@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import discord, logging, os, platform, wavelink
+import discord, logging, platform, traceback, wavelink
 from aiohttp import ClientSession
 from asqlite import Pool
 from discord import Intents, Activity, ActivityType, Embed, app_commands, utils
@@ -63,10 +63,9 @@ class Furina(Bot):
 
     async def on_ready(self) -> None:
         logging.info(f"Logged in as {self.user.name}")
-        print(f"Logged in as {self.user.name}")
-        print(f"discord.py version {discord.__version__}")
-        print(f"Wavelink version {wavelink.__version__}")
-        print(f"Python version {platform.python_version()}")
+        logging.info(f"discord.py v{discord.__version__}")
+        logging.info(f"Wavelink v{wavelink.__version__}")
+        logging.info(f"Running Python {platform.python_version()}")
 
         try:
             embed = Embed(color=self.user.accent_color).set_author(
@@ -76,8 +75,8 @@ class Furina(Bot):
             embed.timestamp = utils.utcnow()
             discord.SyncWebhook.from_url(DEBUG_WEBHOOK).send(embed=embed)
         except ValueError:
-            print("Cannot get the Webhook url for on_ready events."
-                  "If you don't want to get a webhook message when the bot is ready, please ignore this")
+            logging.warning("Cannot get the Webhook url for on_ready events."
+                            "If you don't want to get a webhook message when the bot is ready, please ignore this")
 
     async def setup_hook(self) -> None:
         await self.create_prefix_table()
@@ -89,14 +88,11 @@ class Furina(Bot):
             try:
                 await self.load_extension(f"{extension}")
                 logging.info(f"Loaded extension: {extension}")
-                print(f"Loaded extension: {extension}")
             except errors.NoEntryPointError:
                 logging.error(f"Extension {extension} has no setup function so it cannot be loaded")
-                print(f"Extension {extension} has no setup function so it cannot be loaded")
             except Exception as e:
+                traceback.print_exc()
                 logging.error(f"An error occured when trying to load {extension}\n{e}")
-                print(f"An error occured when trying to load {extension}\n{e}")
         await self.load_extension("jishaku")
         logging.info("Loaded Jishaku extension")
-        print("Loaded Jishaku extension")
 

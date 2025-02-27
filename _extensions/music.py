@@ -81,7 +81,7 @@ def is_valid(track: Playable, player: Player = None) -> bool:
     """Kiểm tra xem track có hợp lệ để phát hay không."""
     if player and track in player.queue:
         return False
-    return False if (track.is_stream or track.length // 3_600_000 > 2) else True
+    return True
 
 async def ensure_voice_connection(ctx: commands.Context | discord.Interaction) -> Player:
     try:
