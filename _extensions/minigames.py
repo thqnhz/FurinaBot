@@ -433,6 +433,16 @@ class Wordle(discord.ui.View):
         pass
 
 
+class Letterle(Wordle):
+    def __init__(self, *, bot, owner, solo):
+        from random import randint
+        letter = self.ALPHABET[randint(0, 25)]
+        super().__init__(bot=bot, word=letter, owner=owner, solo=solo)
+        self.attempt = 25
+        self.embed.title = "LETTERLE"
+        self.embed.set_footer(text="Coded by ThanhZ | v0.1.0-beta")
+        self.remaining_attempt_button.label = f"Attempts: {self.attempt}"
+
 class WordleModal(discord.ui.Modal):
     def __init__(self, letters: int):
         super().__init__(timeout=180, title=f"Wordle ({letters} LETTERS)")
@@ -532,8 +542,9 @@ class Minigames(commands.GroupCog, group_name="minigame"):
                      interaction: discord.Interaction,
                      letters: app_commands.Range[int, 3, 8] = 5,
                      solo: bool = True):
-        """
-        Wordle minigame
+        """Wordle minigame
+
+        A game where you have 6 guesses and a word to guess. If your guess has a letter that is in the word, it becomes yellow, if your guess has a letter that in the correct position with the word, it becomes green, otherwise it becomes black. The game ends when you are out of guesses or you guessed the correct word.
 
         Parameters
         -----------
@@ -541,11 +552,31 @@ class Minigames(commands.GroupCog, group_name="minigame"):
             - The interaction object
         letters: `app_commands.Range[int, 3, 8] = 5`
             - Number of letters for this game (3-8), default to 5
+        solo: `bool = True`
+            - Solo mode only allows others to help, if you want others to guess straight in, make it False
         """
         await interaction.response.defer()
         async with self.bot.cs.get(f"https://random-word-api.vercel.app/api?length={letters}") as response:
             word: str = ast.literal_eval(await response.text())[0]
         view = Wordle(bot=self.bot, word=word.upper(), owner=interaction.user, solo=solo)
+        await interaction.followup.send(embed=view.embed, view=view)
+
+    @app_commands.command(name='letterle', description="Letterle minigame")
+    @app_commands.allowed_installs(guilds=True, users=True)
+    async def letterle(self, interaction: discord.Interaction, solo: bool = True):
+        """Letterle minigame
+
+        A game where you have 25 guesses and a letter to guess. If you guess the correct letter within 25 guesses you win.
+
+        Parameters
+        -----------
+        interaction: `discord.Interaction`
+            - The interaction object
+        solo: `bool = True`
+            - Solo mode only allows others to help, if you want others to guess straight in, make it False
+        """
+        await interaction.response.defer()
+        view = Letterle(bot=self.bot, owner=interaction.user, solo=solo)
         await interaction.followup.send(embed=view.embed, view=view)
 
 
