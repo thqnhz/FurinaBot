@@ -355,6 +355,10 @@ class Wordle(discord.ui.View):
         self.embed.clear_fields()
         self.embed.add_field(name="Keyboard", value=available)
 
+    async def check_dictionary(self, guess: str) -> int:
+        async with self.bot.cs.get(f"https://api.dictionaryapi.dev/api/v2/entries/en/{guess.lower()}") as response:
+                return response.status
+
     @discord.ui.button(label="Guess", emoji="\U0001f4dd")
     async def guess_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.selected_guess:
@@ -371,9 +375,9 @@ class Wordle(discord.ui.View):
                 return
             guess = modal.guess
             guesser = interaction.user.mention
-            async with self.bot.cs.get(f"https://api.dictionaryapi.dev/api/v2/entries/en/{guess.lower()}") as response:
-                if response.status != 200:
-                    return await interaction.followup.send(f"`{guess}` is not a real word!", ephemeral=True)
+            status = await self.check_dictionary(guess=guess)
+            if status != 200:
+                return await interaction.followup.send(f"`{guess}` is not a real word!", ephemeral=True)
         
         try:
             for option in self.helped_guess.options:
@@ -440,8 +444,12 @@ class Letterle(Wordle):
         super().__init__(bot=bot, word=letter, owner=owner, solo=solo)
         self.attempt = 25
         self.embed.title = "LETTERLE"
-        self.embed.set_footer(text="Coded by ThanhZ | v0.1.0-beta")
+        self.embed.set_footer(text="Coded by ThanhZ | v0.1.1-beta")
         self.remaining_attempt_button.label = f"Attempts: {self.attempt}"
+
+    async def check_dictionary(self, guess: str):
+        return 200 if guess in self.ALPHABET else 404
+
 
 class WordleModal(discord.ui.Modal):
     def __init__(self, letters: int):
