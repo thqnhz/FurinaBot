@@ -135,7 +135,7 @@ class Utils(commands.Cog):
         await ctx.reply("https://github.com/Th4nhZ/FurinaBot")
 
     @commands.command(name='help', description="Help command")
-    async def help_command(self, ctx: commands.Context, category_or_command_name: Optional[str] = None):
+    async def help_command(self, ctx: commands.Context, category_or_command_name: str = None):
         """
         Help command
 
@@ -161,13 +161,10 @@ class Utils(commands.Cog):
         # !help <Command>
         command = self.bot.get_command(category_or_command_name)
         if command and not command.hidden:
-            usage = f"{ctx.prefix}{command.name}"
-            for param in command.clean_params.values():
-                usage += f" {'<' if param.default else '['}{param.name}{'>' if param.default else ']'}"
             embed = discord.Embed()
             embed.description = (f"- **__Name:__** `{command.qualified_name}`\n"
                                  f"- **__Description:__** {command.description}\n"
-                                 f"- **__How to use:__** `{usage}`"
+                                 f"- **__How to use:__** `{ctx.prefix}{command.qualified_name} {command.signature}`"
             )
             embed.set_footer(text="Aliases: " + ", ".join(alias for alias in command.aliases)) if command.aliases else None
             await ctx.reply(embed=embed)

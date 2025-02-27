@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import asyncio, discord, subprocess, textwrap, threading, wavelink
+import asyncio, discord, logging, subprocess, textwrap, threading, wavelink
 from discord.ext import commands
 from discord import app_commands, ui, Color, ButtonStyle, Embed, Message
 from typing import TYPE_CHECKING, List, cast
@@ -81,7 +81,7 @@ def is_valid(track: Playable, player: Player = None) -> bool:
     """Kiểm tra xem track có hợp lệ để phát hay không."""
     if player and track in player.queue:
         return False
-    return False if (track.is_stream or track.length // 3_600_000 > 2) else True
+    return True
 
 async def ensure_voice_connection(ctx: commands.Context | discord.Interaction) -> Player:
     try:
@@ -276,10 +276,13 @@ class Music(commands.Cog):
     async def get_lavalink_jar(self) -> None:
         async with self.bot.cs.get("https://api.github.com/repos/lavalink-devs/Lavalink/releases/latest") as response:
             release_info = await response.json()
-            jar_info = next(
-                (asset for asset in release_info["assets"] if asset["name"] == "Lavalink.jar"),
-                None
-            )
+            try:
+                jar_info = next(
+                    (asset for asset in release_info["assets"] if asset["name"] == "Lavalink.jar"),
+                    None
+                )
+            except KeyError:
+                return
             jar_url = jar_info["browser_download_url"]
             async with self.bot.cs.get(jar_url) as jar:
                 with open("./Lavalink.jar", "wb") as f:
@@ -288,9 +291,24 @@ class Music(commands.Cog):
 
     def start_lavalink(self):
         def run_lavalink():
-            subprocess.run(["java", "-jar", "Lavalink.jar"], cwd="./")
-        thread = threading.Thread(target=run_lavalink, daemon=True)
-        thread.start()
+            try:
+                subprocess.run(["java", "-jar", "Lavalink.jar"], cwd="./")
+            except FileNotFoundError as e:
+                logging.error(f"Java is not installed or not in PATH: {e}")
+                print(f"Java is not installed or not in PATH: {e}")
+                raise e
+            except subprocess.CalledProcessError as e:
+                logging.error(f"Error starting Lavalink: {e}")
+                print(f"Error starting Lavalink: {e}")
+                raise e
+            except Exception as e:
+                logging.error(f"An error occured when starting Lavalink: {e}")
+                print(f"An error occured when starting Lavalink: {e}")
+        try:
+            thread = threading.Thread(target=run_lavalink, daemon=True)
+            thread.start()
+        except Exception as e:
+            pass
 
     async def cog_check(self, ctx: commands.Context) -> bool:
         embed = Embeds.error_embed("")
@@ -315,8 +333,11 @@ class Music(commands.Cog):
         except wavelink.InvalidNodeException:
             node = Node(uri=LAVA_URI, password=LAVA_PW, heartbeat=5.0, inactive_player_timeout=None)
             await Pool.close()
-            await Pool.connect(client=self.bot, nodes=[node])
-            print(f"Connected to \"{node.uri}\"")
+            try:
+                await Pool.connect(client=self.bot, nodes=[node])
+                print(f"Connected to \"{node.uri}\"")
+            except wavelink.NodeException:
+                node = Node(uri=BACKUP_LL, password=BACKUP_LL_PW, heartbeat=5.0, inactive_player_timeout=None)
 
     @staticmethod
     def _is_connected(ctx: commands.Context) -> bool:
