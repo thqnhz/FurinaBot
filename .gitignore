@@ -9,4 +9,4 @@
 /config.*
 /logs
 /plugins
-/Lavalink.jar
+/Lavalink*.jar

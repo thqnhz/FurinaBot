@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+
+from pathlib import Path
 import asyncio, discord, logging, subprocess, textwrap, threading, wavelink
 from discord.ext import commands
-from discord import app_commands, ui, Color, ButtonStyle, Embed, Message
-from typing import TYPE_CHECKING, List, cast
+from discord import app_commands, ui, Color, ButtonStyle, Embed, Interaction, Message
+from typing import TYPE_CHECKING, List, Union, cast
 from wavelink import (Player, Playable, Playlist, TrackSource, TrackStartEventPayload, QueueMode,
                       TrackEndEventPayload, TrackExceptionEventPayload, AutoPlayMode, Node, Pool)
 from youtube_search import YoutubeSearch
 
 
+from bot import FurinaCtx
 from _classes.views import PaginatedView
 from settings import *
 
@@ -23,27 +26,6 @@ class FooterEmbed(Embed):
 
 
 class Embeds:
-    @staticmethod
-    def loading_embed() -> Embed:
-        return FooterEmbed(color=Color.blue()).set_author(name="Loading...")
-    
-    @staticmethod
-    def invalid_embed() -> Embed:
-        return FooterEmbed(title="Error",
-                           description="The track is more than 2 hours or is a livestream. Please choose another one.",
-                           color=Color.red())
-    
-    @staticmethod
-    def added_embed(track: Playable, player: Player) -> Embed:
-        """Embed phản hồi khi được thêm vào danh sách phát."""
-        embed = FooterEmbed(title="Added to queue", color=Color.green())
-        embed.description = f"### Track: [{track}]({track.uri}) ({format_len(track.length)})"
-        embed.set_author(name=track.author)
-        embed.set_image(url=track.artwork)
-        if player.queue.count > 0:
-            embed.add_field(name="Number in queue", value=player.queue.count)
-        return embed
-
     @staticmethod
     def nowplaying_embed(player: Player) -> Embed:
         """Embed phản hồi cho lệnh nowplaying"""
@@ -60,125 +42,133 @@ class Embeds:
     def error_embed(error: str) -> Embed:
         return FooterEmbed(title="Error", description=error)
 
+
+
+class TrackUtils:
+    """Some utilities for `wavelink.Playable`"""
+    def __init__(self, track: Playable) -> None:
+        self.__track = track
+    
+    @property
+    def formatted_len(self) -> str:
+        """Convert track len from `ms` to `mm:ss` format"""
+        minutes, seconds = divmod(self.__track.length // 1000, 60)
+        return f"{minutes:02d}:{seconds:02d}"
+    
+    @property
+    def shortened_name(self) -> str:
+        """Shorten the track name to 50 characters long"""
+        return textwrap.shorten(self.__track.title, width=50, break_long_words=False, placeholder="...")
+    
+
+class PlayerUtils:
     @staticmethod
-    def player_embed(track: Playable) -> Embed:
-        embed = FooterEmbed(title=f"Playing: **{track}**", url = track.uri)
-        embed.set_author(name=track.author, icon_url=PLAYING_GIF)
-        embed.set_thumbnail(url=track.artwork)
-        return embed
-
-
-def format_len(length: int) -> str:
-    """Chuyển đổi độ dài track sang dạng `phút:giây`"""
-    minutes, seconds = divmod(length // 1000, 60)
-    return f"{minutes:02d}:{seconds:02d}"
-
-def shorten_name(track: Playable) -> str:
-    """Rút gọn tên track xuống còn 50 ký tự."""
-    return textwrap.shorten(track.title, width=50, break_long_words=False, placeholder="...")
-
-def is_valid(track: Playable, player: Player = None) -> bool:
-    """Kiểm tra xem track có hợp lệ để phát hay không."""
-    if player and track in player.queue:
-        return False
-    return True
-
-async def ensure_voice_connection(ctx: commands.Context | discord.Interaction) -> Player:
-    try:
-        if ctx.guild.voice_client:
-            return cast(Player, ctx.guild.voice_client)
-        elif isinstance(ctx, commands.Context):
-            return await ctx.author.voice.channel.connect(cls=Player, self_deaf=True)
+    async def __search_for_tracks(*, query: str, source: TrackSource = None) -> wavelink.Search:
+        if "https://" not in query:
+            ytsearch = YoutubeSearch(query, 1).to_dict()[0]
+            query = f"https://youtu.be/{ytsearch['id']}"
+            return await Playable.search(query)
         else:
-            interaction = ctx
-            return await interaction.user.voice.channel.connect(cls=Player, self_deaf=True)
-    except wavelink.exceptions.ChannelTimeoutException:
-        await ctx.channel.send("Bot không kết nối được với kênh thoại...", delete_after=10.0)
+            return await Playable.search(query, source=source)
 
-async def add_to_queue(ctx: commands.Context | discord.Interaction, data: Playlist | Playable):
-    msg = await loading_embed_reply(ctx)
-    player = await ensure_voice_connection(ctx)
-    while not player:
-        player = await ensure_voice_connection(ctx)
+    async def play(self, ctx: Union[FurinaCtx, Interaction], query: str, source: TrackSource = None) -> None:
+        self.__ctx = ctx
+        await self.__ctx.tick()
+        await self.__ctx.defer()
 
+        self.__searched = await self.__search_for_tracks(query=query, source=source)
+        if not self.__searched:
+            embed = self.__ctx.embed
+            embed.title = "Cannot find any tracks with the given query"
+            embed.color = Color.red()
+            await self.__ctx.reply(embed=embed)
+        
+        await self.__add_to_queue()
 
-    # Kiểm tra xem bot có đang ở trong StageChannel không để có thể request to speak
-    if isinstance(player.channel, discord.StageChannel):
-        await player.channel.guild.me.edit(suppress=False)
+    async def __add_to_queue(self) -> None:
+        embed = self.__ctx.embed
+        embed.color = Color.blue()
+        embed.set_author(name="Loading...")
+        if isinstance(self.__ctx, Interaction):
+            interaction = self.__ctx
+            msg = await interaction.edit_original_response(embed=embed, view=None)
+        else:
+            msg = await self.__ctx.reply(embed=embed, view=None)
+        self.__player = await self.ensure_voice_connection()
 
-    async with ctx.channel.typing():
-        if isinstance(data, Playlist):
-            embeds = await put_a_playlist(playlist=data, player=player)
+        # If the bot is in a StageChannel, request to speak
+        if isinstance(self.__player.channel, discord.StageChannel):
+            await self.__player.channel.guild.me.edit(suppress=False)
+        
+        if isinstance(self.__searched, Playlist):
+            embeds = await self.__add_playlist()
             view = PaginatedView(timeout=180, embeds=embeds)
             embed = embeds[0]
         else:
-            embed = await put_a_song(track=data, player=player)
             view = None
-
+            embed = await self.__add_song()
         await msg.edit(embed=embed, view=view)
 
-async def loading_embed_reply(ctx: commands.Context | discord.Interaction) -> Message:
-    """Reply lệnh với `LoadingEmbed` và trả về `Message`"""
-    if isinstance(ctx, discord.Interaction):
-        interaction = ctx
-        return await interaction.edit_original_response(embed=Embeds.loading_embed(), view=None)
-    else:
-        return await ctx.reply(embed=Embeds.loading_embed(), view=None)
+    async def __add_playlist(self) -> List[Embed]:
+        self.__searched = cast(Playlist, self.__searched)
+        track_added: int = 0
+        track_skipped: int = 0
+        embed = self.__ctx.embed
+        embed.description = ""
+        embeds = []
+        for track in self.__searched.tracks:
+            if not track.is_stream:
+                embed.description += f"- Added `{track}` to the queue\n"
+                await self.__player.queue.put_wait(track)
+                track_added += 1
+            else:
+                embed.description += f"- Skipped `{track}`\n"
+                track_skipped += 1
 
-async def put_a_song(*, track: Playable, player: Player) -> Embed:
-    """Thêm một track vào hàng chờ."""
-    if not is_valid(track):
-        return Embeds.invalid_embed()
-    await player.queue.put_wait(track)
+            if (track_added + track_skipped) % 10 == 0: # Pagination
+                embeds.append(embed)
+                embed = self.__ctx.embed
+                embed.description =  ""
 
-    if not player.playing:
-        await player.play(player.queue.get(), populate=True)
-    return Embeds.added_embed(track=track, player=player)
-
-async def put_a_playlist(*, playlist: Playlist, player: Player) -> Embed:
-    """Thêm một playlist vào hàng chờ."""
-    track_added: int = 0
-    track_skipped: int = 0
-    embed = FooterEmbed(description="")
-    embeds = []
-    for track in playlist.tracks:
-        if is_valid(track):
-            embed.description += f"- Đã thêm `{track}` vào hàng chờ\n"
-            await player.queue.put_wait(track)
-            track_added += 1
-        else:
-            embed.description += f"- Đã bỏ qua `{track}`\n"
-            track_skipped += 1
-
-        if (track_added + track_skipped) % 10 == 0: # Phân trang
+        if embed.description != "":
             embeds.append(embed)
-            embed = FooterEmbed(description="")
-    if embed.description != "":
-        embeds.append(embed)
-            
-    for embed in embeds:
-        embed.title = f"Đã thêm {track_added}, bỏ qua {track_skipped} trên tổng số {len(playlist.tracks)} track"
-    if not player.playing:
-        await player.play(player.queue.get(), populate=True)
-    return embeds
+                
+        for embed in embeds:
+            embed.title = f"Added {track_added}, skipped {track_skipped} out of {len(self.__searched.tracks)} tracks"
+        if not self.__player.playing:
+            await self.__player.play(self.__player.queue.get(), populate=True)
+        return embeds
 
-async def play_music(ctx: commands.Context, track_name: str, source: TrackSource | str = None):
-    if not ctx.interaction:
-        await ctx.message.add_reaction(CHECKMARK)
-    tracks = await search_for_tracks(track_name=track_name, source=source)
-    if not tracks:
-        return await ctx.reply(embed=Embeds.error_embed(f"Không tìm thấy kết quả nào cho `{track_name}`"))
-    if isinstance(tracks, Playlist):
-        return await add_to_queue(ctx, tracks)
-    await add_to_queue(ctx, tracks[0])
+    async def __add_song(self) -> Embed:
+        self.__searched = cast(List[Playable], self.__searched)
+        track = self.__searched[0]
+        embed = self.__ctx.embed
+        if track.is_stream:
+            embed.title = "Cannot play a livestream"
+            embed.color = Color.red()
+            return embed
+        await self.__player.queue.put_wait(track)
 
-async def search_for_tracks(track_name: str, source: TrackSource | str = None) -> wavelink.Search:
-    if "https://" not in track_name:
-        ytsearch = YoutubeSearch(track_name, 1).to_dict()[0]
-        track_name = f"https://youtu.be/{ytsearch['id']}"
-        return await Playable.search(track_name)
-    else:
-        return await Playable.search(track_name, source=source)
+        if not self.__player.playing:
+            await self.__player.play(self.__player.queue.get(), populate=True)
+        embed.title = "Added to queue"
+        embed.color = Color.green()
+        embed.description = f"### Track: [{track}]({track.uri}) ({TrackUtils(track).formatted_len})"
+        embed.set_author(name=track.author)
+        embed.set_image(url=track.artwork)
+        if self.__player.queue.count > 0:
+            embed.add_field(name="Number in queue", value=self.__player.queue.count)
+        return embed
+
+    async def ensure_voice_connection(self, ctx: FurinaCtx = None) -> Player:
+        ctx = ctx or self.__ctx
+        try:
+            if ctx.guild.voice_client:
+                return cast(Player, self.__ctx.guild.voice_client)
+            channel = ctx.author.voice.channel if isinstance(ctx, FurinaCtx) else ctx.user.voice.channel
+            return await channel.connect(cls=Player, self_deaf=True)
+        except wavelink.exceptions.ChannelTimeoutException:
+            await ctx.channel.send("Bot cannot connect to the channel...", delete_after=10.0)
 
 
 class SelectTrackView(ui.View):
@@ -268,31 +258,43 @@ class Music(commands.Cog):
         self.webhook = discord.SyncWebhook.from_url(MUSIC_WEBHOOK)
 
     async def cog_load(self) -> None:
-        await self.get_lavalink_jar()
-        self.start_lavalink()
+        version = await self.get_lavalink_jar()
+        self.start_lavalink(version)
         await asyncio.sleep(10)
         await self.refresh_node_connection()
 
-    async def get_lavalink_jar(self) -> None:
+    async def get_lavalink_jar(self) -> str:
         async with self.bot.cs.get("https://api.github.com/repos/lavalink-devs/Lavalink/releases/latest") as response:
             release_info = await response.json()
+        try:
+            jar_info = next(
+                (asset for asset in release_info["assets"] if asset["name"] == "Lavalink.jar"),
+                None
+            )
+            version_info = release_info["tag_name"]
+        except KeyError:
+            return
+        ll_path = Path(f"Lavalink-{version_info}.jar")
+        if ll_path.exists():
+            logging.info(f"Lavalink.jar is up-to-date (v{version_info}). Skipping download...")
+        else:
             try:
-                jar_info = next(
-                    (asset for asset in release_info["assets"] if asset["name"] == "Lavalink.jar"),
-                    None
-                )
-            except KeyError:
-                return
+                file = [file for file in os.listdir() if (file.startswith("Lavalink-") and file.endswith(".jar"))]
+                os.remove(file[0])
+            except IndexError:
+                pass
+            logging.info("Deleted outdated Lavalink.jar file. Downloading new version...")
             jar_url = jar_info["browser_download_url"]
             async with self.bot.cs.get(jar_url) as jar:
-                with open("./Lavalink.jar", "wb") as f:
+                with open(f"./Lavalink-{version_info}.jar", "wb") as f:
                     f.write(await jar.read())
-                    logging.info("Lavalink.jar downloaded")
-
-    def start_lavalink(self):
+                    logging.info(f"Successfully downloaded Lavalink.jar (v{version_info})")
+        return version_info
+            
+    def start_lavalink(self, version: str):
         def run_lavalink():
             try:
-                subprocess.run(["java", "-jar", "Lavalink.jar"], cwd="./")
+                subprocess.run(["java", "-jar", f"Lavalink-{version}.jar"], cwd="./")
             except FileNotFoundError as e:
                 logging.error(f"Java is not installed or not in PATH: {e}")
                 print(f"Java is not installed or not in PATH: {e}")
@@ -310,19 +312,21 @@ class Music(commands.Cog):
         except Exception as e:
             pass
 
-    async def cog_check(self, ctx: commands.Context) -> bool:
-        embed = Embeds.error_embed("")
+    async def cog_check(self, ctx: FurinaCtx) -> bool:
+        embed = ctx.embed
+        embed.color = Color.red()
+        embed.title = "Error"
         if not self._is_connected(ctx):
-            embed.description = "Bạn cần tham gia kênh thoại để sử dụng lệnh"
+            embed.description = "You need to join a voice channel to use this"
             await ctx.reply(embed=embed, ephemeral=True, delete_after=10)
             return False
         if not self._is_in_music_channel(ctx):
-            embed.description = f"Lệnh này chỉ có thể dùng được ở <#{MUSIC_CHANNEL}>"
+            embed.description = f"This command can only be used in <#{MUSIC_CHANNEL}>"
             await ctx.reply(embed=embed, ephemeral=True, delete_after=10)
             return False
         if not self._is_in_same_channel(ctx):
-            embed.description = (f"Bạn và {ctx.me.mention} phải cùng ở một kênh thoại.\n"
-                                 f"{ctx.me.mention} đang ở kênh {ctx.guild.me.voice.channel.mention}")
+            embed.description = (f"You and {ctx.me.mention} are not in the same voice channel.\n"
+                                 f"{ctx.me.mention} is in {ctx.guild.me.voice.channel.mention}")
             await ctx.reply(embed=embed, ephemeral=True, delete_after=10)
             return False
         return True
@@ -340,20 +344,20 @@ class Music(commands.Cog):
                 node = Node(uri=BACKUP_LL, password=BACKUP_LL_PW, heartbeat=5.0, inactive_player_timeout=None)
 
     @staticmethod
-    def _is_connected(ctx: commands.Context) -> bool:
-        """Kiểm tra người dùng đã kết nối chưa."""
+    def _is_connected(ctx: FurinaCtx) -> bool:
+        """Whether the author is connected or not"""
         return ctx.author.voice is not None
 
     @staticmethod
-    def _is_in_music_channel(ctx: commands.Context) -> bool:
-        """Kiểm tra tin nhẵn có đang ở kênh lệnh bật nhạc không."""
+    def _is_in_music_channel(ctx: FurinaCtx) -> bool:
+        """Whether the command is executed in music channel or not"""
         return ctx.message.channel.id == MUSIC_CHANNEL
 
     @staticmethod
-    def _is_in_same_channel(ctx: commands.Context) -> bool:
-        """Kiểm tra xem bot và người dùng có ở cùng một kênh thoại hay không."""
+    def _is_in_same_channel(ctx: FurinaCtx) -> bool:
+        """Whether the bot is in the same voice channel with the author or not"""
         bot_connected = ctx.guild.me.voice
-        # Nếu bot không trong kênh thoại nào thì trả về True
+        # Bot not in voice channel, return True
         if not bot_connected:
             return True
         return bot_connected.channel.id == ctx.author.voice.channel.id
@@ -369,44 +373,48 @@ class Music(commands.Cog):
         if hasattr(player, "queue") and not player.queue.is_empty:
             await player.play(player.queue.get())
         else:
-            embed = FooterEmbed(title="Queue is empty")
+            embed = self.bot.embed
+            embed.title = "Queue is empty"
             self.webhook.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_wavelink_track_start(self, payload: TrackStartEventPayload):
-        """Xử lý khi bài hát bắt đầu."""
+        """Sends an embed notify the track started playing"""
         track: Playable = payload.track
-        embed = Embeds.player_embed(track=track)
+        embed = self.bot.embed
+        embed.title = f"Playing: **{track}**"
+        embed.url = track.uri
+        embed.set_author(name=track.author, icon_url=PLAYING_GIF)
+        embed.set_thumbnail(url=track.artwork)
         self.webhook.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_wavelink_track_exception(self, payload: TrackExceptionEventPayload):
-        """Xử lý khi track bị lỗi khi đang phát."""
-        embed = Embeds.error_embed(f"Có lỗi xuất hiện khi đang phát {payload.track.title}\n"
-                                   f"Chi tiết lỗi:\n"
+        """Sends an embed notify an exception occured while playing"""
+        embed = Embeds.error_embed(f"An error occured while playing {payload.track.title}\n"
+                                   f"Detailed error:\n"
                                    f"```\n"
                                    f"{payload.exception}\n"
                                    f"```")
+        logging.exception(f"An error occured while playing {payload.track}\n{payload.exception}")
         self.webhook.send(embed=embed)
 
     @staticmethod
-    def _get_player(ctx: commands.Context) -> Player:
-        """Lấy `wavelink.Player` từ ctx."""
+    def _get_player(ctx: FurinaCtx) -> Player:
+        """Get `wavelink.Player` from ctx"""
         return cast(Player, ctx.guild.voice_client)
 
-    @commands.hybrid_group(name='play', aliases=['p'], description="Phát một bài hát")
-    async def play_command(self, ctx: commands.Context, *, query: str):
+    @commands.hybrid_group(name='play', aliases=['p'], description="Play music")
+    async def play_command(self, ctx: FurinaCtx, *, query: str):
         """
-        Phát một bài hát từ YouTube. Prefix only
+        Play music from YouTube. Prefix only
 
         Parameters
         -----------
-        ctx: commands.Context
-            Context
         query: str
-            Tên bài hát hoặc link dẫn đến bài hát
+            - Name or link to the music
         """
-        await play_music(ctx, query)
+        await PlayerUtils().play(ctx, query)
 
     @play_command.command(name='youtube', aliases=['yt'], description="Phát một bài hát từ YouTube")
     async def play_yt_command(self, ctx: commands.Context, *, query: str):
@@ -420,7 +428,7 @@ class Music(commands.Cog):
         query: str
             Tên bài hát hoặc link dẫn đến bài hát
         """
-        await play_music(ctx, query)
+        await PlayerUtils().play(ctx, query)
 
     @play_command.command(name='youtubemusic', aliases=['ytm'], description="Phát một bài hát từ YouTube Music")
     async def play_ytm_command(self, ctx: commands.Context, *, query: str):
@@ -434,7 +442,7 @@ class Music(commands.Cog):
         query: str
             Tên bài hát hoặc link dẫn đến bài hát
         """
-        await play_music(ctx, query, TrackSource.YouTubeMusic)
+        await PlayerUtils().play(ctx, query, TrackSource.YouTubeMusic)
 
     @play_command.command(name='soundcloud', aliases=['sc'], description="Phát một bài hát từ SoundCloud")
     async def play_sc_command(self, ctx: commands.Context, *, query: str):
@@ -448,7 +456,7 @@ class Music(commands.Cog):
         query: str
             Tên bài hát hoặc link dẫn đến bài hát
         """
-        await play_music(ctx, query, TrackSource.SoundCloud)
+        await PlayerUtils.play(ctx, query, TrackSource.SoundCloud)
 
     @commands.hybrid_command(name='search', aliases=['s'], description="Tìm kiếm một bài hát.")
     async def search_command(self, ctx: commands.Context, *, query: str):
@@ -572,7 +580,7 @@ class Music(commands.Cog):
         queue_embeds: list[Embed] = []
         q: str = ""
         for i, track in enumerate(player.queue, 1):
-            q += f"{i}. [**{track}**](<{track.uri}>) ({format_len(track.length)})\n"
+            q += f"{i}. [**{track}**](<{track.uri}>) ({TrackUtils(track).formatted_len})\n"
             if i % 10 == 0:
                 embed: Embed = self._create_queue_embed(player, q)
                 queue_embeds.append(embed)
@@ -590,7 +598,7 @@ class Music(commands.Cog):
             track = player.current
             embed.add_field(
                 name="Đang phát",
-                value=f"[**{track}**](<{track.uri}>) ({format_len(track.length)})"
+                value=f"[**{track}**](<{track.uri}>) ({TrackUtils(track).formatted_len})"
                 )
         return embed
 
@@ -638,7 +646,7 @@ class Music(commands.Cog):
     @commands.hybrid_command(name='connect', aliases=['j', 'join'], description="Kết nối bot vào kênh thoại")
     async def connect_command(self, ctx: commands.Context):
         """Gọi bot vào kênh thoại"""
-        player: Player = await ensure_voice_connection(ctx)
+        player: Player = await PlayerUtils().ensure_voice_connection(ctx)
         embed = FooterEmbed(title="— Đã kết nối!", description=f"Đã vào kênh {player.channel.mention}.")
         await ctx.reply(embed=embed)
 

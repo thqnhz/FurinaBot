@@ -46,7 +46,7 @@ plugins:
 lavalink:
   plugins:
     - dependency: "com.github.topi314.lavasrc:lavasrc-plugin:4.3.0"
-    - dependency: "dev.lavalink.youtube:youtube-plugin:1.11.4"
+    - dependency: "dev.lavalink.youtube:youtube-plugin:1.11.5"
       snapshot: false # Set to true if you want to use a snapshot version.
 #    - dependency: "me.duncte123.java-lyrics-plugin:lavalyrics:1.6.5"
 #    - dependency: "me.duncte123:java-lyrics-plugin:1.6.5"
