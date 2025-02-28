@@ -1,11 +1,18 @@
 from __future__ import annotations
 
 
+import asyncio
+import logging
+import subprocess
+import textwrap
+import threading
 from pathlib import Path
-import asyncio, discord, logging, subprocess, textwrap, threading, wavelink
-from discord.ext import commands
-from discord import app_commands, ui, Color, ButtonStyle, Embed, Interaction, Message
 from typing import TYPE_CHECKING, List, Union, cast
+
+
+import discord, wavelink
+from discord import app_commands, ui, Color, ButtonStyle, Embed, Interaction, Message
+from discord.ext import commands
 from wavelink import (Player, Playable, Playlist, TrackSource, TrackStartEventPayload, QueueMode,
                       TrackEndEventPayload, TrackExceptionEventPayload, AutoPlayMode, Node, Pool)
 from youtube_search import YoutubeSearch
@@ -27,18 +34,6 @@ class FooterEmbed(Embed):
 
 class Embeds:
     @staticmethod
-    def nowplaying_embed(player: Player) -> Embed:
-        """Embed phản hồi cho lệnh nowplaying"""
-        current = player.current
-        embed = FooterEmbed(title=f"Now Playing", description=f"### [{current}]({current.uri})\n", color=Color.blue())
-        embed.set_author(icon_url=PLAYING_GIF, name=current.author)
-        embed.set_image(url=current.artwork)
-        played = int((player.position / current.length) * 20)
-        embed.description += ('▰'*played + '▱'*(20-played))
-        embed.description += f"\n`{format_len(player.position)} / {format_len(current.length)}`"
-        return embed
-
-    @staticmethod
     def error_embed(error: str) -> Embed:
         return FooterEmbed(title="Error", description=error)
 
@@ -48,12 +43,16 @@ class TrackUtils:
     """Some utilities for `wavelink.Playable`"""
     def __init__(self, track: Playable) -> None:
         self.__track = track
+
+    @staticmethod
+    def format_len(length: int) -> str:
+        minutes, seconds = divmod(length // 1000, 60)
+        return f"{minutes:02d}:{seconds:02d}"
     
     @property
     def formatted_len(self) -> str:
         """Convert track len from `ms` to `mm:ss` format"""
-        minutes, seconds = divmod(self.__track.length // 1000, 60)
-        return f"{minutes:02d}:{seconds:02d}"
+        return self.format_len(self.__track.length)
     
     @property
     def shortened_name(self) -> str:
@@ -62,6 +61,10 @@ class TrackUtils:
     
 
 class PlayerUtils:
+    @property
+    def __embed(self):
+        return self.__ctx.embed if isinstance(self.__ctx, FurinaCtx) else self.__ctx.client.embed
+    
     @staticmethod
     async def __search_for_tracks(*, query: str, source: TrackSource = None) -> wavelink.Search:
         if "https://" not in query:
@@ -73,12 +76,18 @@ class PlayerUtils:
 
     async def play(self, ctx: Union[FurinaCtx, Interaction], query: str, source: TrackSource = None) -> None:
         self.__ctx = ctx
-        await self.__ctx.tick()
-        await self.__ctx.defer()
+        if isinstance(ctx, Interaction):
+            try:
+                await self.__ctx.response.defer()
+            except discord.errors.InteractionResponded:
+                pass
+        else:
+            await self.__ctx.tick()
+        
 
         self.__searched = await self.__search_for_tracks(query=query, source=source)
         if not self.__searched:
-            embed = self.__ctx.embed
+            embed = self.__embed
             embed.title = "Cannot find any tracks with the given query"
             embed.color = Color.red()
             await self.__ctx.reply(embed=embed)
@@ -86,7 +95,7 @@ class PlayerUtils:
         await self.__add_to_queue()
 
     async def __add_to_queue(self) -> None:
-        embed = self.__ctx.embed
+        embed = self.__embed
         embed.color = Color.blue()
         embed.set_author(name="Loading...")
         if isinstance(self.__ctx, Interaction):
@@ -113,7 +122,7 @@ class PlayerUtils:
         self.__searched = cast(Playlist, self.__searched)
         track_added: int = 0
         track_skipped: int = 0
-        embed = self.__ctx.embed
+        embed = self.__embed
         embed.description = ""
         embeds = []
         for track in self.__searched.tracks:
@@ -127,7 +136,7 @@ class PlayerUtils:
 
             if (track_added + track_skipped) % 10 == 0: # Pagination
                 embeds.append(embed)
-                embed = self.__ctx.embed
+                embed = self.__embed
                 embed.description =  ""
 
         if embed.description != "":
@@ -142,7 +151,7 @@ class PlayerUtils:
     async def __add_song(self) -> Embed:
         self.__searched = cast(List[Playable], self.__searched)
         track = self.__searched[0]
-        embed = self.__ctx.embed
+        embed = self.__embed
         if track.is_stream:
             embed.title = "Cannot play a livestream"
             embed.color = Color.red()
@@ -195,17 +204,18 @@ class SelectTrack(ui.Select):
         self.tracks = tracks
 
         for i, track in enumerate(tracks):
+            track = TrackUtils(track)
             self.options.append(
                 discord.SelectOption(
-                    label=f"{shorten_name(track)} ({format_len(track.length)})",
+                    label=f"{track.shortened_name} ({track.formatted_len})",
                     value=str(i)
                 )
             )
 
-    async def callback(self, interaction: discord.Interaction) -> None:
+    async def callback(self, interaction: Interaction) -> None:
         await interaction.response.defer()
         self.view.message = None
-        await add_to_queue(interaction, self.tracks[int(self.values[0])])
+        await PlayerUtils().play(interaction, self.tracks[int(self.values[0])].uri)
 
 
 class LoopView(ui.View):
@@ -220,19 +230,19 @@ class LoopView(ui.View):
             self.loop_all.style = ButtonStyle.green
 
     @ui.button(emoji="\U0000274e", style=ButtonStyle.grey)
-    async def loop_off(self, interaction: discord.Interaction, button: ui.Button):
+    async def loop_off(self, interaction: Interaction, button: ui.Button):
         await interaction.response.defer()
         self.player.queue.mode = QueueMode.normal
         await self.mass_button_style_change(button)
 
     @ui.button(emoji="\U0001f502", style=ButtonStyle.grey)
-    async def loop_current(self, interaction: discord.Interaction, button: ui.Button):
+    async def loop_current(self, interaction: Interaction, button: ui.Button):
         await interaction.response.defer()
         self.player.queue.mode = QueueMode.loop_all
         await self.mass_button_style_change(button)
 
     @ui.button(emoji="\U0001f501", style=ButtonStyle.grey)
-    async def loop_all(self, interaction: discord.Interaction, button: ui.Button):
+    async def loop_all(self, interaction: Interaction, button: ui.Button):
         await interaction.response.defer()
         self.player.queue.mode = QueueMode.loop
         await self.mass_button_style_change(button)
@@ -417,56 +427,48 @@ class Music(commands.Cog):
         await PlayerUtils().play(ctx, query)
 
     @play_command.command(name='youtube', aliases=['yt'], description="Phát một bài hát từ YouTube")
-    async def play_yt_command(self, ctx: commands.Context, *, query: str):
+    async def play_yt_command(self, ctx: FurinaCtx, *, query: str):
         """
         Phát một bài hát từ YouTube
 
         Parameters
         -----------
-        ctx: commands.Context
-            Context
         query: str
             Tên bài hát hoặc link dẫn đến bài hát
         """
         await PlayerUtils().play(ctx, query)
 
     @play_command.command(name='youtubemusic', aliases=['ytm'], description="Phát một bài hát từ YouTube Music")
-    async def play_ytm_command(self, ctx: commands.Context, *, query: str):
+    async def play_ytm_command(self, ctx: FurinaCtx, *, query: str):
         """
         Phát một bài hát từ YouTube Music
 
         Parameters
         -----------
-        ctx: commands.Context
-            Context
         query: str
             Tên bài hát hoặc link dẫn đến bài hát
         """
         await PlayerUtils().play(ctx, query, TrackSource.YouTubeMusic)
 
     @play_command.command(name='soundcloud', aliases=['sc'], description="Phát một bài hát từ SoundCloud")
-    async def play_sc_command(self, ctx: commands.Context, *, query: str):
+    async def play_sc_command(self, ctx: FurinaCtx, *, query: str):
         """
         Phát một bài hát từ SoundCloud
 
         Parameters
         -----------
-        ctx: commands.Context
-            Context
         query: str
             Tên bài hát hoặc link dẫn đến bài hát
         """
         await PlayerUtils.play(ctx, query, TrackSource.SoundCloud)
 
     @commands.hybrid_command(name='search', aliases=['s'], description="Tìm kiếm một bài hát.")
-    async def search_command(self, ctx: commands.Context, *, query: str):
+    async def search_command(self, ctx: FurinaCtx, *, query: str):
         """
         Tìm kiếm một bài hát.
 
         Parameters
         -----------
-        ctx
-            commands.Context
         query
             Tên bài hát cần tìm
         """
@@ -491,7 +493,7 @@ class Music(commands.Cog):
             await msg.edit(embed=FooterEmbed(title=f"Kết quả tìm kiếm cho `{query}`"), view=view)
 
     @commands.hybrid_command(name='pause', description="Tạm dừng việc phát nhạc")
-    async def pause_command(self, ctx: commands.Context) -> None:
+    async def pause_command(self, ctx: FurinaCtx) -> None:
         """Tạm dừng việc phát nhạc."""
         player: Player = self._get_player(ctx)
         await player.pause(True)
@@ -499,7 +501,7 @@ class Music(commands.Cog):
         await ctx.reply(embed=embed)
 
     @commands.hybrid_command(name='resume', description="Tiếp tục việc phát nhạc")
-    async def resume_command(self, ctx: commands.Context) -> None:
+    async def resume_command(self, ctx: FurinaCtx) -> None:
         """Tiếp tục việc phát nhạc."""
         player: Player = self._get_player(ctx)
         await player.pause(False)
@@ -507,7 +509,7 @@ class Music(commands.Cog):
         await ctx.reply(embed=embed)
 
     @commands.hybrid_group(name='autoplay', aliases=['auto'], description="Bật hoặc tắt tự động phát.")
-    async def autoplay_switch(self, ctx: commands.Context):
+    async def autoplay_switch(self, ctx: FurinaCtx):
         """Bật hoặc tắt tự động phát."""
         player: Player = self._get_player(ctx)
         if player.autoplay == AutoPlayMode.disabled:
@@ -519,27 +521,37 @@ class Music(commands.Cog):
         await ctx.reply(embed=FooterEmbed().set_author(name=f"Đã {switch_to_mode} chế độ tự động phát"))
 
     @autoplay_switch.command(name='on', description="Bật tính năng tự động phát")
-    async def autoplay_on(self, ctx: commands.Context):
+    async def autoplay_on(self, ctx: FurinaCtx):
         """Bật tính năng tự động phát."""
         player: Player = self._get_player(ctx)
         player.autoplay = AutoPlayMode.enabled
         await ctx.reply(embed=FooterEmbed().set_author(name=f"Đã bật chế độ tự động phát"))
 
     @autoplay_switch.command(name='off', description="Tắt tính năng tự động phát")
-    async def autoplay_off(self, ctx: commands.Context):
+    async def autoplay_off(self, ctx: FurinaCtx):
         """Tắt tính năng tự động phát."""
         player: Player = self._get_player(ctx)
         player.autoplay = AutoPlayMode.disabled
         await ctx.reply(embed=FooterEmbed().set_author(name=f"Đã tắt chế độ tự động phát"))
 
     @commands.hybrid_command(name='nowplaying', aliases=['np', 'now', 'current'], description="Đang phát bài gì thế?")
-    async def nowplaying_command(self, ctx: commands.Context):
+    async def nowplaying_command(self, ctx: FurinaCtx):
         """Xem bài hát đang phát."""
         player: Player = self._get_player(ctx)
-        await ctx.reply(embed=Embeds.nowplaying_embed(player))
+        current = player.current
+        embed = ctx.embed
+        embed.title=f"Now Playing"
+        embed.description=f"### [{current}]({current.uri})\n"
+        embed.color=Color.blue()
+        embed.set_author(icon_url=PLAYING_GIF, name=current.author)
+        embed.set_image(url=current.artwork)
+        played = int((player.position / current.length) * 20)
+        embed.description += ('▰'*played + '▱'*(20-played))
+        embed.description += f"\n`{TrackUtils.format_len(player.position)} / {TrackUtils(current).formatted_len}`"
+        await ctx.reply(embed=embed)
 
     @commands.hybrid_command(name='skip', description="Bỏ qua bài hát hiện tại.")
-    async def skip_command(self, ctx: commands.Context):
+    async def skip_command(self, ctx: FurinaCtx):
         """Bỏ qua bài hát hiện tại."""
         player: Player = self._get_player(ctx)
         track = player.current
@@ -551,7 +563,7 @@ class Music(commands.Cog):
         await ctx.reply(embed=embed)
 
     @commands.hybrid_command(name='stop', description="Dừng phát nhạc và xóa hàng chờ")
-    async def stop_playing(self, ctx: commands.Context):
+    async def stop_playing(self, ctx: FurinaCtx):
         """Tạm dừng phát nhạc và xóa hàng chờ."""
         player: Player = self._get_player(ctx)
         player.queue.clear()
@@ -561,18 +573,18 @@ class Music(commands.Cog):
         await ctx.reply(embed=embed)
 
     @commands.hybrid_command(name='queue', aliases=['q'], description="Xem chi tiết hàng chờ.")
-    async def queue_command(self, ctx: commands.Context):
+    async def queue_command(self, ctx: FurinaCtx):
         """Show hàng chờ."""
         await self._show_queue(ctx)
 
-    async def _show_queue(self, ctx: commands.Context):
+    async def _show_queue(self, ctx: FurinaCtx):
         embeds: list[Embed] | Embed = self._queue_embeds(ctx)
         if isinstance(embeds, Embed):
             return await ctx.reply(embed=embeds)
         view = PaginatedView(timeout=60, embeds=embeds)
         view.message = await ctx.reply(embed=embeds[0], view=view)
 
-    def _queue_embeds(self, ctx: commands.Context) -> list[Embed] | Embed:
+    def _queue_embeds(self, ctx: FurinaCtx) -> list[Embed] | Embed:
         player: Player = self._get_player(ctx)
         if player.queue.is_empty:
             embed: Embed = FooterEmbed(title="Hàng chờ trống!")
@@ -603,14 +615,12 @@ class Music(commands.Cog):
         return embed
 
     @app_commands.command(name='remove', description="Xóa một bài hát khỏi hàng chờ")
-    async def remove_slashcommand(self, interaction: discord.Interaction, track_name: str):
+    async def remove_slashcommand(self, interaction: Interaction, track_name: str):
         """
         Xóa một bài hát khỏi hàng chờ.
 
         Parameters
         -----------
-        ctx
-            commands.Context
         track_name
             Tên bài hát cần xóa
         """
@@ -621,12 +631,12 @@ class Music(commands.Cog):
         await interaction.response.send_message(embed=Embed(title=f"Đã xóa {deleted} khỏi hàng chờ."))
 
     @remove_slashcommand.autocomplete("track_name")
-    async def remove_slashcommand_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice]:
+    async def remove_slashcommand_autocomplete(self, interaction: Interaction, current: str) -> List[app_commands.Choice]:
         player: Player = self._get_player(interaction)
         return [app_commands.Choice(name=track.title, value=track.title) for track in player.queue if current.lower() in track.title.lower()][:25]
     
     @commands.command(name='remove', aliases=['rm', 'delete'], description="Xóa một bài hát khỏi hàng chờ")
-    async def remove_prefixcommand(self, ctx: commands.Context):
+    async def remove_prefixcommand(self, ctx: FurinaCtx):
         player: Player = self._get_player(ctx)
         if player.queue.is_empty:
             return
@@ -638,26 +648,22 @@ class Music(commands.Cog):
 
 
     @commands.hybrid_command(name='loop', aliases=['repeat'], description="Chuyển đổi giữa các chế độ lặp")
-    async def loop_command(self, ctx: commands.Context) -> None:
+    async def loop_command(self, ctx: FurinaCtx) -> None:
         player: Player = self._get_player(ctx)
         view = LoopView(player=player)
         view.message = await ctx.reply(view=view)
 
     @commands.hybrid_command(name='connect', aliases=['j', 'join'], description="Kết nối bot vào kênh thoại")
-    async def connect_command(self, ctx: commands.Context):
+    async def connect_command(self, ctx: FurinaCtx):
         """Gọi bot vào kênh thoại"""
-        player: Player = await PlayerUtils().ensure_voice_connection(ctx)
-        embed = FooterEmbed(title="— Đã kết nối!", description=f"Đã vào kênh {player.channel.mention}.")
-        await ctx.reply(embed=embed)
+        await PlayerUtils().ensure_voice_connection(ctx)
+        await ctx.tick()
 
     @commands.hybrid_command(name='disconnect', aliases=['dc', 'leave', 'l'], description="Ngắt kết nối bot khỏi kênh thoại")
-    async def disconnect_command(self, ctx: commands.Context):
+    async def disconnect_command(self, ctx: FurinaCtx):
         if ctx.voice_client:
-            embed = FooterEmbed(title="— Đã ngắt kết nối!", description=f"Đã rời kênh {ctx.voice_client.channel.mention}")
+            await ctx.tick()
             await ctx.voice_client.disconnect(force=True)
-        else:
-            embed = Embeds.error_embed("Bot không nằm trong kênh thoại nào.")
-        await ctx.reply(embed=embed)
 
 
 async def setup(bot: FurinaBot):
