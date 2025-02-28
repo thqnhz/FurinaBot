@@ -1,16 +1,20 @@
 from __future__ import annotations
 
-import discord, io, subprocess
+import io
+from typing import Optional, Tuple, TYPE_CHECKING
+
+
+import discord
 from discord.ext import commands
 from discord import app_commands, Embed, Color
-from typing import TYPE_CHECKING, Optional, Tuple
 
 
 from settings import *
 from _classes.embeds import *
 
+
 if TYPE_CHECKING:
-    from bot import Furina
+    from bot import FurinaBot
 
 
 class SendEmbedView(discord.ui.View):
@@ -31,7 +35,7 @@ class SendEmbedView(discord.ui.View):
 
 class Hidden(commands.Cog):
     """Hidden Commands"""
-    def __init__(self, bot: Furina):
+    def __init__(self, bot: FurinaBot):
         self.bot = bot
 
     @staticmethod
@@ -153,6 +157,6 @@ class Hidden(commands.Cog):
         await interaction.response.send_message(embed=embed, ephemeral=True, view=view)
 
 
-async def setup(bot: Furina):
+async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Hidden(bot))
 

@@ -8,7 +8,7 @@ import asqlite
 from aiohttp import ClientSession
 
 
-from bot import Furina
+from bot import FurinaBot
 from settings import TOKEN
        
 
@@ -66,7 +66,7 @@ async def main() -> None:
     delete_old_logs()
     handle_setup_logging()
     async with ClientSession() as client_session, asqlite.create_pool("config.db") as pool:
-        async with Furina(pool=pool, client_session=client_session) as bot:
+        async with FurinaBot(pool=pool, client_session=client_session) as bot:
             await bot.start(TOKEN)
 
 asyncio.run(main())

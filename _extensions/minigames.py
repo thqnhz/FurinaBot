@@ -6,13 +6,12 @@ from discord.ext import commands
 from enum import Enum
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 from collections import Counter
-from io import BytesIO
 
 from .utils import Utils
 
 
 if TYPE_CHECKING:
-    from bot import Furina
+    from bot import FurinaBot
 
 
 class RPSButton(discord.ui.Button):
@@ -248,7 +247,7 @@ WORDLE_EMOJIS: Dict[str, Dict[WordleLetterStatus, str]]
 
 class Wordle(discord.ui.View):
     ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-    def __init__(self, *, bot: Furina, word: str, owner: discord.User, solo: bool):
+    def __init__(self, *, bot: FurinaBot, word: str, owner: discord.User, solo: bool):
         super().__init__(timeout=None)
         self.word = word
         self.bot = bot
@@ -490,7 +489,7 @@ class WordleHelpGuessSelect(discord.ui.Select):
 
 class Minigames(commands.GroupCog, group_name="minigame"):
     """Các Minigame bạn có thể chơi"""
-    def __init__(self, bot: Furina):
+    def __init__(self, bot: FurinaBot):
         self.bot = bot
 
     async def cog_load(self) -> None:
@@ -588,5 +587,5 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         await interaction.followup.send(embed=view.embed, view=view)
 
 
-async def setup(bot: Furina):
+async def setup(bot: FurinaBot):
     await bot.add_cog(Minigames(bot))

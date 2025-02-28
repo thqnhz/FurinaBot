@@ -1,25 +1,30 @@
 from __future__ import annotations
 
-import discord, random
-from discord.ext import commands
+import random
 from typing import TYPE_CHECKING
 
 
-from _classes.embeds import *
+from discord import Message
+from discord.ext import commands
+
+
+from bot import FurinaCtx
+
 
 if TYPE_CHECKING:
-    from bot import Furina
+    from bot import FurinaBot
 
 
 class Fun(commands.Cog):
     """Funni Commands haha XD"""
-    def __init__(self, bot: Furina):
+    def __init__(self, bot: FurinaBot) -> None:
         self.bot = bot
 
     @commands.Cog.listener()
-    async def on_message(self, message: discord.Message) -> None:
+    async def on_message(self, message: Message) -> None:
         if message.author.bot:
             return
+        
         msg = message.content.lower()
         if any(_ in msg for _ in ["viettel", "vietteo", "vitteo", "mạng 7 chữ",
                                   "vnpt", "vienpiti", "vê en pê tê",
@@ -66,15 +71,14 @@ class Fun(commands.Cog):
         return emote
 
     @commands.command(name='botngu', aliases=['ngu'], description="Bot ngu quãi lều.")
-    async def botngu(self, ctx: commands.Context) -> None:
-        embed = ImageEmbed(
-            title="Sao bạn lại chửi mình ngu :sob:",
-            desc=f"<@596886610214125598> ơi {ctx.author.mention} chửi bé là ngu.",
-            image="https://media1.tenor.com/m/2ROZqn-Kr1IAAAAd/furina-furina-cry.gif"
-        )
+    async def botngu(self, ctx: FurinaCtx) -> None:
+        embed = ctx.embed
+        embed.title = "Sao bạn lại chửi mình ngu :sob:"
+        embed.description = f"<@596886610214125598> ơi {ctx.author.mention} chửi bé là ngu."
+        embed.set_image(url="https://media1.tenor.com/m/2ROZqn-Kr1IAAAAd/furina-furina-cry.gif")
         await ctx.send(embed=embed)
 
 
-async def setup(bot: Furina):
+async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Fun(bot))
 

@@ -12,12 +12,12 @@ from _classes.embeds import *
 from _classes.views import PaginatedView, TimeoutView, SelectView
 
 if TYPE_CHECKING:
-    from bot import Furina
+    from bot import FurinaBot
 
 
 class HelpSelect(Select):
     """Help Selection Menu"""
-    def __init__(self, bot: Furina):
+    def __init__(self, bot: FurinaBot):
         super().__init__(
             placeholder="Select Category",
             options=[
@@ -54,7 +54,7 @@ class MemberStatus(Enum):
 
 class Utils(commands.Cog):
     """Utility Commands"""
-    def __init__(self, bot: Furina):
+    def __init__(self, bot: FurinaBot):
         self.bot = bot
 
     @commands.Cog.listener()
@@ -395,5 +395,5 @@ class Utils(commands.Cog):
         view.message = await ctx.reply(embed=view.embeds[0], view=view)
 
 
-async def setup(bot: Furina):
+async def setup(bot: FurinaBot):
     await bot.add_cog(Utils(bot))

@@ -6,7 +6,7 @@ load_dotenv()
 # Basic
 DEFAULT_PREFIX = "!"
 ACTIVITY_NAME = "Music » /play"
-TOKEN = os.getenv("BOT_TOKEN")
+TOKEN = os.getenv("BOT_TOKEN2")
 DEBUG_WEBHOOK = os.getenv("DEBUG_WEBHOOK")
 
 # GIF

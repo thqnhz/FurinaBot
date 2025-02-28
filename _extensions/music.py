@@ -13,7 +13,7 @@ from _classes.views import PaginatedView
 from settings import *
 
 if TYPE_CHECKING:
-    from bot import Furina
+    from bot import FurinaBot
 
 
 class FooterEmbed(Embed):
@@ -263,7 +263,7 @@ class LoopView(ui.View):
 
 class Music(commands.Cog):
     """Music Related Commands"""
-    def __init__(self, bot: Furina):
+    def __init__(self, bot: FurinaBot):
         self.bot = bot
         self.webhook = discord.SyncWebhook.from_url(MUSIC_WEBHOOK)
 
@@ -287,7 +287,7 @@ class Music(commands.Cog):
             async with self.bot.cs.get(jar_url) as jar:
                 with open("./Lavalink.jar", "wb") as f:
                     f.write(await jar.read())
-                    print("Lavalink.jar downloaded")
+                    logging.info("Lavalink.jar downloaded")
 
     def start_lavalink(self):
         def run_lavalink():
@@ -652,5 +652,5 @@ class Music(commands.Cog):
         await ctx.reply(embed=embed)
 
 
-async def setup(bot: Furina):
+async def setup(bot: FurinaBot):
     await bot.add_cog(Music(bot))
