@@ -478,8 +478,8 @@ class Letterle(WordleABC):
         self.embed = bot.embed
         self.embed.title = "LETTERLE"
         self.embed.description = ""
-        self.embed.set_footer(text="Coded by ThanhZ | v0.2.4-beta")
-        super().__init__(bot=bot, word=letter, owner=owner, solo=False, attempt=25)
+        self.embed.set_footer(text="Coded by ThanhZ | v0.2.5-beta")
+        super().__init__(bot=bot, word=letter, owner=owner, solo=False, attempt=24)
         self.init_guess = init_guess
         self.remaining_attempt_button.label = f"Attempts: {self.attempt}"
         for letter in self.ALPHABET:
