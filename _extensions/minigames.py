@@ -8,7 +8,7 @@ import os
 from abc import abstractmethod
 from collections import Counter
 from enum import Enum
-from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 
 
 import discord
@@ -395,7 +395,7 @@ class Wordle(WordleABC):
         async with self.bot.cs.get(f"https://api.dictionaryapi.dev/api/v2/entries/en/{guess.lower()}") as response:
                 return response.status
 
-    async def get_guessandguesser(self, interaction: Interaction) -> Tuple[str, str]:
+    async def get_guessandguesser(self, interaction: Interaction) -> Union[Tuple[str, str]]:
         if self.selected_guess:
             await interaction.response.defer()
             selected_guess = self.selected_guess
