@@ -314,7 +314,7 @@ class WordleABC(ui.View):
                 self._availability[letter_index] = WordleLetterStatus.CORRECT
         return result, word_counter
     
-    def check_yellow_black_square(self, guess: str, *, result: List[str], word_counter: Counter) -> List[str]:
+    def check_yellow_and_black_square(self, guess: str, *, result: List[str], word_counter: Counter) -> List[str]:
         """Check the wrong position and incorrect letters in the guess"""
         for i, char in enumerate(guess):
             # if the square is already correct, don't change it
@@ -383,7 +383,7 @@ class Wordle(WordleABC):
         if all("GREEN" in letter for letter in result):
             self._is_winning = True
         else: 
-            result = self.check_yellow_black_square(guess, result=result, word_counter=word_counter)
+            result = self.check_yellow_and_black_square(guess, result=result, word_counter=word_counter)
         self.update_availabilities()
         return "".join(result)
 
@@ -478,7 +478,7 @@ class Letterle(WordleABC):
         self.embed = bot.embed
         self.embed.title = "LETTERLE"
         self.embed.description = ""
-        self.embed.set_footer(text="Coded by ThanhZ | v0.2.2-beta")
+        self.embed.set_footer(text="Coded by ThanhZ | v0.2.3-beta")
         super().__init__(bot=bot, word=letter, owner=owner, solo=False, attempt=25)
         self.init_guess = init_guess
         self.remaining_attempt_button.label = f"Attempts: {self.attempt}"
@@ -491,13 +491,19 @@ class Letterle(WordleABC):
                 )
 
     def check_guess(self, guess: str) -> str:
-        result, _ = self.check_green_square(guess)
+        result = self.check_green_square(guess)
         if "GREEN" in result:
             self._is_winning = True
         else: 
-            result = self.check_yellow_black_square(guess, result=result, word_counter=_)
+            result = self.mark_black_square(guess)
         self.update_availabilities()
         return "".join(result)
+
+    def mark_black_square(self, guess: str) -> str:
+        letter_index = self.ALPHABET.index(guess)
+        self._availability[letter_index] = WordleLetterStatus.INCORRECT
+        return self.get_letter_emoji(guess, WordleLetterStatus.INCORRECT)
+
     
     def update_keyboard_field(self, availabilities) -> None:
         self.embed.clear_fields()
