@@ -478,7 +478,7 @@ class Letterle(WordleABC):
         self.embed = bot.embed
         self.embed.title = "LETTERLE"
         self.embed.description = ""
-        self.embed.set_footer(text="Coded by ThanhZ | v0.2.1-beta")
+        self.embed.set_footer(text="Coded by ThanhZ | v0.2.2-beta")
         super().__init__(bot=bot, word=letter, owner=owner, solo=False, attempt=25)
         self.init_guess = init_guess
         self.remaining_attempt_button.label = f"Attempts: {self.attempt}"
@@ -514,6 +514,7 @@ class Letterle(WordleABC):
                 select.options.remove(option)
         await interaction.edit_original_response(view=self)
         self.attempt -= 1
+        self.remaining_attempt_button.label = f"Attempts: {self.attempt}"
         result = self.check_guess(guess)
         self.embed.description += f"{result} by {guesser.mention}\n"
         if "GREEN" in result:
