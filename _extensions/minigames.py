@@ -1,11 +1,19 @@
 from __future__ import annotations
 
-import ast, asyncio, discord, logging, os
-from discord import app_commands, Embed, ButtonStyle
-from discord.ext import commands
-from enum import Enum
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+
+import ast
+import asyncio
+import logging
+import os
 from collections import Counter
+from enum import Enum
+from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
+
+
+import discord
+from discord import app_commands, Embed, ButtonStyle, Interaction
+from discord.ext import commands
+
 
 from .utils import Utils
 
@@ -29,7 +37,7 @@ class RPSButton(discord.ui.Button):
             emoji=self.EMOJIS[number]
         )
 
-    async def add_player(self, *, view: RPSView, interaction: discord.Interaction) -> int:
+    async def add_player(self, *, view: RPSView, interaction: Interaction) -> int:
         """
         Add the player to the view and update the embed
 
@@ -43,7 +51,7 @@ class RPSButton(discord.ui.Button):
         await interaction.response.edit_message(embed=view.embed, view=view)
         return len(view.players)
 
-    async def callback(self, interaction: discord.Interaction):
+    async def callback(self, interaction: Interaction):
         assert self.view is not None
         view: RPSView = self.view
 
@@ -109,7 +117,7 @@ class TicTacToeButton(discord.ui.Button['TicTacToe']):
         self.x = x
         self.y = y
 
-    async def callback(self, interaction: discord.Interaction):
+    async def callback(self, interaction: Interaction):
         assert self.view is not None
         view: TicTacToe = self.view
         state = view.board[self.y][self.x]
@@ -359,7 +367,7 @@ class Wordle(discord.ui.View):
                 return response.status
 
     @discord.ui.button(label="Guess", emoji="\U0001f4dd")
-    async def guess_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def guess_button(self, interaction: Interaction, button: discord.ui.Button):
         if self.selected_guess:
             await interaction.response.defer()
             selected_guess = self.selected_guess
@@ -394,8 +402,8 @@ class Wordle(discord.ui.View):
                 self.add_item(self.helped_guess) if self.helped_guess not in self.children else None
                 self.helped_guess.append_option(
                     discord.SelectOption(label=guess.capitalize(), 
-                                            value=f"{guess.upper()} {interaction.user.mention}", 
-                                            description=f"by {interaction.user.display_name}")
+                                         value=f"{guess.upper()} {interaction.user.mention}", 
+                                         description=f"by {interaction.user.display_name}")
                 )
                 await interaction.edit_original_response(view=self)
                 return await interaction.followup.send(f"Added `{guess}` to help guess list", ephemeral=True)
@@ -432,7 +440,7 @@ class Wordle(discord.ui.View):
             await interaction.edit_original_response(view=self)
 
     @discord.ui.button(label="Attempts: 6", emoji="\U0001f4ad", disabled=True)
-    async def remaining_attempt_button(self, _: discord.Interaction, _b: discord.ui.Button):
+    async def remaining_attempt_button(self, _: Interaction, _b: discord.ui.Button):
         pass
 
 
@@ -456,7 +464,7 @@ class WordleModal(discord.ui.Modal):
         self.text_input = discord.ui.TextInput(label="Type in your guess", placeholder="...", min_length=letters, max_length=letters)
         self.add_item(self.text_input)
 
-    async def on_submit(self, interaction: discord.Interaction):
+    async def on_submit(self, interaction: Interaction):
         await interaction.response.defer()
         self.guess = self.text_input.value.upper()
 
@@ -470,7 +478,7 @@ class LookUpButton(discord.ui.Button):
         super().__init__(style=ButtonStyle.secondary, label="Look Up", emoji="\U0001f310", row=0)
         self.word = word
 
-    async def callback(self, interaction: discord.Interaction):
+    async def callback(self, interaction: Interaction):
         await interaction.response.defer(thinking=True, ephemeral=True)
         view = await Utils.dictionary_call(self.word)
         await interaction.followup.send(embed=view.embeds[0], view=view)
@@ -480,7 +488,7 @@ class WordleHelpGuessSelect(discord.ui.Select):
     def __init__(self):
         super().__init__(placeholder="Select a helped guess", options=[], min_values=1, max_values=1, row=1)
 
-    async def callback(self, interaction: discord.Interaction):
+    async def callback(self, interaction: Interaction):
         assert self.view is not None
         view: Wordle = self.view
         await interaction.response.defer()
@@ -516,18 +524,20 @@ class Minigames(commands.GroupCog, group_name="minigame"):
 
     async def upload_missing_emojis(self) -> None:
         logging.info("Uploading missing wordle emojis...")
-        wordle_letters_path = "./wordle_letters"
+
+        from pathlib import Path
+        from tqdm import tqdm
+        wordle_letters_path = Path("./assets/wordle")
         filenames = os.listdir(wordle_letters_path)
-        total = len(filenames)
-        for index, filename in enumerate(filenames, 1):
-            emoji = filename.split('.')[0].upper()
-            with open(f"{wordle_letters_path}/{filename}", "rb") as file:
+        for _, filename in enumerate(tqdm(filenames, desc="Uploading", unit=" emojis"), 1):
+            with open(Path(f"{wordle_letters_path}/{filename}"), "rb") as file:
                 try:
-                    print(f"\rUploading {emoji}....................({index:03d}/{total})", end="")
-                    await self.bot.create_application_emoji(name=emoji, image=file.read())
-                    await asyncio.sleep(0.5)
+                    await self.bot.create_application_emoji(name=filename.split(".")[0], image=file.read())
                 except discord.HTTPException:
+                    # This is when the emoji failed to upload because the emoji name already exists.
+                    # We don't need to care about this.
                     pass
+            await asyncio.sleep(0.5)
         logging.info("Uploaded missing wordle emojis")
         return await self.update_wordle_emojis()
 
@@ -546,7 +556,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
     @app_commands.command(name='wordle', description="Wordle minigame")
     @app_commands.allowed_installs(guilds=True, users=True)
     async def wordle(self,
-                     interaction: discord.Interaction,
+                     interaction: Interaction,
                      letters: app_commands.Range[int, 3, 8] = 5,
                      solo: bool = True):
         """Wordle minigame
@@ -555,8 +565,6 @@ class Minigames(commands.GroupCog, group_name="minigame"):
 
         Parameters
         -----------
-        interaction: `discord.Interaction`
-            - The interaction object
         letters: `app_commands.Range[int, 3, 8] = 5`
             - Number of letters for this game (3-8), default to 5
         solo: `bool = True`
@@ -570,15 +578,13 @@ class Minigames(commands.GroupCog, group_name="minigame"):
 
     @app_commands.command(name='letterle', description="Letterle minigame")
     @app_commands.allowed_installs(guilds=True, users=True)
-    async def letterle(self, interaction: discord.Interaction, solo: bool = True):
+    async def letterle(self, interaction: Interaction, solo: bool = True):
         """Letterle minigame
 
         A game where you have 25 guesses and a letter to guess. If you guess the correct letter within 25 guesses you win.
 
         Parameters
         -----------
-        interaction: `discord.Interaction`
-            - The interaction object
         solo: `bool = True`
             - Solo mode only allows others to help, if you want others to guess straight in, make it False
         """
