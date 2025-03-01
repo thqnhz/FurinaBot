@@ -478,7 +478,7 @@ class Letterle(WordleABC):
         self.embed = bot.embed
         self.embed.title = "LETTERLE"
         self.embed.description = ""
-        self.embed.set_footer(text="Coded by ThanhZ | v0.2.7-beta")
+        self.embed.set_footer(text="Coded by ThanhZ | v0.2.8-beta")
         super().__init__(bot=bot, word=letter, owner=owner, solo=False, attempt=24)
         self.init_guess = init_guess
         self.remaining_attempt_button.label = f"Attempts: {self.attempt}"
@@ -663,13 +663,14 @@ class Minigames(commands.GroupCog, group_name="minigame"):
             - The first letter to guess, leave it blank for random one
         """
         await interaction.response.defer()
+        first_guess = first_guess.upper()
         from random import randint
         letter = Letterle.ALPHABET[randint(0, 25)]
-        if first_guess.upper() not in Letterle.ALPHABET or len(first_guess) != 1:
+        if first_guess not in Letterle.ALPHABET or len(first_guess) != 1:
             first_guess = Letterle.ALPHABET[randint(0, 25)]
-        view = Letterle(bot=self.bot, letter=letter, owner=interaction.user, init_guess=first_guess.upper())
+        view = Letterle(bot=self.bot, letter=letter, owner=interaction.user, init_guess=first_guess)
         embed = view.embed
-        init_result = view.check_guess(first_guess.upper())
+        init_result = view.check_guess(first_guess)
         embed.description = f"{init_result} by {interaction.user.mention}\n"
         if "GREEN" in init_result:
             embed.description += "First Guess Correct!!!"
