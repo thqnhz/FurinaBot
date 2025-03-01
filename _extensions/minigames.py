@@ -478,7 +478,7 @@ class Letterle(WordleABC):
         self.embed = bot.embed
         self.embed.title = "LETTERLE"
         self.embed.description = ""
-        self.embed.set_footer(text="Coded by ThanhZ | v0.2.6-beta")
+        self.embed.set_footer(text="Coded by ThanhZ | v0.2.7-beta")
         super().__init__(bot=bot, word=letter, owner=owner, solo=False, attempt=24)
         self.init_guess = init_guess
         self.remaining_attempt_button.label = f"Attempts: {self.attempt}"
@@ -491,7 +491,7 @@ class Letterle(WordleABC):
                 )
 
     def check_guess(self, guess: str) -> str:
-        result = self.check_green_square(guess)
+        result, _ = self.check_green_square(guess)
         if "GREEN" in result[0]:
             self._is_winning = True
         else: 
