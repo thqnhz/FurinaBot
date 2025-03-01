@@ -492,7 +492,7 @@ class Letterle(WordleABC):
 
     def check_guess(self, guess: str) -> str:
         result = self.check_green_square(guess)
-        if "GREEN" in result:
+        if "GREEN" in result[0]:
             self._is_winning = True
         else: 
             result = self.mark_black_square(guess)
