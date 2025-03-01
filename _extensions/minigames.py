@@ -669,7 +669,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
             first_guess = Letterle.ALPHABET[randint(0, 25)]
         view = Letterle(bot=self.bot, letter=letter, owner=interaction.user, init_guess=first_guess.upper())
         embed = view.embed
-        init_result = view.check_guess(first_guess)
+        init_result = view.check_guess(first_guess.upper())
         embed.description = f"{init_result} by {interaction.user.mention}\n"
         if "GREEN" in init_result:
             embed.description += "First Guess Correct!!!"
