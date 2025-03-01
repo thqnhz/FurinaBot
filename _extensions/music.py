@@ -345,7 +345,7 @@ class Music(commands.Cog):
         try:
             Pool.get_node()
         except wavelink.InvalidNodeException:
-            node = Node(uri=LAVA_URI, password=LAVA_PW, heartbeat=5.0, inactive_player_timeout=None)
+            node = Node(uri=LAVA_URI, password=LAVA_PW, heartbeat=5.0, inactive_player_timeout=None, retries=3)
             await Pool.close()
             try:
                 await Pool.connect(client=self.bot, nodes=[node])
