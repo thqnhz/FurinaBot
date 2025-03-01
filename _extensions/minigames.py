@@ -5,13 +5,14 @@ import ast
 import asyncio
 import logging
 import os
+from abc import abstractmethod
 from collections import Counter
 from enum import Enum
 from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 
 
 import discord
-from discord import app_commands, Embed, ButtonStyle, Interaction
+from discord import app_commands, ui, Color, Embed, ButtonStyle, Interaction, User
 from discord.ext import commands
 
 
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
     from bot import FurinaBot
 
 
-class RPSButton(discord.ui.Button):
+class RPSButton(ui.Button):
     LABEL_TO_NUMBER = {
         "Rock": -1,
         "Paper": 0,
@@ -70,24 +71,24 @@ class RPSButton(discord.ui.Button):
             await interaction.edit_original_response(embed=view.embed, view=view)
             
 
-class RPSView(discord.ui.View):
+class RPSView(ui.View):
     def __init__(self):
         super().__init__(timeout=300)
         # A dict to store players and their move
-        self.players: Dict[discord.User, int] = {}
+        self.players: Dict[User, int] = {}
         for i in range(3):
             self.add_item(RPSButton(i))
         self.embed = Embed().set_author(name="Rock Paper Scissor")
 
-    def check_winner(self) -> discord.User | int:
+    def check_winner(self) -> User | int:
         """
         Check the winner of the game
 
         Returns
         -----------
-        `discord.User | int`
+        `User | int`
             - If the result is 0, it's a draw
-            - Else it's the discord.User who won
+            - Else it's the User who won
         """
         self.disable_buttons()
         players = list(self.players.keys())
@@ -111,7 +112,7 @@ class RPSView(discord.ui.View):
         await self.message.edit(embed=self.embed, view=self)
 
 
-class TicTacToeButton(discord.ui.Button['TicTacToe']):
+class TicTacToeButton(ui.Button['TicTacToe']):
     def __init__(self, x: int, y: int):
         super().__init__(style=ButtonStyle.secondary, label='\u200b', row=y)
         self.x = x
@@ -177,7 +178,7 @@ class TicTacToeButton(discord.ui.Button['TicTacToe']):
         await interaction.response.edit_message(embed=view.embed, view=view)
 
 
-class TicTacToe(discord.ui.View):
+class TicTacToe(ui.View):
     children: List[TicTacToeButton]
     X: int = -1
     O: int = 1
@@ -191,8 +192,8 @@ class TicTacToe(discord.ui.View):
             [0, 0, 0],
             [0, 0, 0],
         ]
-        self.player_one: discord.User | None = None
-        self.player_two: discord.User | None = None
+        self.player_one: User | None = None
+        self.player_two: User | None = None
         self.embed: Embed = Embed().set_author(name="Tic Tac Toe")
 
         for x in range(3):
@@ -253,58 +254,54 @@ class WordleLetterStatus(Enum):
 WORDLE_EMOJIS: Dict[str, Dict[WordleLetterStatus, str]]
 
 
-class Wordle(discord.ui.View):
+class WordleABC(ui.View):
     ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-    def __init__(self, *, bot: FurinaBot, word: str, owner: discord.User, solo: bool):
+    def __init__(self, *, bot: FurinaBot, word: str, owner: User, solo: bool, attempt: int) -> None:
         super().__init__(timeout=None)
-        self.word = word
         self.bot = bot
+        self.word = word
         self.owner = owner
         self.solo = solo
-        self.attempt: int = 6
-        self.embed = Embed(title=f"WORDLE ({len(word)} LETTERS)", description="", color=0x2F3136).set_footer(text="Coded by ThanhZ | v0.2.0-beta")
-        self.helped_guess: WordleHelpGuessSelect = WordleHelpGuessSelect()
-        self.selected_guess: Optional[str] = None
-        self.is_winning = False
+        self.attempt = attempt
+        
+        self._is_winning = False
+        self._availability: List[WordleLetterStatus] = [WordleLetterStatus.UNUSED] * len(self.ALPHABET)
 
-        # a list to store the status of the letters in alphabetical order, init with 26 0s
-        self.available: List[WordleLetterStatus] = [WordleLetterStatus.UNUSED]*26
-
-        # update the availability right away to get the keyboard field
-        self.update_available_characters()
+        self.update_availabilities()
 
     @property
     def is_over(self) -> bool:
-        """Is the game over or not"""
-        return self.attempt == 0 or self.is_winning
+        """Whether the game is over or not"""
+        return self.attempt == 0 or self._is_winning
+
+    def update_availabilities(self):
+        """Update letters availability"""
+        keyboard_layout = [
+            'QWERTYUIOP',
+            'ASDFGHJKL',
+            'ZXCVBNM'
+        ]
+
+        availabilities = ""
+        tab = 0
+        for row in keyboard_layout:
+            availabilities += ' '*tab*2 # half space blank unicode character
+            for letter in row:
+                letter_index = self.ALPHABET.index(letter)
+                status = self._availability[letter_index]
+                availabilities += self.get_letter_emoji(letter, status)
+            availabilities += "\n"
+            tab += 1
+        self.update_keyboard_field(availabilities)
+
+    @abstractmethod
+    def update_keyboard_field(self, availabilities: str) -> None:
+        pass
 
     def get_letter_emoji(self, letter: str, status: WordleLetterStatus) -> str:
         """Get the emoji for the letter based on the status"""
         return WORDLE_EMOJIS[letter][status]
-    
-    def check_guess(self, guess: str) -> str:
-        """
-        Check the user's input and update the availabilities afterward
-        
-        Parameters
-        -----------
-        guess: `str`
-            - User's input
-        
-        Returns
-        -----------
-        `str`
-            - A string of emojis to represent the result, consists of `<:X_Y:ID>`s where X = letter, Y = status and ID = emoji id
-        """
-        result, word_counter = self.check_green_square(guess)
-        # using all() to check if the result is all green squares
-        if all("GREEN" in letter for letter in result):
-            self.is_winning = True
-        else: 
-            result = self.check_yellow_black_square(guess, result=result, word_counter=word_counter)
-        self.update_available_characters()
-        return "".join(result)
-        
+
     def check_green_square(self, guess: str) -> Tuple[List[str], Counter]:
         """Check the correct letters in the guess"""
         result = [""] * len(self.word)
@@ -314,7 +311,7 @@ class Wordle(discord.ui.View):
                 result[i] = self.get_letter_emoji(char, WordleLetterStatus.CORRECT)
                 word_counter[char] -= 1
                 letter_index = self.ALPHABET.index(char)
-                self.available[letter_index] = WordleLetterStatus.CORRECT
+                self._availability[letter_index] = WordleLetterStatus.CORRECT
         return result, word_counter
     
     def check_yellow_black_square(self, guess: str, *, result: List[str], word_counter: Counter) -> List[str]:
@@ -331,43 +328,74 @@ class Wordle(discord.ui.View):
 
                 # status priority: green (3) > yellow (2) > black (1) > white (0)
                 # so if the status of the current pos is already correct, don't change it
-                if self.available[letter_index] != WordleLetterStatus.CORRECT:
-                    self.available[letter_index] = WordleLetterStatus.WRONG_POS
+                if self._availability[letter_index] != WordleLetterStatus.CORRECT:
+                    self._availability[letter_index] = WordleLetterStatus.WRONG_POS
             else:
                 result[i] = self.get_letter_emoji(guess[i], WordleLetterStatus.INCORRECT)
 
                 # as above, black square can only replace white square
-                if self.available[letter_index] == WordleLetterStatus.UNUSED:
-                        self.available[letter_index] = WordleLetterStatus.INCORRECT
+                if self._availability[letter_index] == WordleLetterStatus.UNUSED:
+                        self._availability[letter_index] = WordleLetterStatus.INCORRECT
         return result
 
-    def update_available_characters(self):
-        """Update letters availability"""
-        keyboard_layout = [
-            'QWERTYUIOP',
-            'ASDFGHJKL',
-            'ZXCVBNM'
-        ]
+    @abstractmethod
+    async def validate_guess(self, guess: str):
+        """Whether the guess is a valid word or not"""
+        pass
 
-        available = ""
-        tab = 0
-        for row in keyboard_layout:
-            available += ' '*tab*2 # half space blank unicode character
-            for letter in row:
-                letter_index = self.ALPHABET.index(letter)
-                status = self.available[letter_index]
-                available += self.get_letter_emoji(letter, status)
-            available += "\n"
-            tab += 1
+    @abstractmethod
+    def check_guess(self, guess: str) -> str:
+        """
+        Check the user's input and update the availabilities afterward
+        
+        Parameters
+        -----------
+        guess: `str`
+            - User's input
+        
+        Returns
+        -----------
+        `str`
+            - A string of emojis to represent the result, consists of `<:X_Y:ID>`s where X = letter, Y = status and ID = emoji id
+        """
+        pass
+
+    @ui.button(emoji="\U0001f4ad", disabled=True)
+    async def remaining_attempt_button(self, _: Interaction, _b: ui.Button):
+        pass
+
+
+class Wordle(WordleABC):
+    def __init__(self, *, bot: FurinaBot, word: str, owner: User, solo: bool):
+        self.embed = bot.embed
+        self.embed.title = f"WORDLE ({len(word)} LETTERS)"
+        self.embed.description = ""
+        self.embed.color = 0x2F3136
+        self.embed.set_footer(text="Coded by ThanhZ | v0.3.0-beta")
+        super().__init__(bot=bot, word=word, owner=owner, solo=solo, attempt=6)
+        self.helped_guess: WordleHelpGuessSelect = WordleHelpGuessSelect()
+        self.selected_guess: Optional[str] = None
+        self.remaining_attempt_button.label = f"Attempts: {self.attempt}"
+    
+    def check_guess(self, guess: str) -> str:
+        result, word_counter = self.check_green_square(guess)
+        # using all() to check if the result is all green squares
+        if all("GREEN" in letter for letter in result):
+            self._is_winning = True
+        else: 
+            result = self.check_yellow_black_square(guess, result=result, word_counter=word_counter)
+        self.update_availabilities()
+        return "".join(result)
+
+    def update_keyboard_field(self, availabilities) -> None:
         self.embed.clear_fields()
-        self.embed.add_field(name="Keyboard", value=available)
+        self.embed.add_field(name="Keyboard", value=availabilities)
 
-    async def check_dictionary(self, guess: str) -> int:
+    async def validate_guess(self, guess: str) -> int:
         async with self.bot.cs.get(f"https://api.dictionaryapi.dev/api/v2/entries/en/{guess.lower()}") as response:
                 return response.status
 
-    @discord.ui.button(label="Guess", emoji="\U0001f4dd")
-    async def guess_button(self, interaction: Interaction, button: discord.ui.Button):
+    async def get_guessandguesser(self, interaction: Interaction) -> Tuple[str, str]:
         if self.selected_guess:
             await interaction.response.defer()
             selected_guess = self.selected_guess
@@ -382,9 +410,14 @@ class Wordle(discord.ui.View):
                 return
             guess = modal.guess
             guesser = interaction.user.mention
-            status = await self.check_dictionary(guess=guess)
+            status = await self.validate_guess(guess=guess)
             if status != 200:
                 return await interaction.followup.send(f"`{guess}` is not a real word!", ephemeral=True)
+        return guess, guesser
+
+    @ui.button(label="Guess", emoji="\U0001f4dd")
+    async def guess_button(self, interaction: Interaction, button: ui.Button):
+        guess, guesser = await self.get_guessandguesser(interaction)
         
         try:
             for option in self.helped_guess.options:
@@ -423,12 +456,12 @@ class Wordle(discord.ui.View):
             for child in self.children:
                 if isinstance(child, WordleHelpGuessSelect):
                     self.remove_item(child)
-            if self.is_winning:
-                self.embed.color = discord.Color.green()
+            if self._is_winning:
+                self.embed.color = Color.green()
                 button.style = ButtonStyle.success
                 button.label = "You WON!"
             else:
-                self.embed.color = discord.Color.red()
+                self.embed.color = Color.red()
                 button.style = ButtonStyle.danger
                 button.label = "You Lost!"
         await interaction.edit_original_response(embed=self.embed, view=self)
@@ -439,29 +472,61 @@ class Wordle(discord.ui.View):
             self.stop()
             await interaction.edit_original_response(view=self)
 
-    @discord.ui.button(label="Attempts: 6", emoji="\U0001f4ad", disabled=True)
-    async def remaining_attempt_button(self, _: Interaction, _b: discord.ui.Button):
-        pass
 
-
-class Letterle(Wordle):
-    def __init__(self, *, bot, owner, solo):
-        from random import randint
-        letter = self.ALPHABET[randint(0, 25)]
-        super().__init__(bot=bot, word=letter, owner=owner, solo=solo)
-        self.attempt = 25
+class Letterle(WordleABC):
+    def __init__(self, *, bot: FurinaBot, letter: str, owner: User, init_guess: str):
+        self.embed = bot.embed
         self.embed.title = "LETTERLE"
-        self.embed.set_footer(text="Coded by ThanhZ | v0.1.1-beta")
+        self.embed.description = ""
+        self.embed.set_footer(text="Coded by ThanhZ | v0.2.0-beta")
+        super().__init__(bot=bot, word=letter, owner=owner, solo=False, attempt=25)
+        self.init_guess = init_guess
         self.remaining_attempt_button.label = f"Attempts: {self.attempt}"
+        for letter in self.ALPHABET:
+            if letter != init_guess:
+                self.select_guess.add_option(
+                    label=letter, 
+                    value=letter, 
+                    emoji=self.get_letter_emoji(letter, WordleLetterStatus.UNUSED)
+                )
 
-    async def check_dictionary(self, guess: str):
-        return 200 if guess in self.ALPHABET else 404
+    def check_guess(self, guess: str) -> str:
+        result, _ = self.check_green_square(guess)
+        if "GREEN" in result:
+            self._is_winning = True
+        else: 
+            result = self.check_yellow_black_square(guess, result=result, word_counter=_)
+        self.update_availabilities()
+        return "".join(result)
+    
+    def update_keyboard_field(self, availabilities) -> None:
+        self.embed.clear_fields()
+        self.embed.add_field(name="Keyboard", value=availabilities)
 
 
-class WordleModal(discord.ui.Modal):
+    @ui.select(placeholder="Select a letter")
+    async def select_guess(self, interaction: Interaction, select: ui.Select):
+        await interaction.response.defer()
+        guess = interaction.data["values"][0]
+        guesser = interaction.user
+        for option in select.options:
+            if option.value == guess:
+                select.options.remove(option)
+        await interaction.edit_original_response(view=self)
+        self.attempt -= 1
+        result = self.check_guess(guess)
+        self.embed.description += f"{result} by {guesser.mention}\n"
+        if self.is_over:
+            select.disabled = True
+            self.embed.description += f"### The letter is: `{self.word}`"
+            self.embed.color = Color.green() if self._is_winning else Color.red()
+        await interaction.edit_original_response(embed=self.embed, view=self)
+
+
+class WordleModal(ui.Modal):
     def __init__(self, letters: int):
-        super().__init__(timeout=180, title=f"Wordle ({letters} LETTERS)")
-        self.text_input = discord.ui.TextInput(label="Type in your guess", placeholder="...", min_length=letters, max_length=letters)
+        super().__init__(timeout=180, title=f"WORDLE ({letters} LETTERS)")
+        self.text_input = ui.TextInput(label="Type in your guess", placeholder="...", min_length=letters, max_length=letters)
         self.add_item(self.text_input)
 
     async def on_submit(self, interaction: Interaction):
@@ -473,7 +538,7 @@ class WordleModal(discord.ui.Modal):
         self.stop()
 
 
-class LookUpButton(discord.ui.Button):
+class LookUpButton(ui.Button):
     def __init__(self, word: str):
         super().__init__(style=ButtonStyle.secondary, label="Look Up", emoji="\U0001f310", row=0)
         self.word = word
@@ -484,7 +549,7 @@ class LookUpButton(discord.ui.Button):
         await interaction.followup.send(embed=view.embeds[0], view=view)
 
 
-class WordleHelpGuessSelect(discord.ui.Select):
+class WordleHelpGuessSelect(ui.Select):
     def __init__(self):
         super().__init__(placeholder="Select a helped guess", options=[], min_values=1, max_values=1, row=1)
 
@@ -578,19 +643,30 @@ class Minigames(commands.GroupCog, group_name="minigame"):
 
     @app_commands.command(name='letterle', description="Letterle minigame")
     @app_commands.allowed_installs(guilds=True, users=True)
-    async def letterle(self, interaction: Interaction, solo: bool = True):
+    async def letterle(self, interaction: Interaction, first_guess: str = ""):
         """Letterle minigame
 
         A game where you have 25 guesses and a letter to guess. If you guess the correct letter within 25 guesses you win.
 
         Parameters
         -----------
-        solo: `bool = True`
-            - Solo mode only allows others to help, if you want others to guess straight in, make it False
+        first_guess: `str = ""`
+            - The first letter to guess, leave it blank for random one
         """
         await interaction.response.defer()
-        view = Letterle(bot=self.bot, owner=interaction.user, solo=solo)
-        await interaction.followup.send(embed=view.embed, view=view)
+        from random import randint
+        letter = Letterle.ALPHABET[randint(0, 25)]
+        if first_guess.upper() not in Letterle.ALPHABET or len(first_guess) != 1:
+            first_guess = Letterle.ALPHABET[randint(0, 25)]
+        view = Letterle(bot=self.bot, letter=letter, owner=interaction.user, init_guess=first_guess.upper())
+        embed = view.embed
+        init_result = view.check_guess(first_guess)
+        embed.description = f"{init_result} by {interaction.user.mention}\n"
+        if "GREEN" in init_result:
+            embed.description += "First Guess Correct!!!"
+            embed.color = Color.green()
+            view = None
+        await interaction.followup.send(embed=embed, view=view)
 
 
 async def setup(bot: FurinaBot):
