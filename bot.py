@@ -89,7 +89,7 @@ class FurinaBot(Bot):
                    (
                         guild_id BIGINT NOT NULL PRIMARY KEY,
                         prefix TEXT NOT NULL
-                   );""")
+                   )""")
             
     async def update_prefixes(self) -> None:
         """Retrieve all prefixes in the `custom_prefixes` table and cache them in `Furina.prefixes`"""
