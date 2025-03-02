@@ -97,6 +97,18 @@ class FurinaBot(Bot):
             prefixes = await con.fetch("""SELECT * FROM custom_prefixes""")
             self.prefixes = {prefix["guild_id"]: prefix["prefix"] for prefix in prefixes}
             
+    async def create_minigame_stats_db(self):
+        async with self.pool.acquire() as con:
+            await con.execute("""
+                CREATE TABLE IF NOT EXISTS minigame_stats
+                (
+                    user_id BIGINT NOT NULL,
+                    minigame TEXT NOT NULL,
+                    wins INT NOT NULL DEFAULT 0,
+                    loses INT NOT NULL DEFAULT 0,
+                    PRIMARY KEY (user_id, minigame)
+                )""")
+
     def get_pre(self, _, message: discord.Message) -> List[str]:
         """Custom `get_prefix` method"""
         prefix = self.prefixes.get(message.guild.id) or DEFAULT_PREFIX
@@ -121,6 +133,7 @@ class FurinaBot(Bot):
         logging.info(f"Running Python {python_version()}")
         await self.create_prefix_table()
         await self.update_prefixes()
+        await self.create_minigame_stats_db()
 
         # loads the extensions
         from _extensions import EXTENSIONS
