@@ -1,6 +1,14 @@
 from __future__ import annotations
 
-import asqlite, platform, discord, random, psutil, wavelink, aiohttp
+
+import aiohttp
+import platform
+import psutil
+import random
+
+
+import discord
+import wavelink
 from discord.ext import commands
 from discord import app_commands
 from enum import Enum
@@ -8,6 +16,7 @@ from typing import TYPE_CHECKING, Optional
 from discord.ui import Select
 
 
+from bot import FurinaCtx
 from _classes.embeds import *
 from _classes.views import PaginatedView, TimeoutView, SelectView
 
@@ -85,7 +94,7 @@ class Utils(commands.Cog):
         return random_number
 
     @commands.hybrid_command(name='ping', aliases=['test'], description="Get the ping to discord api and lavalink node(s)")
-    async def ping_command(self, ctx: commands.Context):
+    async def ping_command(self, ctx: FurinaCtx):
         """Đo ping và thông tin Node của bot."""
         await ctx.defer()
         bot_latency = self.bot.latency
@@ -107,42 +116,42 @@ class Utils(commands.Cog):
         await ctx.reply(embed=embed)
 
     @commands.command(name="prefix", description="Set a custom prefix for your server")
-    async def prefix_command(self, ctx: commands.Context, prefix: str):
-        """Set a custom prefix or clear it with 'clear' or 'reset'"""
-        async with asqlite.connect("config.db") as db:
+    async def prefix_command(self, ctx: FurinaCtx, prefix: str):
+        """Set a custom prefix or clear it with 'clear' or 'reset' or 'default'"""
+        await ctx.tick()
+        async with self.bot.pool.acquire() as con:
             if prefix in ['clear', 'reset', 'default']:
-                await db.execute(
-                    f"""DELETE FROM custom_prefixes
-                        WHERE guild_id = {ctx.guild.id}"""
+                await con.execute(
+                    """DELETE FROM custom_prefixes
+                       WHERE guild_id = $1""",
+                    ctx.guild.id
                 )
             else:
-                await db.execute(
+                await con.execute(
                     """INSERT INTO custom_prefixes ( guild_id, prefix )
-                       VALUES ( ?, ? )
+                       VALUES ( $1, $2 )
                        ON CONFLICT(guild_id) DO UPDATE SET
-                       prefix = excluded.prefix""", (ctx.guild.id, prefix)
+                       prefix = excluded.prefix""",
+                    ctx.guild.id, prefix
                 )
-            await db.commit()
         await self.bot.update_prefixes()
-        await ctx.reply(
-            embed=FooterEmbed(
-                description=f"Prefix for this server has been changed to `{self.bot.prefixes.get(ctx.guild.id) or DEFAULT_PREFIX}`"
-            )
-        )
+        embed = ctx.embed
+        embed.description = f"Prefix for this server has been changed to `{self.bot.prefixes.get(ctx.guild.id) or DEFAULT_PREFIX}`"
+        await ctx.reply(embed=embed)
 
     @commands.command(name='source', aliases=['sources', 'src'], description="Source code of the bot")
-    async def source_command(self, ctx: commands.Context):
+    async def source_command(self, ctx: FurinaCtx):
         await ctx.reply("https://github.com/Th4nhZ/FurinaBot")
 
     @commands.command(name='help', description="Help command")
-    async def help_command(self, ctx: commands.Context, category_or_command_name: str = None):
+    async def help_command(self, ctx: FurinaCtx, category_or_command_name: str = None):
         """
         Help command
 
         Parameters
         -----------
         ctx
-            commands.Context
+            FurinaCtx
         category_or_command_name: `str`
             Category/Command name you need help with
         """
@@ -172,7 +181,7 @@ class Utils(commands.Cog):
             raise commands.BadArgument("""I don't recognize that command/category""")
 
     @commands.command(name='vps', description="VPS Info")
-    async def vps_command(self, ctx: commands.Context):
+    async def vps_command(self, ctx: FurinaCtx):
         # OS Version
         os_version = platform.platform()
 
@@ -217,14 +226,14 @@ class Utils(commands.Cog):
         await ctx.reply(embed=embed)
 
     @commands.hybrid_command(name='userinfo', aliases=['uinfo', 'whois'], description="Get info about a member")
-    async def user_info_command(self, ctx: commands.Context, member: Optional[discord.Member] = None):
+    async def user_info_command(self, ctx: FurinaCtx, member: Optional[discord.Member] = None):
         """
         Get info about a member
 
         Parameters
         -----------
-        ctx: `commands.Context`
-            commands.Context
+        ctx: `FurinaCtx`
+            FurinaCtx
         member: `Optional[discord.Member]`
             A member to get info from
         """
@@ -250,7 +259,7 @@ class Utils(commands.Cog):
         await ctx.reply(embed=embed)
 
     @commands.command(name='random', aliases=['rand'], description="Random số ngẫu nhiên.")
-    async def random(self, ctx: commands.Context, number: Optional[int] = 1) -> None:
+    async def random(self, ctx: FurinaCtx, number: Optional[int] = 1) -> None:
         embed = discord.Embed()
         if number == 1:
             rand_num = self.generate_random_number(0, 10)
@@ -279,7 +288,7 @@ class Utils(commands.Cog):
         await ctx.message.delete()
 
     @commands.command(name='dice', aliases=['roll'], description="Tung xúc xắc.")
-    async def dice(self, ctx: commands.Context, number: Optional[int] = 1) -> None:
+    async def dice(self, ctx: FurinaCtx, number: Optional[int] = 1) -> None:
         embed = discord.Embed()
         if number == 1:
             rand_num = self.generate_random_number(1, 6)
@@ -296,7 +305,7 @@ class Utils(commands.Cog):
         await ctx.message.delete()
 
     @commands.command(name='flip', aliases=['coin', 'coinflip'], description="Tung đồng xu.")
-    async def flip(self, ctx: commands.Context, number: Optional[int] = 1) -> None:
+    async def flip(self, ctx: FurinaCtx, number: Optional[int] = 1) -> None:
         embed = discord.Embed()
         if number == 1:
             for _ in range(100):
@@ -380,14 +389,12 @@ class Utils(commands.Cog):
 
     @commands.hybrid_command(name='dictionary', aliases=['dict'], description="Tra từ điển một từ.")
     @app_commands.allowed_installs(guilds=True, users=True)
-    async def dict_command(self, ctx: commands.Context, word: str):
+    async def dict_command(self, ctx: FurinaCtx, word: str):
         """
         Tra từ điển một từ.
         
         Parameters
         -----------
-        ctx: `commands.Context`
-            Context
         word: `str`
             Từ cần tra
         """

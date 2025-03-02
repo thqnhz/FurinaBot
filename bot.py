@@ -9,7 +9,7 @@ from typing import List
 
 import discord
 import wavelink
-from asqlite import Pool
+from asyncpg import Pool
 from discord import app_commands, utils, Activity, ActivityType, Embed, Intents
 from discord.ext.commands import errors, Bot, Context, when_mentioned_or
 
@@ -83,17 +83,19 @@ class FurinaBot(Bot):
 
     async def create_prefix_table(self) -> None:
         """Create a `custom_prefixes` table in the database"""
-        async with self.pool.acquire() as db:
-            await db.execute(
+        async with self.pool.acquire() as con:
+            await con.execute(
                 """CREATE TABLE IF NOT EXISTS custom_prefixes
-                   ( guild_id INT NOT NULL PRIMARY KEY, prefix TEXT NOT NULL )""")
+                   (
+                        guild_id BIGINT NOT NULL PRIMARY KEY,
+                        prefix TEXT NOT NULL
+                   );""")
             
     async def update_prefixes(self) -> None:
         """Retrieve all prefixes in the `custom_prefixes` table and cache them in `Furina.prefixes`"""
-        async with self.pool.acquire() as db:
-            async with db.execute("""SELECT * FROM custom_prefixes""") as cursor:
-                prefixes = await cursor.fetchall()
-                self.prefixes = {prefix[0]: prefix[1] for prefix in prefixes}
+        async with self.pool.acquire() as con:
+            prefixes = await con.fetch("""SELECT * FROM custom_prefixes""")
+            self.prefixes = {prefix["guild_id"]: prefix["prefix"] for prefix in prefixes}
             
     def get_pre(self, _, message: discord.Message) -> List[str]:
         """Custom `get_prefix` method"""

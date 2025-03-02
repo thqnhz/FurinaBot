@@ -4,7 +4,8 @@ import asyncio
 import os
 import logging
 
-import asqlite
+
+import asyncpg
 from aiohttp import ClientSession
 
 
@@ -57,7 +58,7 @@ def handle_setup_logging() -> None:
 async def main() -> None:
     os.makedirs("logs", exist_ok=True)
     handle_setup_logging()
-    async with ClientSession() as client_session, asqlite.create_pool("config.db") as pool:
+    async with ClientSession() as client_session, asyncpg.create_pool(user="postgres", command_timeout=30) as pool:
         async with FurinaBot(pool=pool, client_session=client_session) as bot:
             await bot.start(TOKEN)
 
