@@ -5,8 +5,6 @@
 /_extensions/__pycache__
 /_extensions/private.py
 /.vscode
-/gacha.db
-/config.*
 /logs
 /plugins
 /Lavalink*.jar
