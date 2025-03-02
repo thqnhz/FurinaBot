@@ -47,7 +47,7 @@ class FurinaBot(Bot):
 
     Attributes
     -----------
-    - pool: `asqlite.Pool`
+    - pool: `asyncpg.Pool`
         - The database pool for the bot for easier database access
     - client_session: `aiohttp.ClientSession`
         - The client session for the bot for easier http request
@@ -55,7 +55,7 @@ class FurinaBot(Bot):
     Example
     -----------
     .. code-block:: python
-        async with aiohttp.ClientSession() as client_session, asqlite.create_pool("config.db") as pool:
+        async with aiohttp.ClientSession() as client_session, asynpg.create_pool("config.db") as pool:
             async with FurinaBot(pool=pool, client_session=client_session) as bot:
                 await bot.start(TOKEN)
     """
