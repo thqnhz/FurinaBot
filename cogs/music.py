@@ -19,24 +19,11 @@ from youtube_search import YoutubeSearch
 
 
 from bot import FurinaCtx
-from _classes.views import PaginatedView
+from cogs.utility.views import PaginatedView
 from settings import *
 
 if TYPE_CHECKING:
     from bot import FurinaBot
-
-
-class FooterEmbed(Embed):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.set_footer(text="Coded by ThanhZ")
-
-
-class Embeds:
-    @staticmethod
-    def error_embed(error: str) -> Embed:
-        return FooterEmbed(title="Error", description=error)
-
 
 
 class TrackUtils:
@@ -267,6 +254,10 @@ class Music(commands.Cog):
         self.bot = bot
         self.webhook = discord.SyncWebhook.from_url(MUSIC_WEBHOOK)
 
+    @property
+    def embed(self) -> Embed:
+        return self.bot.embed
+
     async def cog_load(self) -> None:
         version = await self.get_lavalink_jar()
         self.start_lavalink(version)
@@ -307,15 +298,12 @@ class Music(commands.Cog):
                 subprocess.run(["java", "-jar", f"Lavalink-{version}.jar"], cwd="./")
             except FileNotFoundError as e:
                 logging.error(f"Java is not installed or not in PATH: {e}")
-                print(f"Java is not installed or not in PATH: {e}")
                 raise e
             except subprocess.CalledProcessError as e:
                 logging.error(f"Error starting Lavalink: {e}")
-                print(f"Error starting Lavalink: {e}")
                 raise e
             except Exception as e:
                 logging.error(f"An error occured when starting Lavalink: {e}")
-                print(f"An error occured when starting Lavalink: {e}")
         try:
             thread = threading.Thread(target=run_lavalink, daemon=True)
             thread.start()
@@ -383,7 +371,7 @@ class Music(commands.Cog):
         if hasattr(player, "queue") and not player.queue.is_empty:
             await player.play(player.queue.get())
         else:
-            embed = self.bot.embed
+            embed = self.embed
             embed.title = "Queue is empty"
             self.webhook.send(embed=embed)
 
@@ -391,7 +379,7 @@ class Music(commands.Cog):
     async def on_wavelink_track_start(self, payload: TrackStartEventPayload):
         """Sends an embed notify the track started playing"""
         track: Playable = payload.track
-        embed = self.bot.embed
+        embed = self.embed
         embed.title = f"Playing: **{track}**"
         embed.url = track.uri
         embed.set_author(name=track.author, icon_url=PLAYING_GIF)
@@ -401,13 +389,15 @@ class Music(commands.Cog):
     @commands.Cog.listener()
     async def on_wavelink_track_exception(self, payload: TrackExceptionEventPayload):
         """Sends an embed notify an exception occured while playing"""
-        embed = Embeds.error_embed(f"An error occured while playing {payload.track.title}\n"
-                                   f"Detailed error:\n"
-                                   f"```\n"
-                                   f"{payload.exception}\n"
-                                   f"```")
-        logging.exception(f"An error occured while playing {payload.track}\n{payload.exception}")
+        embed = self.embed
+        embed.title = "Error"
+        embed.description = (f"An error occured while playing {payload.track.title}\n"
+                             f"Detailed error:\n"
+                             f"```\n"
+                             f"{payload.exception}\n"
+                             f"```")
         self.webhook.send(embed=embed)
+        logging.exception(f"An error occured while playing {payload.track}\n{payload.exception}")
 
     @staticmethod
     def _get_player(ctx: FurinaCtx) -> Player:
@@ -473,7 +463,9 @@ class Music(commands.Cog):
             Tên bài hát cần tìm
         """
         await ctx.defer()
-        msg = await ctx.reply(embed=FooterEmbed(description=f"**Đang tìm kiếm:** `{query}`"))
+        embed = self.embed
+        embed.description = f"**Đang tìm kiếm:** `{query}`"
+        msg = await ctx.reply(embed=embed)
         tracks_yt = []
         for yttrack in YoutubeSearch(query, 5).to_dict():
             for key, value in yttrack.items():
@@ -487,17 +479,22 @@ class Music(commands.Cog):
         view = SelectTrackView(tracks_yt[:5], tracks_sc[:5])
         tracks = tracks_yt[:5] + tracks_sc[:5]
 
-        if len(tracks) == 0:
-            return msg.edit(embed=Embeds.error_embed(f"Không tìm thấy kết quả nào cho `query`"))
-        else:
-            await msg.edit(embed=FooterEmbed(title=f"Kết quả tìm kiếm cho `{query}`"), view=view)
+        embed = self.embed
+        if not tracks:
+            embed.title = "Error"
+            embed.description = f"No search results for query `{query}`"
+            return msg.edit(embed=embed)
+        embed.title = f"Search results for query `{query}`"
+        await msg.edit(embed=embed, view=view)
 
     @commands.hybrid_command(name='pause', description="Tạm dừng việc phát nhạc")
     async def pause_command(self, ctx: FurinaCtx) -> None:
         """Tạm dừng việc phát nhạc."""
         player: Player = self._get_player(ctx)
         await player.pause(True)
-        embed = FooterEmbed(title="Đã tạm dừng chơi nhạc", description="Dùng `!resume` hoặc `/resume` để tiếp tục")
+        embed = self.embed
+        embed.title = "Paused the player"
+        embed.description = f"Use `{ctx.prefix}resume` or `/resume` to continue playing"
         await ctx.reply(embed=embed)
 
     @commands.hybrid_command(name='resume', description="Tiếp tục việc phát nhạc")
@@ -505,7 +502,9 @@ class Music(commands.Cog):
         """Tiếp tục việc phát nhạc."""
         player: Player = self._get_player(ctx)
         await player.pause(False)
-        embed = FooterEmbed(title="Đã tiếp tục chơi nhạc", description="Dùng `!pause` hoặc `/pause` để tạm dừng")
+        embed = self.embed
+        embed.title = "Resumed the player"
+        embed.description = f"Use `{ctx.prefix}pause` or `/pause` to pause"
         await ctx.reply(embed=embed)
 
     @commands.hybrid_group(name='autoplay', aliases=['auto'], description="Bật hoặc tắt tự động phát.")
@@ -513,26 +512,29 @@ class Music(commands.Cog):
         """Bật hoặc tắt tự động phát."""
         player: Player = self._get_player(ctx)
         if player.autoplay == AutoPlayMode.disabled:
-            switch_to_mode: str = "bật"
+            switch_to_mode: str = "Enabled"
             player.autoplay = AutoPlayMode.enabled
         else:
-            switch_to_mode: str = "tắt"
+            switch_to_mode: str = "Disabled"
             player.autoplay = AutoPlayMode.disabled
-        await ctx.reply(embed=FooterEmbed().set_author(name=f"Đã {switch_to_mode} chế độ tự động phát"))
+        embed = self.embed.set_author(name=f"{switch_to_mode} auto play")
+        await ctx.reply(embed=embed)
 
     @autoplay_switch.command(name='on', description="Bật tính năng tự động phát")
     async def autoplay_on(self, ctx: FurinaCtx):
         """Bật tính năng tự động phát."""
         player: Player = self._get_player(ctx)
         player.autoplay = AutoPlayMode.enabled
-        await ctx.reply(embed=FooterEmbed().set_author(name=f"Đã bật chế độ tự động phát"))
+        embed = self.embed.set_author(name="Enabled auto play")
+        await ctx.reply(embed=embed)
 
     @autoplay_switch.command(name='off', description="Tắt tính năng tự động phát")
     async def autoplay_off(self, ctx: FurinaCtx):
         """Tắt tính năng tự động phát."""
         player: Player = self._get_player(ctx)
         player.autoplay = AutoPlayMode.disabled
-        await ctx.reply(embed=FooterEmbed().set_author(name=f"Đã tắt chế độ tự động phát"))
+        embed = self.embed.set_author(name=f"Disabled auto play")
+        await ctx.reply(embed=embed)
 
     @commands.hybrid_command(name='nowplaying', aliases=['np', 'now', 'current'], description="Đang phát bài gì thế?")
     async def nowplaying_command(self, ctx: FurinaCtx):
@@ -559,7 +561,9 @@ class Music(commands.Cog):
             embed = Embed().set_author(name=f"Đã skip {track}", icon_url=SKIP_EMOJI)
             await player.seek(track.length)
         else:
-            embed = Embeds.error_embed("Hiện đang không phát bất cứ thứ gì")
+            embed = self.embed
+            embed.title = "Error"
+            embed.description = "Bot is not playing anything"
         await ctx.reply(embed=embed)
 
     @commands.hybrid_command(name='stop', description="Dừng phát nhạc và xóa hàng chờ")
@@ -587,31 +591,34 @@ class Music(commands.Cog):
     def _queue_embeds(self, ctx: FurinaCtx) -> list[Embed] | Embed:
         player: Player = self._get_player(ctx)
         if player.queue.is_empty:
-            embed: Embed = FooterEmbed(title="Hàng chờ trống!")
+            embed = self.embed
+            embed.title = "Queue is empty"
             return embed
         queue_embeds: list[Embed] = []
         q: str = ""
         for i, track in enumerate(player.queue, 1):
             q += f"{i}. [**{track}**](<{track.uri}>) ({TrackUtils(track).formatted_len})\n"
             if i % 10 == 0:
-                embed: Embed = self._create_queue_embed(player, q)
+                embed = self._create_queue_embed(player, q)
                 queue_embeds.append(embed)
                 q = ""
         if q:
-            embed: Embed = self._create_queue_embed(player, q)
+            embed = self._create_queue_embed(player, q)
             queue_embeds.append(embed)
         return queue_embeds
 
     def _create_queue_embed(self, player: Player, q: str) -> Embed:
-        embed = FooterEmbed(color=Color.blue(),
-                                   title=f"Hàng chờ: {player.queue.count} bài hát",
-                                   description=q)
+        embed = self.embed
+        embed.color = Color.blue()
+        embed.title = f"Queued: {player.queue.count} tracks"
+        embed.description = q
+
         if player.playing:
             track = player.current
             embed.add_field(
-                name="Đang phát",
+                name="Playing",
                 value=f"[**{track}**](<{track.uri}>) ({TrackUtils(track).formatted_len})"
-                )
+            )
         return embed
 
     @app_commands.command(name='remove', description="Xóa một bài hát khỏi hàng chờ")

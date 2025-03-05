@@ -5,20 +5,20 @@ import aiohttp
 import platform
 import psutil
 import random
-
+from enum import Enum
+from typing import TYPE_CHECKING, Dict, Optional
 
 import discord
 import wavelink
+from discord import app_commands, Color, Embed
 from discord.ext import commands
-from discord import app_commands
-from enum import Enum
-from typing import TYPE_CHECKING, Optional
 from discord.ui import Select
-
+from wavelink import NodeStatus, Pool
 
 from bot import FurinaCtx
-from _classes.embeds import *
-from _classes.views import PaginatedView, TimeoutView, SelectView
+from settings import *
+from cogs.utility.views import PaginatedView, View
+
 
 if TYPE_CHECKING:
     from bot import FurinaBot
@@ -38,20 +38,12 @@ class HelpSelect(Select):
         self.bot = bot
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        embed = CommandListEmbed(
-            prefix=self.bot.prefixes.get(interaction.guild.id) or DEFAULT_PREFIX,  
-            cog=self.bot.get_cog(self.values[0])
+        embed = Utils.command_list_embed(
+            cog=self.bot.get_cog(self.values[0]),
+            prefix=self.bot.prefixes.get(interaction.guild.id) or DEFAULT_PREFIX,
+            embed=self.bot.embed
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
-
-
-class CommandListEmbed(FooterEmbed):
-    def __init__(self, *, prefix: str, cog: commands.Cog):
-        super().__init__(color=Color.blue(), title=cog.__cog_name__, description="")
-        self.description = "\n".join(
-            f"- **{prefix}{command.qualified_name}:** `{command.description}`"
-            for command in cog.walk_commands()
-        )
 
 
 class MemberStatus(Enum):
@@ -61,10 +53,30 @@ class MemberStatus(Enum):
     dnd     = ":red_circle: `DND`"
     
 
+NODE_STATUSES: Dict[NodeStatus, str] = {
+    NodeStatus.CONNECTED: ":white_check_mark:",
+    NodeStatus.CONNECTING: ":arrows_clockwise:",
+    NodeStatus.DISCONNECTED: ":negative_squared_cross_mark:"
+}
+
+
 class Utils(commands.Cog):
     """Utility Commands"""
     def __init__(self, bot: FurinaBot):
         self.bot = bot
+
+    @property
+    def embed(self) -> Embed:
+        return self.bot.embed
+    
+    @staticmethod
+    def command_list_embed(*, cog: commands.Cog, prefix: str, embed: Embed) -> Embed:
+        embed.title = cog.__cog_name__
+        embed.description = "\n".join(
+            f"- **{prefix}{command.qualified_name}:** `{command.description}`"
+            for command in cog.walk_commands()
+        )
+        return embed
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -72,18 +84,17 @@ class Utils(commands.Cog):
             return
 
         if message.content == '<@1131530915223441468>':
-            embed = FooterEmbed(
-                description=(f"My Prefix is `{self.bot.prefixes.get(message.guild.id) or DEFAULT_PREFIX}`\n"
-                              "### I also support slash commands \n-> Type `/` to see commands i can do!\n"
-                              "### Or you can select one category below to see all the commands."), 
-                color=Color.blue()
-            )
+            embed = self.embed
+            embed.description = (f"My Prefix is `{self.bot.prefixes.get(message.guild.id) or DEFAULT_PREFIX}`\n"
+                                  "### I also support slash commands \n-> Type `/` to see commands i can do!\n"
+                                  "### Or you can select one category below to see all the commands.")
+            embed.color = Color.blue()
             embed.set_author(
                 name="Miss me that much?",
                 icon_url="https://cdn.7tv.app/emote/01HHV72FBG000870SVK5KGTSJM/4x.png"
             )
             embed.timestamp = message.created_at
-            view = SelectView().add_item(HelpSelect(self.bot))
+            view = View().add_item(HelpSelect(self.bot))
             view.message = await message.channel.send(embed=embed, view=view, reference=message)
 
     @staticmethod
@@ -93,31 +104,24 @@ class Utils(commands.Cog):
             random_number = random.randint(min_num, max_num)
         return random_number
 
-    @commands.hybrid_command(name='ping', aliases=['test'], description="Get the ping to discord api and lavalink node(s)")
+    @commands.command(name='ping', description="Get the ping to discord api and lavalink nodes")
     async def ping_command(self, ctx: FurinaCtx):
-        """Đo ping và thông tin Node của bot."""
         await ctx.defer()
         bot_latency = self.bot.latency
         voice_latency = ctx.guild.voice_client.ping if ctx.guild.voice_client else -1
 
-        embed = AvatarEmbed(title="— Thành công!", user=ctx.author)
-        embed.add_field(name="Độ trễ:", value=f"**Bot:** {bot_latency * 1000:.2f}ms\n**Voice:** {voice_latency}ms")
+        embed = self.embed
+        embed.title = "Pong!"
+        embed.add_field(name="Ping:", value=f"**Text:** {bot_latency * 1000:.2f}ms\n**Voice:** {voice_latency}ms")
 
-        for i, node in enumerate(wavelink.Pool.nodes, 1):
+        for i, node in enumerate(Pool.nodes, 1):
             node_ = wavelink.Pool.get_node(node)
-            if node_.status == wavelink.NodeStatus.CONNECTED:
-                node_status = ":white_check_mark:"
-            elif node_.status == wavelink.NodeStatus.CONNECTING:
-                node_status = ":arrows_clockwise:"
-            else:
-                node_status = ":negative_squared_cross_mark:"
-            embed.add_field(name=f"Node {i}: {node_status}",
-                            value="")
+            node_status = NODE_STATUSES[node_.status]
+            embed.add_field(name=f"Node {i}: {node_status}", value="", inline=False)
         await ctx.reply(embed=embed)
 
     @commands.command(name="prefix", description="Set a custom prefix for your server")
     async def prefix_command(self, ctx: FurinaCtx, prefix: str):
-        """Set a custom prefix or clear it with 'clear' or 'reset' or 'default'"""
         await ctx.tick()
         async with self.bot.pool.acquire() as con:
             if prefix in ['clear', 'reset', 'default']:
@@ -146,36 +150,34 @@ class Utils(commands.Cog):
     @commands.command(name='help', description="Help command")
     async def help_command(self, ctx: FurinaCtx, category_or_command_name: str = None):
         """
-        Help command
-
         Parameters
         -----------
-        ctx
-            FurinaCtx
         category_or_command_name: `str`
             Category/Command name you need help with
         """
         # !help
         if category_or_command_name is None:
-            view = TimeoutView().add_item(HelpSelect(self.bot))
+            view = View().add_item(HelpSelect(self.bot))
             view.message = await ctx.reply(view=view)
             return
         
         # !help <CogName>
-        cog = self.bot.get_cog(category_or_command_name.capitalize())
+        for cog_ in self.bot.cogs.keys():
+            if cog_.lower() == category_or_command_name.lower():
+                cog = self.bot.get_cog(cog_)
+                break
         if cog and cog.__cog_name__ != "Hidden":
-            embed = CommandListEmbed(prefix=self.bot.prefixes.get(ctx.guild.id) or DEFAULT_PREFIX, cog=cog)
+            embed = self.command_list_embed(cog=cog, prefix=ctx.prefix, embed=self.embed)
             return await ctx.reply(embed=embed)
         
         # !help <Command>
-        command = self.bot.get_command(category_or_command_name)
+        command = self.bot.get_command(category_or_command_name.lower())
         if command and not command.hidden:
-            embed = discord.Embed()
+            embed = self.embed
             embed.description = (f"- **__Name:__** `{command.qualified_name}`\n"
                                  f"- **__Description:__** {command.description}\n"
-                                 f"- **__How to use:__** `{ctx.prefix}{command.qualified_name} {command.signature}`"
-            )
-            embed.set_footer(text="Aliases: " + ", ".join(alias for alias in command.aliases)) if command.aliases else None
+                                 f"- **__How to use:__** `{ctx.prefix}{command.qualified_name} {command.signature}`")
+            embed.set_footer(text="Aliases: " + ", ".join(alias for alias in command.aliases) if command.aliases else "")
             await ctx.reply(embed=embed)
         else:
             raise commands.BadArgument("""I don't recognize that command/category""")
@@ -201,26 +203,23 @@ class Utils(commands.Cog):
         disk_used = round(disk_info.used / (1024 ** 3), 2)
         disk_available = round(disk_info.free / (1024 ** 3), 2)
 
-        embed = FooterEmbed(title="Thông tin về máy ảo")
-        embed.add_field(name="Hệ điều hành", value=os_version)
-        embed.add_field(
-            name="CPU Usage",
-            value=f"{cpu_percent}%",
-            inline=False
-        )
+        embed = self.embed
+        embed.title = "VPS Info"
+        embed.add_field(name="Operating System", value=os_version)
+        embed.add_field(name="CPU Usage", value=f"{cpu_percent}%", inline=False)
         embed.add_field(
             name="RAM Usage",
-            value=f'- Tổng: {ram_total}GB\n'
-                  f'- Đã dùng: {ram_used}GB\n'
-                  f'- Đệm: {ram_cached}GB\n'
-                  f'- Trống: {ram_available}GB',
+            value=f'- Total: {ram_total}GB\n'
+                  f'- Used: {ram_used}GB\n'
+                  f'- Cache: {ram_cached}GB\n'
+                  f'- Free: {ram_available}GB',
             inline=False
         )
         embed.add_field(
             name="Disk Usage",
-            value=f'- Tổng: {disk_total}GB\n'
-                  f'- Đã dùng: {disk_used}GB\n'
-                  f'- Trống: {disk_available}GB',
+            value=f'- Total: {disk_total}GB\n'
+                  f'- Used: {disk_used}GB\n'
+                  f'- Free: {disk_available}GB',
             inline=False
         )
         await ctx.reply(embed=embed)
@@ -228,17 +227,15 @@ class Utils(commands.Cog):
     @commands.hybrid_command(name='userinfo', aliases=['uinfo', 'whois'], description="Get info about a member")
     async def user_info_command(self, ctx: FurinaCtx, member: Optional[discord.Member] = None):
         """
-        Get info about a member
-
         Parameters
         -----------
-        ctx: `FurinaCtx`
-            FurinaCtx
         member: `Optional[discord.Member]`
             A member to get info from
         """
         member = member or ctx.author
-        embed = FooterEmbed(title="— Member Info", color=Color.blue())
+        embed = self.embed
+        embed.title = "Member Info"
+        embed.color = Color.blue()
         embed.add_field(name="Display Name:", value=member.mention)
         embed.add_field(name="Username:", value=member)
         embed.add_field(name="ID:", value=member.id)
@@ -342,14 +339,14 @@ class Utils(commands.Cog):
         async with aiohttp.ClientSession() as cs:
             async with cs.get(f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}") as response:
                 if response.status == 404:
-                    embed = FooterEmbed(
+                    embed = Embed(
                         title=word.capitalize(),
                         description="No definitions found. API call returned 404."
-                    )
+                    ).set_footer(text="Coded by ThanhZ")
                     return PaginatedView(timeout=300, embeds=[embed])
                 data: list[dict] = eval(await response.text())
 
-        embed = FooterEmbed(title=word.capitalize())
+        embed = Embed(title=word.capitalize()).set_footer(text="Coded by ThanhZ")
 
         for d in data:
             phonetics = d['phonetic'] if 'phonetic' in d \
@@ -381,10 +378,10 @@ class Utils(commands.Cog):
                     inline=False
                 )
                 embeds.append(embed)
-                embed = FooterEmbed(
+                embed = Embed(
                     title=word.capitalize(),
                     description=f"Pronunciation: `{phonetics}`"
-                )
+                ).set_footer(text="Coded by ThanhZ")
         return PaginatedView(timeout=300, embeds=embeds)
 
     @commands.hybrid_command(name='dictionary', aliases=['dict'], description="Tra từ điển một từ.")

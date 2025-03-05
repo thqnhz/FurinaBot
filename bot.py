@@ -136,7 +136,7 @@ class FurinaBot(Bot):
         await self.create_minigame_stats_db()
 
         # loads the extensions
-        from _extensions import EXTENSIONS
+        from cogs import EXTENSIONS
         for extension in EXTENSIONS:
             try:
                 await self.load_extension(f"{extension}")

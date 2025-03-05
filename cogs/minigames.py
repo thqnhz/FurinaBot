@@ -17,7 +17,7 @@ from discord.ext import commands
 
 
 from .utils import Utils
-from _classes.views import PaginatedView
+from cogs.utility.views import PaginatedView
 
 
 if TYPE_CHECKING:
