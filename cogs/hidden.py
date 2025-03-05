@@ -10,7 +10,6 @@ from discord import app_commands, Embed, Color
 
 
 from settings import *
-from _classes.embeds import *
 
 
 if TYPE_CHECKING:
@@ -38,8 +37,11 @@ class Hidden(commands.Cog):
     def __init__(self, bot: FurinaBot):
         self.bot = bot
 
-    @staticmethod
-    def get_logs(dir: str, lines: int = 15) -> Tuple[Embed, Optional[discord.File]]:
+    @property
+    def embed(self):
+        return self.bot.embed
+
+    def get_logs(self, dir: str, lines: int = 15) -> Tuple[Embed, Optional[discord.File]]:
         try:
             with open(dir, 'r', encoding='utf-8') as file:
                 log_lines = file.readlines()[-lines:]
@@ -52,14 +54,15 @@ class Hidden(commands.Cog):
         file = None
 
         if not errors:
-            embed = FooterEmbed(title=f"Nhật ký lỗi gần đây nhất của Furina ({lines} dòng)",
-                                description="")
+            embed = self.embed
+            embed.title = f"Nhật ký lỗi gần đây nhất của Furina ({lines} dòng)"
             if len(output) < 4096 and lines < 30:
                 embed.description = f"```log\n{output}\n```"
             else:
                 file = discord.File(fp=io.StringIO(output), filename=f'logs-{lines}lines.log')
         else:
-            embed = ErrorEmbed(description=f"Có lỗi xảy ra khi lấy nhật ký: {errors}")
+            embed = self.embed
+            embed.description = f"Có lỗi xảy ra khi lấy nhật ký: {errors}"
         return embed, file
 
     @commands.command(hidden=True, name='logs', aliases=['log'], description="Get the bot's logs")

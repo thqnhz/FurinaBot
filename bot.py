@@ -59,7 +59,7 @@ class FurinaBot(Bot):
             async with FurinaBot(pool=pool, client_session=client_session) as bot:
                 await bot.start(TOKEN)
     """
-    def __init__(self, *, pool: Pool, client_session: ClientSession) -> None:
+    def __init__(self, *, pool: Pool, client_session: ClientSession, skip_lavalink: bool) -> None:
         super().__init__(
             command_prefix     = self.get_pre,
             case_insensitive   = True,
@@ -71,6 +71,7 @@ class FurinaBot(Bot):
                                           name=ACTIVITY_NAME,
                                           state="Playing: N̸o̸t̸h̸i̸n̸g̸")
         )
+        self.skip_lavalink = skip_lavalink
         self.pool = pool
         self.cs = client_session
 

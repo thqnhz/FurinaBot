@@ -259,9 +259,10 @@ class Music(commands.Cog):
         return self.bot.embed
 
     async def cog_load(self) -> None:
-        version = await self.get_lavalink_jar()
-        self.start_lavalink(version)
-        await asyncio.sleep(10)
+        if not self.bot.skip_lavalink:
+            version = await self.get_lavalink_jar()
+            self.start_lavalink(version)
+            await asyncio.sleep(10)
         await self.refresh_node_connection()
 
     async def get_lavalink_jar(self) -> str:

@@ -3,11 +3,10 @@ from __future__ import annotations
 import asyncio
 import os
 import logging
-
+import sys
 
 import asyncpg
 from aiohttp import ClientSession
-
 
 from bot import FurinaBot
 from settings import TOKEN
@@ -55,11 +54,14 @@ def handle_setup_logging() -> None:
     root_logger.addHandler(file_handler)
     root_logger.addHandler(console_handler)
 
-async def main() -> None:
+async def main(skip_ll: bool) -> None:
     os.makedirs("logs", exist_ok=True)
     handle_setup_logging()
     async with ClientSession() as client_session, asyncpg.create_pool(user="postgres", command_timeout=30) as pool:
-        async with FurinaBot(pool=pool, client_session=client_session) as bot:
+        async with FurinaBot(pool=pool, client_session=client_session, skip_lavalink=skip_ll) as bot:
             await bot.start(TOKEN)
 
-asyncio.run(main())
+
+if __name__ == "__main__":
+    skip_ll = True if "--skip-ll" in sys.argv else False
+    asyncio.run(main(skip_ll))
