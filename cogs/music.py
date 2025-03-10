@@ -334,13 +334,14 @@ class Music(commands.Cog):
         try:
             Pool.get_node()
         except wavelink.InvalidNodeException:
-            node = Node(uri=LAVA_URI, password=LAVA_PW, heartbeat=5.0, inactive_player_timeout=None, retries=3)
             await Pool.close()
             try:
+                node = Node(uri=LAVA_URI, password=LAVA_PW, heartbeat=5.0, inactive_player_timeout=None, retries=3)
                 await Pool.connect(client=self.bot, nodes=[node])
-                print(f"Connected to \"{node.uri}\"")
             except wavelink.NodeException:
-                node = Node(uri=BACKUP_LL, password=BACKUP_LL_PW, heartbeat=5.0, inactive_player_timeout=None)
+                node = Node(uri=BACKUP_LL, password=BACKUP_LL_PW, heartbeat=5.0, inactive_player_timeout=None, retries=3)
+                await Pool.connect(client=self.bot, nodes=[node])
+            logging.info(f"Connected to \"{node.uri}\"")
 
     @staticmethod
     def _is_connected(ctx: FurinaCtx) -> bool:
