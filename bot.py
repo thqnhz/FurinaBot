@@ -99,16 +99,8 @@ class FurinaBot(Bot):
             self.prefixes = {prefix["guild_id"]: prefix["prefix"] for prefix in prefixes}
             
     async def create_minigame_stats_db(self):
-        async with self.pool.acquire() as con:
-            await con.execute("""
-                CREATE TABLE IF NOT EXISTS minigame_stats
-                (
-                    user_id BIGINT NOT NULL,
-                    minigame TEXT NOT NULL,
-                    wins INT NOT NULL DEFAULT 0,
-                    loses INT NOT NULL DEFAULT 0,
-                    PRIMARY KEY (user_id, minigame)
-                )""")
+        from cogs.utility.sql import MinigamesSQL
+        await MinigamesSQL(self.pool).init_tables()
 
     def get_pre(self, _, message: discord.Message) -> List[str]:
         """Custom `get_prefix` method"""

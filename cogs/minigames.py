@@ -12,10 +12,11 @@ from typing import Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 
 
 import discord
-from discord import app_commands, ui, Color, Embed, ButtonStyle, Interaction, User
+from discord import app_commands, ui, Color, Embed, ButtonStyle, Message, Interaction, User
 from discord.ext import commands
 
 
+from cogs.utility.sql import MinigamesSQL
 from .utils import Utils
 from cogs.utility.views import PaginatedView
 
@@ -258,7 +259,7 @@ WORDLE_EMOJIS: Dict[str, Dict[WordleLetterStatus, str]]
 class WordleABC(ui.View):
     ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
     def __init__(self, *, bot: FurinaBot, word: str, owner: User, solo: bool, attempt: int) -> None:
-        super().__init__(timeout=None)
+        super().__init__(timeout=600)
         self.bot = bot
         self.word = word
         self.owner = owner
@@ -269,11 +270,27 @@ class WordleABC(ui.View):
         self._availability: List[WordleLetterStatus] = [WordleLetterStatus.UNUSED] * len(self.ALPHABET)
 
         self.update_availabilities()
+        self.message: Message
 
     @property
     def is_over(self) -> bool:
         """Whether the game is over or not"""
         return self.attempt == 0 or self._is_winning
+    
+    async def on_timeout(self) -> None:
+        for child in self.children:
+            child.disabled = True
+        await self.message.edit(view=self)
+
+    async def update_game_status(self, game_name: str, win: bool):
+        async with self.bot.pool.acquire() as db:
+            await db.execute("""INSERT INTO singleplayer_games (game_id, game_name, user_id, attempts, win)
+                                VALUES ($1, $2, $3, $4, $5)
+                                ON CONFLICT (game_id) DO UPDATE SET
+                                attempts = EXCLUDED.attempts,
+                                win = EXCLUDED.win""",
+                            self.message.id, game_name, self.owner.id, self.attempt, win)
+
 
     def update_availabilities(self):
         """Update letters availability"""
@@ -361,23 +378,6 @@ class WordleABC(ui.View):
         """
         pass
 
-    async def update_minigame_stats(self, user: User, minigame: str, win: bool) -> None:
-        if win:
-            wins = 1
-            loses = 0
-        else:
-            wins = 0
-            loses = 1
-        async with self.bot.pool.acquire() as con:
-            await con.execute("""
-                INSERT INTO minigame_stats (user_id, minigame, wins, loses)
-                VALUES ($1, $2, $3, $4)
-                ON CONFLICT (user_id, minigame) DO UPDATE SET
-                wins = minigame_stats.wins + EXCLUDED.wins,
-                loses = minigame_stats.loses + EXCLUDED.loses""",
-                user.id, minigame, wins, loses
-            )
-
     @ui.button(emoji="\U0001f4ad", disabled=True)
     async def remaining_attempt_button(self, _: Interaction, _b: ui.Button):
         pass
@@ -389,7 +389,7 @@ class Wordle(WordleABC):
         self.embed.title = f"WORDLE ({len(word)} LETTERS)"
         self.embed.description = ""
         self.embed.color = 0x2F3136
-        self.embed.set_footer(text="Coded by ThanhZ | v0.3.1-beta")
+        self.embed.set_footer(text="Coded by ThanhZ | v0.3.2-beta")
         super().__init__(bot=bot, word=word, owner=owner, solo=solo, attempt=6)
         self.helped_guess: WordleHelpGuessSelect = WordleHelpGuessSelect()
         self.selected_guess: Optional[str] = None
@@ -433,6 +433,11 @@ class Wordle(WordleABC):
                 return await interaction.followup.send(f"`{guess}` is not a real word!", ephemeral=True)
         return guess, guesser
 
+    async def on_timeout(self) -> None:
+        await super().on_timeout()
+        self.remove_item(self.children[2])
+        await self.update_game_status(game_name="wordle", win=self._is_winning)
+
     @ui.button(label="Guess", emoji="\U0001f4dd")
     async def guess_button(self, interaction: Interaction, button: ui.Button):
         guess, guesser = await self.get_guessandguesser(interaction)
@@ -474,7 +479,6 @@ class Wordle(WordleABC):
             for child in self.children:
                 if isinstance(child, WordleHelpGuessSelect):
                     self.remove_item(child)
-            await self.update_minigame_stats(interaction.user, "wordle", self._is_winning)
             if self._is_winning:
                 self.embed.color = Color.green()
                 button.style = ButtonStyle.success
@@ -484,12 +488,7 @@ class Wordle(WordleABC):
                 button.style = ButtonStyle.danger
                 button.label = "You Lost!"
         await interaction.edit_original_response(embed=self.embed, view=self)
-
-        if self.is_over:
-            await asyncio.sleep(300)
-            self.remove_item(self.children[2])
-            self.stop()
-            await interaction.edit_original_response(view=self)
+        await self.update_game_status(game_name="wordle", win=self._is_winning)
 
 
 class Letterle(WordleABC):
@@ -497,7 +496,7 @@ class Letterle(WordleABC):
         self.embed = bot.embed
         self.embed.title = "LETTERLE"
         self.embed.description = ""
-        self.embed.set_footer(text="Coded by ThanhZ | v0.3.0-beta")
+        self.embed.set_footer(text="Coded by ThanhZ | v0.3.1-beta")
         super().__init__(bot=bot, word=letter, owner=owner, solo=False, attempt=24)
         self.init_guess = init_guess
         self.remaining_attempt_button.label = f"Attempts: {self.attempt}"
@@ -528,6 +527,9 @@ class Letterle(WordleABC):
         self.embed.clear_fields()
         self.embed.add_field(name="Keyboard", value=availabilities)
 
+    async def on_timeout(self) -> None:
+        await super().on_timeout()
+        await self.update_game_status(game_name="letterle", win=self._is_winning)
 
     @ui.select(placeholder="Select a letter")
     async def select_guess(self, interaction: Interaction, select: ui.Select):
@@ -548,7 +550,7 @@ class Letterle(WordleABC):
             select.disabled = True
             self.embed.description += f"### The letter is: `{self.word}`"
             self.embed.color = Color.green() if self._is_winning else Color.red()
-            await self.update_minigame_stats(interaction.user, "letterle", self._is_winning)
+        await self.update_game_status(game_name="letterle", win=self._is_winning)
         await interaction.edit_original_response(embed=self.embed, view=self)
 
 
@@ -591,7 +593,7 @@ class WordleHelpGuessSelect(ui.Select):
 
 
 class Minigames(commands.GroupCog, group_name="minigame"):
-    """Các Minigame bạn có thể chơi"""
+    """Some minigames that you can play"""
     def __init__(self, bot: FurinaBot):
         self.bot = bot
 
@@ -670,6 +672,8 @@ class Minigames(commands.GroupCog, group_name="minigame"):
             word: str = ast.literal_eval(await response.text())[0]
         view = Wordle(bot=self.bot, word=word.upper(), owner=interaction.user, solo=solo)
         await interaction.followup.send(embed=view.embed, view=view)
+        view.message = await interaction.original_response()
+        await view.update_game_status(game_name="wordle", win=False)
 
     @app_commands.command(name='letterle', description="Letterle minigame")
     @app_commands.allowed_installs(guilds=True, users=True)
@@ -696,8 +700,13 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         if "GREEN" in init_result:
             embed.description += "First Guess Correct!!!"
             embed.color = Color.green()
-            return await interaction.followup.send(embed=embed)
-        await interaction.followup.send(embed=embed, view=view)
+            await interaction.followup.send(embed=embed)
+            win = True
+        else:
+            await interaction.followup.send(embed=embed, view=view)
+            win = False
+        view.message = await interaction.original_response()
+        await view.update_game_status(game_name="letterle", win=win)
 
     stats = app_commands.Group(name='stats', description="View minigame stats")
 
@@ -706,23 +715,13 @@ class Minigames(commands.GroupCog, group_name="minigame"):
     async def minigame_stats_all(self, interaction: Interaction):
         await interaction.response.defer()
         embeds: List[Embed] = []
-        async with self.bot.pool.acquire() as con:
-            rows = await con.fetch("""
-                WITH ranked_stats AS (
-                    SELECT user_id, minigame, wins, loses, ROW_NUMBER()
-                    OVER (PARTITION BY minigame ORDER BY wins DESC) AS rank
-                    FROM minigame_stats)
-                SELECT user_id, minigame, wins, loses
-                FROM ranked_stats
-                WHERE rank <= 3
-                ORDER BY minigame, wins DESC""")
+        rows = await MinigamesSQL(self.bot.pool).get_minigame_stats_all()
         sorted_by_minigame: Dict[str, List[Dict[str, int]]] = {}
         for row in rows:
-            minigame = row['minigame']
+            minigame = row['game_name']
             user_stats = {
                 'user_id': row['user_id'],
-                'wins': row['wins'],
-                'loses': row['loses']
+                'wins': row['wins']
             }
             if minigame not in sorted_by_minigame:
                 sorted_by_minigame[minigame] = []
@@ -732,7 +731,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
             embed.title = minigame.capitalize()
             embed.description = ""
             for index, user_stats in enumerate(user_stats_list, 1):
-                embed.description += f"{index}. <@{user_stats['user_id']}>: {user_stats['wins']} wins, {user_stats['loses']} loses\n"
+                embed.description += f"{index}. <@{user_stats['user_id']}>: {user_stats['wins']} wins\n"
             embeds.append(embed)
         view = PaginatedView(timeout=180, embeds=embeds)
         await interaction.followup.send(embed=view.embeds[0], view=view)
@@ -751,54 +750,15 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         """
         await interaction.response.defer()
         user = user or interaction.user
-        async with self.bot.pool.acquire() as con:
-            rows = await con.fetch("""SELECT * FROM minigame_stats WHERE user_id = $1""", user.id)
+        rows = await MinigamesSQL(self.bot.pool).get_minigame_stats_user(user.id)
         embed = self.bot.embed
         embed.title = f"Minigame Stats"
         embed.description = f"User: {user.mention}"
         for row in rows:
-            embed.add_field(name=row['minigame'].capitalize(), 
-                            value=f"Wins: `{row['wins']:04d}` | Loses: `{row['loses']:04d}`", 
+            embed.add_field(name=row['game_name'].capitalize(), 
+                            value=f"Total games played: `{row['total_games']:04d}`\nWins: `{row['wins']:04d}`\nLosses: `{row['losses']:04d}`", 
                             inline=False)
         await interaction.followup.send(embed=embed)
-
-    async def get_top_players_by_minigame(self, minigame: str):
-        async with self.bot.pool.acquire() as con:
-            rows = await con.fetch("""
-                WITH ranked_stats AS (
-                    SELECT
-                        user_id,
-                        minigame,
-                        wins,
-                        loses,
-                        ROW_NUMBER() OVER (PARTITION BY minigame ORDER BY wins DESC) AS rank
-                    FROM minigame_stats
-                    WHERE minigame = $1
-                )
-                SELECT user_id, minigame, wins, loses
-                FROM ranked_stats
-                WHERE rank <= 3
-                ORDER BY wins DESC""", minigame)
-            return rows
-
-    async def get_bottom_players_by_minigame(self, minigame: str):
-        async with self.bot.pool.acquire() as con:
-            rows = await con.fetch("""
-                WITH ranked_stats AS (
-                    SELECT
-                        user_id,
-                        minigame,
-                        wins,
-                        loses,
-                        ROW_NUMBER() OVER (PARTITION BY minigame ORDER BY loses DESC) AS rank
-                    FROM minigame_stats
-                    WHERE minigame = $1
-                )
-                SELECT user_id, minigame, wins, loses
-                FROM ranked_stats
-                WHERE rank <= 3
-                ORDER BY wins DESC""", minigame)
-            return rows
 
     @stats.command(name='wordle', description="View wordle minigame stats")
     @app_commands.allowed_installs(guilds=True, users=True)
@@ -814,7 +774,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
 
     async def get_minigame_stats(self, interaction: Interaction, minigame: str):
         await interaction.response.defer()
-        rows_top = await self.get_top_players_by_minigame(minigame)
+        rows_top = await MinigamesSQL(self.bot.pool).get_top_players_by_minigame(minigame)
         embed = self.bot.embed
         embed.title = f"{minigame.capitalize()} Minigame Stats"
         top_players = ""
@@ -823,10 +783,10 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         if not top_players:
             top_players = "There is no one here"
         embed.add_field(name=f"Top 3 {minigame} players\n", value=top_players)
-        rows_bottom = await self.get_bottom_players_by_minigame(minigame)
+        rows_bottom = await MinigamesSQL(self.bot.pool).get_bottom_players_by_minigame(minigame)
         bottom_players = ""
         for index, row in enumerate(rows_bottom, 1):
-            bottom_players += f"{index}. <@{row['user_id']}>: `{row['loses']:04d}` loses\n"
+            bottom_players += f"{index}. <@{row['user_id']}>: `{row['losses']:04d}` loses\n"
         if not bottom_players:
             bottom_players = "No one is here either"
         embed.add_field(name=f"Bottom 3 {minigame} players\n", value=bottom_players, inline=False)

@@ -63,5 +63,5 @@ async def main(skip_ll: bool) -> None:
 
 
 if __name__ == "__main__":
-    skip_ll = True if "--skip-ll" in sys.argv else False
+    skip_ll = True if ("--skip-ll" in sys.argv or os.getenv("SKIP_LL") == 'true') else False
     asyncio.run(main(skip_ll))

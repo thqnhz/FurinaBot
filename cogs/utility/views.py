@@ -18,21 +18,21 @@ class View(ui.View):
 
 
 class PaginatedView(View):
-    def __init__(self, *, timeout: float, embeds: List[Embed]):
+    def __init__(self, *, timeout: float, embeds: List[Embed] | Embed):
         super().__init__(timeout=timeout)
-        self.embeds = embeds
+        self.embeds = embeds if isinstance(embeds, List) else [embeds, ]
         self.page: int = 0
         if len(self.embeds) == 1:
             self.clear_items()
 
-    @ui.button(emoji="\U00002b05", disabled=True)
+    @ui.button(label="<", disabled=True)
     async def left_button(self, interaction: Interaction, button: Button):
         self.page -= 1
         button.disabled = True if self.page == 0 else False
         self.right_button.disabled = False
         await interaction.response.edit_message(embed=self.embeds[self.page], view=self)
 
-    @ui.button(emoji="\U000027a1")
+    @ui.button(label=">")
     async def right_button(self, interaction: Interaction, button: Button):
         self.page += 1 if self.page <= len(self.embeds) - 1 else self.page
         button.disabled = True if self.page == len(self.embeds) - 1 else False
