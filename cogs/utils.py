@@ -18,6 +18,7 @@ from wavelink import NodeStatus, Pool
 from bot import FurinaCtx
 from settings import *
 from cogs.utility.views import PaginatedView, View
+from cogs.utility.sql import PrefixSQL
 
 
 if TYPE_CHECKING:
@@ -121,23 +122,13 @@ class Utils(commands.Cog):
         await ctx.reply(embed=embed)
 
     @commands.command(name="prefix", description="Set a custom prefix for your server")
+    @commands.guild_only()
     async def prefix_command(self, ctx: FurinaCtx, prefix: str):
         await ctx.tick()
-        async with self.bot.pool.acquire() as con:
-            if prefix in ['clear', 'reset', 'default']:
-                await con.execute(
-                    """DELETE FROM custom_prefixes
-                       WHERE guild_id = $1""",
-                    ctx.guild.id
-                )
-            else:
-                await con.execute(
-                    """INSERT INTO custom_prefixes ( guild_id, prefix )
-                       VALUES ( $1, $2 )
-                       ON CONFLICT(guild_id) DO UPDATE SET
-                       prefix = excluded.prefix""",
-                    ctx.guild.id, prefix
-                )
+        if prefix in ['clear', 'reset', 'default', DEFAULT_PREFIX]:
+            await PrefixSQL(pool=self.bot.pool).delete_custom_prefix(guild_id=ctx.guild.id)
+        else:
+            await PrefixSQL(pool=self.bot.pool).set_custom_prefix(guild_id=ctx.guild.id, prefix=prefix)
         await self.bot.update_prefixes()
         embed = ctx.embed
         embed.description = f"Prefix for this server has been changed to `{self.bot.prefixes.get(ctx.guild.id) or DEFAULT_PREFIX}`"

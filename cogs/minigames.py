@@ -16,9 +16,9 @@ from discord import app_commands, ui, Color, Embed, ButtonStyle, Message, Intera
 from discord.ext import commands
 
 
-from cogs.utility.sql import MinigamesSQL
 from .utils import Utils
 from cogs.utility.views import PaginatedView
+from cogs.utility.sql import MinigamesSQL
 
 
 if TYPE_CHECKING:
@@ -283,14 +283,13 @@ class WordleABC(ui.View):
         await self.message.edit(view=self)
 
     async def update_game_status(self, game_name: str, win: bool):
-        async with self.bot.pool.acquire() as db:
-            await db.execute("""INSERT INTO singleplayer_games (game_id, game_name, user_id, attempts, win)
-                                VALUES ($1, $2, $3, $4, $5)
-                                ON CONFLICT (game_id) DO UPDATE SET
-                                attempts = EXCLUDED.attempts,
-                                win = EXCLUDED.win""",
-                            self.message.id, game_name, self.owner.id, self.attempt, win)
-
+        await MinigamesSQL(pool=self.bot.pool).update_game_status(
+            game_id=self.message.id, 
+            game_name=game_name, 
+            user_id=self.owner.id, 
+            attempts=self.attempt, 
+            win=win
+        )
 
     def update_availabilities(self):
         """Update letters availability"""

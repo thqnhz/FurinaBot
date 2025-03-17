@@ -4,8 +4,7 @@ import logging
 import traceback
 from aiohttp import ClientSession
 from platform import python_version
-from typing import List
-
+from typing import Dict, List
 
 import discord
 import wavelink
@@ -13,7 +12,7 @@ from asyncpg import Pool
 from discord import app_commands, utils, Activity, ActivityType, Embed, Intents
 from discord.ext.commands import errors, Bot, Context, when_mentioned_or
 
-
+from cogs.utility.sql import PrefixSQL
 from settings import DEFAULT_PREFIX, ACTIVITY_NAME, DEBUG_WEBHOOK, CHECKMARK
 
 
@@ -84,26 +83,21 @@ class FurinaBot(Bot):
 
     async def create_prefix_table(self) -> None:
         """Create a `custom_prefixes` table in the database"""
-        async with self.pool.acquire() as con:
-            await con.execute(
-                """CREATE TABLE IF NOT EXISTS custom_prefixes
-                   (
-                        guild_id BIGINT NOT NULL PRIMARY KEY,
-                        prefix TEXT NOT NULL
-                   )""")
+        await PrefixSQL(pool=self.pool).create_prefix_table()
             
     async def update_prefixes(self) -> None:
         """Retrieve all prefixes in the `custom_prefixes` table and cache them in `Furina.prefixes`"""
-        async with self.pool.acquire() as con:
-            prefixes = await con.fetch("""SELECT * FROM custom_prefixes""")
-            self.prefixes = {prefix["guild_id"]: prefix["prefix"] for prefix in prefixes}
+        prefixes = await PrefixSQL(pool=self.pool).get_custom_prefixes()
+        self.prefixes: Dict[int, str] = {prefix["guild_id"]: prefix["prefix"] for prefix in prefixes}
             
     async def create_minigame_stats_db(self):
         from cogs.utility.sql import MinigamesSQL
-        await MinigamesSQL(self.pool).init_tables()
+        await MinigamesSQL(pool=self.pool).init_tables()
 
     def get_pre(self, _, message: discord.Message) -> List[str]:
         """Custom `get_prefix` method"""
+        if not message.guild:
+            return when_mentioned_or(DEFAULT_PREFIX)(self, message)
         prefix = self.prefixes.get(message.guild.id) or DEFAULT_PREFIX
         return when_mentioned_or(prefix)(self, message)
 

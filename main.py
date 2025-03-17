@@ -9,7 +9,7 @@ import asyncpg
 from aiohttp import ClientSession
 
 from bot import FurinaBot
-from settings import TOKEN
+from settings import SKIP_LL, TOKEN
        
 
 class LogFormatter(logging.Formatter):
@@ -63,5 +63,5 @@ async def main(skip_ll: bool) -> None:
 
 
 if __name__ == "__main__":
-    skip_ll = True if ("--skip-ll" in sys.argv or os.getenv("SKIP_LL") == 'true') else False
+    skip_ll = True if ("--skip-ll" in sys.argv or SKIP_LL) else False
     asyncio.run(main(skip_ll))
