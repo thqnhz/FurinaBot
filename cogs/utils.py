@@ -84,7 +84,7 @@ class Utils(commands.Cog):
         if message.author == self.bot.user:
             return
 
-        if message.content == '<@1131530915223441468>':
+        if message.content == self.bot.user.mention:
             embed = self.embed
             embed.description = (f"My Prefix is `{self.bot.prefixes.get(message.guild.id) or DEFAULT_PREFIX}`\n"
                                   "### I also support slash commands \n-> Type `/` to see commands i can do!\n"
