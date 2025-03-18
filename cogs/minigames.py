@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 import ast
 import asyncio
 import logging
@@ -10,14 +9,12 @@ from collections import Counter
 from enum import Enum
 from typing import Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 
-
 import discord
 from discord import app_commands, ui, Color, Embed, ButtonStyle, Message, Interaction, User
 from discord.ext import commands
 
-
 from .utils import Utils
-from cogs.utility.views import PaginatedView
+from cogs.utility.views import View, PaginatedView
 from cogs.utility.sql import MinigamesSQL
 
 
@@ -73,7 +70,7 @@ class RPSButton(ui.Button):
             await interaction.edit_original_response(embed=view.embed, view=view)
             
 
-class RPSView(ui.View):
+class RPSView(View):
     def __init__(self):
         super().__init__(timeout=300)
         # A dict to store players and their move
@@ -180,7 +177,7 @@ class TicTacToeButton(ui.Button['TicTacToe']):
         await interaction.response.edit_message(embed=view.embed, view=view)
 
 
-class TicTacToe(ui.View):
+class TicTacToe(View):
     children: List[TicTacToeButton]
     X: int = -1
     O: int = 1
@@ -256,7 +253,7 @@ class WordleLetterStatus(Enum):
 WORDLE_EMOJIS: Dict[str, Dict[WordleLetterStatus, str]]
 
 
-class WordleABC(ui.View):
+class WordleABC(View):
     ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
     def __init__(self, *, bot: FurinaBot, word: str, owner: User, solo: bool, attempt: int) -> None:
         super().__init__(timeout=600)

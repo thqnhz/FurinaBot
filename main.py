@@ -10,7 +10,7 @@ from aiohttp import ClientSession
 
 from bot import FurinaBot
 from settings import SKIP_LL, TOKEN
-       
+
 
 class LogFormatter(logging.Formatter):
     grey = '\x1b[38;21m'

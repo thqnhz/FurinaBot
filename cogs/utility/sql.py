@@ -54,12 +54,16 @@ class SQL:
         """
         async with self.pool.acquire() as connection:
             connection: Connection
-            return await connection.execute(query=sql, *args)
+            if args:
+                return await connection.execute(sql, *args)
+            return await connection.execute(sql)
 
     async def fetch(self, sql: str, *args: Any) -> List[Record]:
         async with self.pool.acquire() as connection:
             connection: Connection
-            return await connection.fetch(query=sql, *args)
+            if args:
+                return await connection.fetch(sql, *args)
+            return await connection.fetch(sql)
         
 
 class PrefixSQL(SQL):
