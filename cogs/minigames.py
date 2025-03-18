@@ -385,7 +385,7 @@ class Wordle(WordleABC):
         self.embed.title = f"WORDLE ({len(word)} LETTERS)"
         self.embed.description = ""
         self.embed.color = 0x2F3136
-        self.embed.set_footer(text="Coded by ThanhZ | v0.3.2-beta")
+        self.embed.set_footer(text="Coded by ThanhZ | v0.3.3-beta")
         super().__init__(bot=bot, word=word, owner=owner, solo=solo, attempt=6)
         self.helped_guess: WordleHelpGuessSelect = WordleHelpGuessSelect()
         self.selected_guess: Optional[str] = None
@@ -492,7 +492,7 @@ class Letterle(WordleABC):
         self.embed = bot.embed
         self.embed.title = "LETTERLE"
         self.embed.description = ""
-        self.embed.set_footer(text="Coded by ThanhZ | v0.3.1-beta")
+        self.embed.set_footer(text="Coded by ThanhZ | v0.3.2-beta")
         super().__init__(bot=bot, word=letter, owner=owner, solo=False, attempt=24)
         self.init_guess = init_guess
         self.remaining_attempt_button.label = f"Attempts: {self.attempt}"
