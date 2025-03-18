@@ -153,6 +153,7 @@ class Utils(commands.Cog):
             return
         
         # !help <CogName>
+        cog: commands.Cog = None
         for cog_ in self.bot.cogs.keys():
             if cog_.lower() == category_or_command_name.lower():
                 cog = self.bot.get_cog(cog_)
