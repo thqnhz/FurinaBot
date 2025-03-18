@@ -44,7 +44,7 @@ class View(ui.View):
 class PaginatedView(View):
     def __init__(self, *, timeout: float, embeds: List[Embed] | Embed):
         super().__init__(timeout=timeout)
-        self.embeds = embeds if isinstance(embeds, List) else [embeds]
+        self.embeds = embeds if isinstance(embeds, List) else [embeds, ]
         self.page: int = 0
         if len(self.embeds) == 1:
             self.clear_items()
