@@ -711,7 +711,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
     async def minigame_stats_all(self, interaction: Interaction):
         await interaction.response.defer()
         embeds: List[Embed] = []
-        rows = await MinigamesSQL(self.bot.pool).get_minigame_stats_all()
+        rows = await MinigamesSQL(pool=self.bot.pool).get_minigame_stats_all()
         sorted_by_minigame: Dict[str, List[Dict[str, int]]] = {}
         for row in rows:
             minigame = row['game_name']
@@ -746,7 +746,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         """
         await interaction.response.defer()
         user = user or interaction.user
-        rows = await MinigamesSQL(self.bot.pool).get_minigame_stats_user(user.id)
+        rows = await MinigamesSQL(pool=self.bot.pool).get_minigame_stats_user(user.id)
         embed = self.bot.embed
         embed.title = f"Minigame Stats"
         embed.description = f"User: {user.mention}"
@@ -770,7 +770,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
 
     async def get_minigame_stats(self, interaction: Interaction, minigame: str):
         await interaction.response.defer()
-        rows_top = await MinigamesSQL(self.bot.pool).get_top_players_by_minigame(minigame)
+        rows_top = await MinigamesSQL(pool=self.bot.pool).get_top_players_by_minigame(minigame)
         embed = self.bot.embed
         embed.title = f"{minigame.capitalize()} Minigame Stats"
         top_players = ""
@@ -779,7 +779,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         if not top_players:
             top_players = "There is no one here"
         embed.add_field(name=f"Top 3 {minigame} players\n", value=top_players)
-        rows_bottom = await MinigamesSQL(self.bot.pool).get_bottom_players_by_minigame(minigame)
+        rows_bottom = await MinigamesSQL(pool=self.bot.pool).get_bottom_players_by_minigame(minigame)
         bottom_players = ""
         for index, row in enumerate(rows_bottom, 1):
             bottom_players += f"{index}. <@{row['user_id']}>: `{row['losses']:04d}` loses\n"
