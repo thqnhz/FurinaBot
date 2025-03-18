@@ -57,7 +57,7 @@ class MinigamesSQL:
                         game_name TEXT NOT NULL,
                         user_id BIGINT NOT NULL,
                         attempts INT NOT NULL,
-                        win BOOLEAN DEFAULT 0
+                        win BOOLEAN
                     );
 
                     CREATE TABLE IF NOT EXISTS twoplayers_games
