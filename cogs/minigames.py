@@ -729,6 +729,9 @@ class Minigames(commands.GroupCog, group_name="minigame"):
             for index, user_stats in enumerate(user_stats_list, 1):
                 embed.description += f"{index}. <@{user_stats['user_id']}>: {user_stats['wins']} wins\n"
             embeds.append(embed)
+        if not embeds:
+            embeds = [self.bot.embed]
+            embeds[0].title = "No Game Records"
         view = PaginatedView(timeout=180, embeds=embeds)
         await interaction.followup.send(embed=view.embeds[0], view=view)
         view.message = await interaction.original_response()
