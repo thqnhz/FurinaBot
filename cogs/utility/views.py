@@ -6,7 +6,7 @@ from discord import ui, Button, Embed, Interaction, Message, User
 from discord.ext.commands import CommandError, CooldownMapping
 
 
-class ButtonOnCoolDownError(CommandError):
+class UIElementOnCoolDownError(CommandError):
     def __init__(self, retry_after: float):
         self.retry_after = retry_after
 
@@ -24,11 +24,11 @@ class View(ui.View):
     async def interaction_check(self, interaction: Interaction):
         retry_after = self.cd.update_rate_limit(interaction)
         if retry_after:
-            raise ButtonOnCoolDownError(retry_after=retry_after)
+            raise UIElementOnCoolDownError(retry_after=retry_after)
         return True
     
     async def on_error(self, interaction: Interaction, error: Exception, item: ui.Item):
-        if isinstance(error, ButtonOnCoolDownError):
+        if isinstance(error, UIElementOnCoolDownError):
             seconds = int(error.retry_after)
             unit = 'second' if seconds == 1 else 'seconds'
             await interaction.response.send_message(f"You are clicking too fast, try again in {seconds} {unit}!", ephemeral=True)
