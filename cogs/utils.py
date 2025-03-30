@@ -275,9 +275,8 @@ class Utils(commands.Cog):
         embed.set_author(name=f"{ctx.author.display_name} thought {number} times before drawing a fortune slip",
                          icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
         await ctx.send(embed=embed)
-        await ctx.message.delete()
 
-    @commands.command(name='dice', aliases=['roll'], description="Tung xúc xắc.")
+    @commands.command(name='dice', aliases=['roll'], description="Roll a dice 6")
     async def dice(self, ctx: FurinaCtx, number: Optional[int] = 1) -> None:
         embed = discord.Embed()
         if number == 1:
@@ -287,12 +286,11 @@ class Utils(commands.Cog):
             for i in range(number):
                 rand_num = self.generate_random_number(1, 6)
                 seq += f"{rand_num} "
-            embed.add_field(name="Lịch sử:", value=f"```\n{seq[:-1]}\n```")
-        embed.set_author(name=f"{ctx.author.display_name} đã tung xúc xắc {number} lần",
+            embed.add_field(name="History:", value=f"```\n{seq[:-1]}\n```")
+        embed.set_author(name=f"{ctx.author.display_name} rolled a dice {number} times",
                          icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
-        embed.title = f"Con số trên xúc xắc là: {rand_num}"
+        embed.title = f"The current number is: {rand_num}"
         await ctx.send(embed=embed)
-        await ctx.message.delete()
 
     @commands.command(name='flip', aliases=['coin', 'coinflip'], description="Flip a coin")
     async def flip(self, ctx: FurinaCtx, number: Optional[int] = 1) -> None:
@@ -311,7 +309,6 @@ class Utils(commands.Cog):
                          icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
         embed.title = f"{rand_flip}"
         await ctx.send(embed=embed)
-        await ctx.message.delete()
 
     @staticmethod
     async def dictionary_call(word: str) -> PaginatedView:
