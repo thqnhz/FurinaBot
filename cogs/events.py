@@ -58,8 +58,6 @@ class BotEvents(commands.Cog):
             return
         elif isinstance(error, commands.MissingRequiredArgument):
             embed.description = f"Missing required argument: `{error.param.name}`"
-        elif isinstance(error, commands.CheckFailure):
-            return
         else:
             embed.description = f"{error}"
         await ctx.reply(embed=embed, ephemeral=True, delete_after=60)
