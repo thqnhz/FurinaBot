@@ -226,7 +226,7 @@ class Utils(commands.Cog):
         member: `Optional[discord.Member]`
             A member to get info from
         """
-        member = member or ctx.author
+        member = ctx.guild.get_member(member.id if member else ctx.author.id)
         embed = self.embed
         embed.title = "Member Info"
         embed.color = Color.blue()
