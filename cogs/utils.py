@@ -33,7 +33,7 @@ class HelpSelect(Select):
             options=[
                 discord.SelectOption(
                     label=cog_name, description=cog.__doc__
-                ) for cog_name, cog in bot.cogs.items() if cog.__cog_commands__ and cog_name not in ['Hidden']
+                ) for cog_name, cog in bot.cogs.items() if cog.__cog_commands__ and cog_name not in ['Hidden', 'Jishaku']
             ]
         )
         self.bot = bot
@@ -159,7 +159,7 @@ class Utils(commands.Cog):
             if cog_.lower() == category_or_command_name.lower():
                 cog = self.bot.get_cog(cog_)
                 break
-        if cog and cog.__cog_name__ != "Hidden":
+        if cog and (cog.__cog_name__ != "Hidden" or cog.__cog_name__ != "Jishaku"):
             embed = self.command_list_embed(cog=cog, prefix=ctx.prefix, embed=self.embed)
             return await ctx.reply(embed=embed)
         
