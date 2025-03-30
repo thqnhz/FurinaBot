@@ -165,7 +165,7 @@ class Utils(commands.Cog):
         
         # !help <Command>
         command = self.bot.get_command(category_or_command_name.lower())
-        if command and not command.hidden:
+        if command and not command.hidden and command.name != 'jishaku':
             embed = self.embed
             embed.description = (f"- **__Name:__** `{command.qualified_name}`\n"
                                  f"- **__Description:__** {command.description}\n"
