@@ -236,7 +236,7 @@ class Utils(commands.Cog):
         embed.set_thumbnail(url=member.display_avatar.url)
         account_created = int(member.created_at.timestamp())
         embed.add_field(name="Account Created:", value=f"<t:{account_created}>\n<t:{account_created}:R>")
-        server_joined = int(member.created_at.timestamp())
+        server_joined = int(member.joined_at.timestamp())
         embed.add_field(name="Server Joined:", value=f"<t:{server_joined}>\n<t:{server_joined}:R>")
         embed.add_field(name="Status: ", value=MemberStatus[str(member.status)].value)
         embed.add_field(name="Roles:", value=", ".join(role.mention for role in reversed(member.roles) if role.name != '@everyone'))
