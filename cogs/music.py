@@ -312,6 +312,8 @@ class Music(commands.Cog):
             pass
 
     async def cog_check(self, ctx: FurinaCtx) -> bool:
+        if ctx.guild.id != GUILD_SPECIFIC:
+                return False
         embed = ctx.embed
         embed.color = Color.red()
         embed.title = "Error"
@@ -407,6 +409,7 @@ class Music(commands.Cog):
         return cast(Player, ctx.guild.voice_client)
 
     @commands.hybrid_group(name='play', aliases=['p'], description="Play music")
+    @app_commands.guilds(GUILD_SPECIFIC)
     async def play_command(self, ctx: FurinaCtx, *, query: str):
         """
         Play music from YouTube. Prefix only
@@ -455,6 +458,7 @@ class Music(commands.Cog):
         await PlayerUtils.play(ctx, query, TrackSource.SoundCloud)
 
     @commands.hybrid_command(name='search', aliases=['s'], description="Tìm kiếm một bài hát.")
+    @app_commands.guilds(GUILD_SPECIFIC)
     async def search_command(self, ctx: FurinaCtx, *, query: str):
         """
         Tìm kiếm một bài hát.
@@ -490,6 +494,7 @@ class Music(commands.Cog):
         await msg.edit(embed=embed, view=view)
 
     @commands.hybrid_command(name='pause', description="Tạm dừng việc phát nhạc")
+    @app_commands.guilds(GUILD_SPECIFIC)
     async def pause_command(self, ctx: FurinaCtx) -> None:
         """Tạm dừng việc phát nhạc."""
         player: Player = self._get_player(ctx)
@@ -500,6 +505,7 @@ class Music(commands.Cog):
         await ctx.reply(embed=embed)
 
     @commands.hybrid_command(name='resume', description="Tiếp tục việc phát nhạc")
+    @app_commands.guilds(GUILD_SPECIFIC)
     async def resume_command(self, ctx: FurinaCtx) -> None:
         """Tiếp tục việc phát nhạc."""
         player: Player = self._get_player(ctx)
@@ -510,6 +516,7 @@ class Music(commands.Cog):
         await ctx.reply(embed=embed)
 
     @commands.hybrid_group(name='autoplay', aliases=['auto'], description="Bật hoặc tắt tự động phát.")
+    @app_commands.guilds(GUILD_SPECIFIC)
     async def autoplay_switch(self, ctx: FurinaCtx):
         """Bật hoặc tắt tự động phát."""
         player: Player = self._get_player(ctx)
@@ -539,6 +546,7 @@ class Music(commands.Cog):
         await ctx.reply(embed=embed)
 
     @commands.hybrid_command(name='nowplaying', aliases=['np', 'now', 'current'], description="Đang phát bài gì thế?")
+    @app_commands.guilds(GUILD_SPECIFIC)
     async def nowplaying_command(self, ctx: FurinaCtx):
         """Xem bài hát đang phát."""
         player: Player = self._get_player(ctx)
@@ -555,6 +563,7 @@ class Music(commands.Cog):
         await ctx.reply(embed=embed)
 
     @commands.hybrid_command(name='skip', description="Bỏ qua bài hát hiện tại.")
+    @app_commands.guilds(GUILD_SPECIFIC)
     async def skip_command(self, ctx: FurinaCtx):
         """Bỏ qua bài hát hiện tại."""
         player: Player = self._get_player(ctx)
@@ -569,6 +578,7 @@ class Music(commands.Cog):
         await ctx.reply(embed=embed)
 
     @commands.hybrid_command(name='stop', description="Dừng phát nhạc và xóa hàng chờ")
+    @app_commands.guilds(GUILD_SPECIFIC)
     async def stop_playing(self, ctx: FurinaCtx):
         """Tạm dừng phát nhạc và xóa hàng chờ."""
         player: Player = self._get_player(ctx)
@@ -579,6 +589,7 @@ class Music(commands.Cog):
         await ctx.reply(embed=embed)
 
     @commands.hybrid_command(name='queue', aliases=['q'], description="Xem chi tiết hàng chờ.")
+    @app_commands.guilds(GUILD_SPECIFIC)
     async def queue_command(self, ctx: FurinaCtx):
         """Show hàng chờ."""
         await self._show_queue(ctx)
@@ -624,6 +635,7 @@ class Music(commands.Cog):
         return embed
 
     @app_commands.command(name='remove', description="Xóa một bài hát khỏi hàng chờ")
+    @app_commands.guilds(GUILD_SPECIFIC)
     async def remove_slashcommand(self, interaction: Interaction, track_name: str):
         """
         Xóa một bài hát khỏi hàng chờ.
@@ -657,18 +669,21 @@ class Music(commands.Cog):
 
 
     @commands.hybrid_command(name='loop', aliases=['repeat'], description="Chuyển đổi giữa các chế độ lặp")
+    @app_commands.guilds(GUILD_SPECIFIC)
     async def loop_command(self, ctx: FurinaCtx) -> None:
         player: Player = self._get_player(ctx)
         view = LoopView(player=player)
         view.message = await ctx.reply(view=view)
 
     @commands.hybrid_command(name='connect', aliases=['j', 'join'], description="Kết nối bot vào kênh thoại")
+    @app_commands.guilds(GUILD_SPECIFIC)
     async def connect_command(self, ctx: FurinaCtx):
         """Gọi bot vào kênh thoại"""
         await PlayerUtils().ensure_voice_connection(ctx)
         await ctx.tick()
 
     @commands.hybrid_command(name='disconnect', aliases=['dc', 'leave', 'l'], description="Ngắt kết nối bot khỏi kênh thoại")
+    @app_commands.guilds(GUILD_SPECIFIC)
     async def disconnect_command(self, ctx: FurinaCtx):
         if ctx.voice_client:
             await ctx.tick()

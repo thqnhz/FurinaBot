@@ -123,6 +123,7 @@ class Utils(commands.Cog):
 
     @commands.command(name="prefix", description="Set a custom prefix for your server")
     @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
     async def prefix_command(self, ctx: FurinaCtx, prefix: str):
         await ctx.tick()
         if prefix in ['clear', 'reset', 'default', DEFAULT_PREFIX]:
@@ -174,7 +175,8 @@ class Utils(commands.Cog):
         else:
             raise commands.BadArgument("""I don't recognize that command/category""")
 
-    @commands.command(name='vps', description="VPS Info")
+    @commands.command(name='vps', hidden=True, description="VPS Info")
+    @commands.is_owner()
     async def vps_command(self, ctx: FurinaCtx):
         # OS Version
         os_version = platform.platform()
@@ -247,32 +249,31 @@ class Utils(commands.Cog):
         embed.timestamp = ctx.message.created_at
         await ctx.reply(embed=embed)
 
-    @commands.command(name='random', aliases=['rand'], description="Random số ngẫu nhiên.")
-    async def random(self, ctx: FurinaCtx, number: Optional[int] = 1) -> None:
+    @commands.command(name='fortune', aliases=['lucky', 'slip', 'fortuneslip'], description="Draw a fortune slip")
+    async def fortune_slip(self, ctx: FurinaCtx, number: Optional[int] = 1) -> None:
         embed = discord.Embed()
         if number == 1:
             rand_num = self.generate_random_number(0, 10)
         else:
             seq = ""
-            for i in range(number):
+            for i in range(number - 1):
                 rand_num = self.generate_random_number(0, 10)
                 seq += f"{rand_num} "
-            embed.add_field(name="Lịch sử:", value=f"```\n{seq[:-1]}\n```")
+            embed.add_field(name="What they could have get:", value=f"```\n{seq[:-1]}\n```")
         if rand_num < 4:
             embed.color = discord.Color.darker_gray()
-            embed.set_footer(text="Bạn đen lắm.")
+            embed.title = "Aww, Misfortune"
         elif 3 < rand_num < 8:
             embed.color = discord.Color.dark_purple()
-            embed.set_footer(text="Vận may bình thường.")
+            embed.title = "Rising Fortune"
         elif 7 < rand_num < 10:
             embed.color = discord.Color.pink()
-            embed.set_footer(text="Khá may mắn.")
+            embed.title = "Fortune"
         else:
             embed.color = discord.Color.red()
-            embed.set_footer(text="Hôm nay bạn rất may mắn.")
-        embed.set_author(name=f"{ctx.author.display_name} đã thử vận may của mình {number} lần",
+            embed.title = "Great Fortune"
+        embed.set_author(name=f"{ctx.author.display_name} thought {number} times before drawing a fortune slip",
                          icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
-        embed.title = f"Con số may mắn là: {rand_num}"
         await ctx.send(embed=embed)
         await ctx.message.delete()
 
@@ -293,34 +294,34 @@ class Utils(commands.Cog):
         await ctx.send(embed=embed)
         await ctx.message.delete()
 
-    @commands.command(name='flip', aliases=['coin', 'coinflip'], description="Tung đồng xu.")
+    @commands.command(name='flip', aliases=['coin', 'coinflip'], description="Flip a coin")
     async def flip(self, ctx: FurinaCtx, number: Optional[int] = 1) -> None:
         embed = discord.Embed()
         if number == 1:
             for _ in range(100):
-                rand_flip = random.choice(["Sấp", "Ngửa"])
+                rand_flip = random.choice(["Head", "Tail"])
         else:
             seq = ""
             for i in range(number):
                 for i in range(100):
-                    rand_flip = random.choice(["Sấp ", "Ngửa"])
+                    rand_flip = random.choice(["Head", "Tail"])
                 seq += f"{rand_flip[:-3]} "
-            embed.add_field(name="Lịch sử:", value=f"```\n{seq[:-1]}\n```")
-        embed.set_author(name=f"{ctx.author.display_name} đã tung một đồng xu {number} lần",
+            embed.add_field(name="History:", value=f"```\n{seq[:-1]}\n```")
+        embed.set_author(name=f"{ctx.author.display_name} flipped a coin {number} times",
                          icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
-        embed.title = f"Mặt hiện tại của đồng xu là: {rand_flip}"
+        embed.title = f"{rand_flip}"
         await ctx.send(embed=embed)
         await ctx.message.delete()
 
     @staticmethod
     async def dictionary_call(word: str) -> PaginatedView:
         """
-        Tạo API call đến dictionaryapi
+        Calls the dictionaryapi
 
         Parameters
         -----------
         `word: str`
-            Từ cần tra từ điển.
+            - The word
 
         Returns
         -----------
@@ -376,16 +377,16 @@ class Utils(commands.Cog):
                 ).set_footer(text="Coded by ThanhZ")
         return PaginatedView(timeout=300, embeds=embeds)
 
-    @commands.hybrid_command(name='dictionary', aliases=['dict'], description="Tra từ điển một từ.")
+    @commands.hybrid_command(name='dictionary', aliases=['dict'], description="Find a word in the dictionary")
     @app_commands.allowed_installs(guilds=True, users=True)
     async def dict_command(self, ctx: FurinaCtx, word: str):
         """
-        Tra từ điển một từ.
+        Find a word in the dictionary
         
         Parameters
         -----------
         word: `str`
-            Từ cần tra
+            - The word, note that it only get the first word
         """
         view = await self.dictionary_call(word.split()[0])
         view.message = await ctx.reply(embed=view.embeds[0], view=view)

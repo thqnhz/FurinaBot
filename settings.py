@@ -9,6 +9,8 @@ ACTIVITY_NAME = "Music » /play"
 TOKEN = os.getenv("BOT_TOKEN")
 DEBUG_WEBHOOK = os.getenv("DEBUG_WEBHOOK")
 
+GUILD_SPECIFIC = 872126813411893328
+
 # GIF
 LOADING_GIF = "https://cdn.discordapp.com/emojis/1187957747724079144.gif?size=64&name=loading&quality=lossless"
 PLAYING_GIF = "https://cdn.discordapp.com/emojis/1174925797082017923.gif?size=64&name=playing&quality=lossless"

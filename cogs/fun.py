@@ -3,12 +3,10 @@ from __future__ import annotations
 import random
 from typing import TYPE_CHECKING
 
-
 from discord import Message
 from discord.ext import commands
 
-
-from bot import FurinaCtx
+from settings import GUILD_SPECIFIC
 
 
 if TYPE_CHECKING:
@@ -23,6 +21,9 @@ class Fun(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message: Message) -> None:
         if message.author.bot:
+            return
+        
+        if message.guild != GUILD_SPECIFIC:
             return
         
         msg = message.content.lower()
@@ -69,14 +70,6 @@ class Fun(commands.Cog):
             'https://cdn.7tv.app/emote/646748346989b9b0d46adc50/4x.webp'
         ])
         return emote
-
-    @commands.command(name='botngu', aliases=['ngu'], description="Bot ngu quãi lều.")
-    async def botngu(self, ctx: FurinaCtx) -> None:
-        embed = ctx.embed
-        embed.title = "Sao bạn lại chửi mình ngu :sob:"
-        embed.description = f"<@596886610214125598> ơi {ctx.author.mention} chửi bé là ngu."
-        embed.set_image(url="https://media1.tenor.com/m/2ROZqn-Kr1IAAAAd/furina-furina-cry.gif")
-        await ctx.send(embed=embed)
 
 
 async def setup(bot: FurinaBot) -> None:

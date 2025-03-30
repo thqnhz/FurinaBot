@@ -29,8 +29,8 @@ class AI(commands.Cog):
         """
         await ctx.tick()
         msg = await ctx.reply(embed=ctx.embed.set_author(name="Translating..."))
-        google_translator = GoogleTranslator(source="auto", target="vi").translate(text)
-        mymemory_translator = MyMemoryTranslator(source="en-US", target="vi-VN").translate(text)
+        google_translator = GoogleTranslator().translate(text)
+        mymemory_translator = MyMemoryTranslator().translate(text)
         embed = ctx.embed
         embed.title = "Translate"
         embed.add_field(name="Original", value=text)

@@ -22,7 +22,7 @@ class SendEmbedView(discord.ui.View):
         self.channel = channel
         self.embed = embed
 
-    @discord.ui.button(label="Gửi", emoji="💭")
+    @discord.ui.button(label="Send", emoji="💭")
     async def send_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
         await interaction.delete_original_response()
@@ -37,52 +37,11 @@ class Hidden(commands.Cog):
     def __init__(self, bot: FurinaBot):
         self.bot = bot
 
-    @property
-    def embed(self):
-        return self.bot.embed
-
-    def get_logs(self, dir: str, lines: int = 15) -> Tuple[Embed, Optional[discord.File]]:
-        try:
-            with open(dir, 'r', encoding='utf-8') as file:
-                log_lines = file.readlines()[-lines:]
-                output = ''.join(log_lines)
-                errors = None
-        except Exception as e:
-            output = ""
-            errors = str(e)
-
-        file = None
-
-        if not errors:
-            embed = self.embed
-            embed.title = f"Nhật ký lỗi gần đây nhất của Furina ({lines} dòng)"
-            if len(output) < 4096 and lines < 30:
-                embed.description = f"```log\n{output}\n```"
-            else:
-                file = discord.File(fp=io.StringIO(output), filename=f'logs-{lines}lines.log')
-        else:
-            embed = self.embed
-            embed.description = f"Có lỗi xảy ra khi lấy nhật ký: {errors}"
-        return embed, file
-
-    @commands.command(hidden=True, name='logs', aliases=['log'], description="Get the bot's logs")
-    @commands.is_owner()
-    async def logs(self, ctx: commands.Context, number: int = 15) -> None:
-        embed, file = self.get_logs("./logs/furina.log", number)
-        await ctx.reply(embed=embed, file=file)
-
-    @commands.command(hidden=True, name='lavalogs', description="Get the lavalink's logs")
-    @commands.is_owner()
-    async def lavalogs(self, ctx: commands.Context, number: int = 15) -> None:
-        embed, file = self.get_logs("./logs/spring.log", number)
-        await ctx.reply(embed=embed, file=file)
-
-    @app_commands.command(name='embed', description="Gửi một embed.")
+    @app_commands.command(name='embed', description="Send an embed.")
     @app_commands.default_permissions(manage_permissions=True)
     async def send_embed(self, interaction: discord.Interaction,
                          title: str, *, url: Optional[str] = None,
                          desc: Optional[str] = None,
-                         color: Optional[bool] = True,
                          author: Optional[str] = None,
                          thumbnail: Optional[discord.Attachment] = None,
                          image: Optional[discord.Attachment] = None,
@@ -95,47 +54,43 @@ class Hidden(commands.Cog):
                          field3: Optional[str] = None,
                          field3_value: Optional[str] = None) -> None:
         """
-        Gửi một embed.
+        Send an embed.
 
         Parameters
         -----------
-        interaction
-            discord.Interaction
         title
-            Tiêu đề của embed.
+            - The embed title
         url
-            URL của embed.
+            - Embed url
         desc
-            Description của embed.
-        color
-            Embed có màu hay không?
+            - Embed description
         author
-            Chủ sở hữu embed (ở trên tiêu đề).
+            - Author text
         thumbnail
-            Ảnh thu nhỏ cho embed (File).
+            - Thumbnail (file)
         image
-            Ảnh to của embed (File).
+            - Big image (file)
         channel
-            Kênh cần gửi embed vào
+            - Destination channel
         footer
-            Chân embed.
+            - Embed footer text
         field1
-            Tiêu đề field thứ nhất của embed
+            First field name
         field1_value
-            Giá trị field thứ nhất của embed
+            First field value
         field2
-            Tiêu đề field thứ hai của embed
+            Second field name
         field2_value
-            Giá trị field thứ hai của embed
+            Second field value
         field3
-            Tiêu đề field thứ ba của embed
+            Third field name
         field3_value
-            Giá trị field thứ ba của embed
+            Third field value
         """
 
         embed = Embed(title=title,
                       description=desc.replace("\\n", "\n") if desc else None,
-                      color=Color.blue() if color else None,
+                      color=Color.blue(),
                       url=url)
         if author:
             embed.set_author(name=author)
