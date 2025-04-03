@@ -430,7 +430,7 @@ class Utils(commands.Cog):
             return (m.author == ctx.author and 
                     m.channel == ctx.channel and 
                     m.content != "" and 
-                    not m.content.startswith((self.bot.prefixes.get(ctx.guild.id), DEFAULT_PREFIX, self.bot.user.mention)))
+                    not m.content.startswith((self.bot.prefixes.get(ctx.guild.id) or DEFAULT_PREFIX, self.bot.user.mention)))
         if not data:
             try:
                 pending = await ctx.send("What is the name of the tag?")
