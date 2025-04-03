@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 from typing import TYPE_CHECKING
 
-from discord import Message
+from discord import app_commands, Interaction, Message
 from discord.ext import commands
 
 from settings import GUILD_SPECIFIC
@@ -17,6 +17,11 @@ class Fun(commands.Cog):
     """Funni Commands haha XD"""
     def __init__(self, bot: FurinaBot) -> None:
         self.bot = bot
+        self.ctx_menu_liemeter = app_commands.ContextMenu(name="Lie Detector", callback=self.lie_detector)
+        self.bot.tree.add_command(self.ctx_menu_liemeter)
+
+    async def cog_unload(self):
+        self.bot.tree.remove_command(self.ctx_menu_liemeter.name, type=self.ctx_menu_liemeter.type)
 
     @commands.Cog.listener()
     async def on_message(self, message: Message) -> None:
@@ -70,6 +75,13 @@ class Fun(commands.Cog):
             'https://cdn.7tv.app/emote/646748346989b9b0d46adc50/4x.webp'
         ])
         return emote
+    
+    async def lie_detector(self, interaction: Interaction, message: Message):
+        await interaction.response.send_message("Verifying message...", delete_after=5)
+        if random.random() < 0.5:
+            await message.channel.send("This message is verified to be the truth", reference=message)
+        else:
+            await message.channel.send("https://tenor.com/kXIbVjdMB8x.gif", reference=message)
 
 
 async def setup(bot: FurinaBot) -> None:
