@@ -314,9 +314,9 @@ class Utils(commands.Cog):
             for i in range(number - 1):
                 rand_num = self.generate_random_number(0, 10)
                 best = max(best, rand_num)
+            embed.description = f"They couldve got {fortune_convert[best]['name']} if they were more thoughtful"
         embed.color = fortune_convert[rand_num]["color"]
         embed.title = fortune_convert[rand_num]["name"]
-        embed.description = f"They couldve got {fortune_convert[best]['name']} if they were more thoughtful"
         embed.set_author(name=f"{ctx.author.display_name} thought {number} times before drawing a fortune slip",
                          icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
         await ctx.send(embed=embed)
