@@ -103,6 +103,7 @@ class FurinaBot(Bot):
 
     async def on_ready(self) -> None:
         logging.info(f"Logged in as {self.user.name}")
+        self.uptime = utils.utcnow()
 
         try:
             embed = self.embed.set_author(name="BOT IS READY!")

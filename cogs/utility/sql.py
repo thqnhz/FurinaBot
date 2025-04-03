@@ -172,4 +172,58 @@ class MinigamesSQL:
                     total_games DESC 
                 LIMIT 3
             """, minigame)
+        
+
+class TagSQL:
+    def __init__(self, *, pool: Pool):
+        self.pool = pool
+
+    async def create_tag_table(self):
+        await self.pool.execute(
+        """
+            CREATE TABLE IF NOT EXISTS tags
+                (
+                    guild_id BIGINT NOT NULL,
+                    owner BIGINT NOT NULL,
+                    name TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    PRIMARY KEY (guild_id, owner, name)
+                )
+        """
+        )
+
+    async def get_tag(self, *, guild_id: int, name: str) -> str:
+        return await self.pool.fetchval("""SELECT content FROM tags WHERE guild_id = $1 AND name = $2""", 
+                                        guild_id, name)
+        
+    async def create_tag(self, *, guild_id: int, owner: int, name: str, content: str):
+        await self.pool.execute("""
+            INSERT INTO tags (guild_id, owner, name, content)
+            VALUES ($1, $2, $3, $4)
+            """, guild_id, owner, name, content)
+
+    async def force_delete_tag(self, *, guild_id: int, name: str) -> str:
+        deleted = await self.pool.fetchrow("""
+            DELETE FROM tags
+            WHERE guild_id = $1 AND name = $2
+            RETURNING *
+            """, guild_id, name)
+        if deleted is None:
+            return f"Tag `{name}` not found!"
+        return f"Deleted tag `{name}`!"
+         
+    async def delete_tag(self, *, guild_id: int, owner: int, name: str) -> str:
+        tag_owner: int = await self.pool.fetchval("""
+            SELECT owner FROM tags
+            WHERE guild_id = $1 AND name = $2
+            """, guild_id, name)
+        if tag_owner != owner:
+            return "You do not own this tag!"
+        await self.pool.execute("""
+            DELETE FROM tags
+            WHERE guild_id = $1 AND owner = $2 and name = $3
+            """, guild_id, owner, name)
+        return f"Deleted tag `{name}`!"
+
+
 
