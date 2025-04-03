@@ -307,7 +307,7 @@ class Utils(commands.Cog):
             },
         }
         embed = self.bot.embed
-        if number == 1:
+        if number == 1 or number not in range(1, 1000):
             rand_num = self.generate_random_number(0, 10)
         else:
             best: int = 0
@@ -325,7 +325,7 @@ class Utils(commands.Cog):
     @commands.command(name='dice', aliases=['roll'], description="Roll a dice 6")
     async def dice(self, ctx: FurinaCtx, number: Optional[int] = 1) -> None:
         embed = discord.Embed()
-        if number == 1:
+        if number == 1 or number not in range(1, 1000):
             rand_num = self.generate_random_number(1, 6)
         else:
             seq = ""
@@ -341,7 +341,7 @@ class Utils(commands.Cog):
     @commands.command(name='flip', aliases=['coin', 'coinflip'], description="Flip a coin")
     async def flip(self, ctx: FurinaCtx, number: Optional[int] = 1) -> None:
         embed = discord.Embed()
-        if number == 1:
+        if number == 1 or number not in range(1, 1000):
             for _ in range(100):
                 rand_flip = random.choice(["Head", "Tail"])
         else:
