@@ -77,11 +77,10 @@ class Fun(commands.Cog):
         return emote
     
     async def lie_detector(self, interaction: Interaction, message: Message):
-        await interaction.response.send_message("Verifying message...", delete_after=5)
         if random.random() < 0.5:
-            await message.channel.send("This message is verified to be the truth", reference=message)
+            await interaction.response.send_message("This message is verified to be the truth")
         else:
-            await message.channel.send("https://tenor.com/kXIbVjdMB8x.gif", reference=message)
+            await interaction.response.send_message("https://tenor.com/kXIbVjdMB8x.gif")
 
 
 async def setup(bot: FurinaBot) -> None:
