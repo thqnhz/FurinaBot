@@ -266,12 +266,14 @@ class Utils(commands.Cog):
         embed = self.bot.embed
         if number == 1 or number not in range(1, 10_000):
             rand_num = self.generate_random_number(1, 10)
+            embed.set_author(name=f"{ctx.author.display_name} thought very hard before drawing a fortune slip",
+                             icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
         else:
             rand_num = self.generate_random_number(1, 10, number)
+            embed.set_author(name=f"{ctx.author.display_name} thought {number} times before drawing a fortune slip",
+                             icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
         embed.color = fortunes[rand_num - 1]["color"]
         embed.title = fortunes[rand_num - 1]["name"]
-        embed.set_author(name=f"{ctx.author.display_name} thought {number} times before drawing a fortune slip",
-                         icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
         await ctx.send(embed=embed)
         
 
