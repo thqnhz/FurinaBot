@@ -262,7 +262,7 @@ class Utils(commands.Cog):
         risingfortune = { "name": "Rising Fortune", "color": Color.dark_purple() }
         fortune = { "name": "Fortune", "color": Color.pink() }
         grandfortune = { "name": "Grand Fortune", "color": Color.red() }
-        fortunes = [misfortune*4, risingfortune*3, fortune*2, grandfortune]
+        fortunes = [misfortune]*4 + [risingfortune]*3 + [fortune] * 2 + [grandfortune]
         embed = self.bot.embed
         if number == 1 or number not in range(1, 10_000):
             rand_num = self.generate_random_number(1, 10)
