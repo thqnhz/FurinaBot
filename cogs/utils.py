@@ -3,6 +3,7 @@ from __future__ import annotations
 import aiohttp
 import asyncio
 import asyncpg
+import numpy as np
 import platform
 import psutil
 import random
@@ -109,10 +110,7 @@ class Utils(commands.Cog):
 
     @staticmethod
     def generate_random_number(min_num: int, max_num: int) -> int:
-        random_number: int = -1
-        for _ in range(100):
-            random_number = random.randint(min_num, max_num)
-        return random_number
+        return np.random.randint(min_num, max_num, 100)[-1]
 
     @commands.command(name='ping', description="Get the ping to discord api and lavalink nodes")
     async def ping_command(self, ctx: FurinaCtx):
@@ -260,67 +258,22 @@ class Utils(commands.Cog):
 
     @commands.command(name='fortune', aliases=['lucky', 'slip', 'fortuneslip'], description="Draw a fortune slip")
     async def fortune_slip(self, ctx: FurinaCtx, number: Optional[int] = 1) -> None:
-        fortune_convert = {
-            0: {
-                "name": "Miss Fortune",
-                "color": discord.Color.darker_gray()
-            },
-            1: {
-                "name": "Miss Fortune",
-                "color": discord.Color.darker_gray()
-            },
-            2: {
-                "name": "Miss Fortune",
-                "color": discord.Color.darker_gray()
-            },
-            3: {
-                "name": "Miss Fortune",
-                "color": discord.Color.darker_gray()
-            },
-            4: {
-                "name": "Rising Fortune",
-                "color": discord.Color.dark_purple()
-            },
-            5: {
-                "name": "Rising Fortune",
-                "color": discord.Color.dark_purple()
-            },
-            6: {
-                "name": "Rising Fortune",
-                "color": discord.Color.dark_purple()
-            },
-            7: {
-                "name": "Rising Fortune",
-                "color": discord.Color.dark_purple()
-            },
-            8: {
-                "name": "Fortune",
-                "color": discord.Color.pink()
-            },
-            9: {
-                "name": "Fortune",
-                "color": discord.Color.pink()
-            },
-            10: {
-                "name": "Grand Fortune",
-                "color": discord.Color.red()
-            },
-        }
+        misfortune = { "name": "Miss Fortune", "color": Color.darker_gray() }
+        risingfortune = { "name": "Rising Fortune", "color": Color.dark_purple() }
+        fortune = { "name": "Fortune", "color": Color.pink() }
+        grandfortune = { "name": "Grand Fortune", "color": Color.red() }
+        fortunes = [misfortune*4, risingfortune*3, fortune*2, grandfortune]
         embed = self.bot.embed
-        if number == 1 or number not in range(1, 1000):
-            rand_num = self.generate_random_number(0, 10)
+        if number == 1 or number not in range(1, 10_000):
+            rand_num = self.generate_random_number(1, 10)
         else:
-            best: int = 0
-            for i in range(number - 1):
-                rand_num = self.generate_random_number(0, 10)
-                best = max(best, rand_num)
-            if best != rand_num:
-                embed.description = f"They couldve got {fortune_convert[best]['name']} if they were more thoughtful"
-        embed.color = fortune_convert[rand_num]["color"]
-        embed.title = fortune_convert[rand_num]["name"]
+            rand_num = self.generate_random_number(1, 10, number)
+        embed.color = fortunes[rand_num - 1]["color"]
+        embed.title = fortunes[rand_num - 1]["name"]
         embed.set_author(name=f"{ctx.author.display_name} thought {number} times before drawing a fortune slip",
                          icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
         await ctx.send(embed=embed)
+        
 
     @commands.command(name='dice', aliases=['roll'], description="Roll a dice 6")
     async def dice(self, ctx: FurinaCtx, number: Optional[int] = 1) -> None:
