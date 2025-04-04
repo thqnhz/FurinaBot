@@ -109,8 +109,8 @@ class Utils(commands.Cog):
             view.message = await message.channel.send(embed=embed, view=view, reference=message)
 
     @staticmethod
-    def generate_random_number(min_num: int, max_num: int) -> int:
-        return np.random.randint(min_num, max_num, 100)[-1]
+    def generate_random_number(min_num: int, max_num: int, number: int = 1) -> int:
+        return np.random.randint(min_num, max_num, 100*number)[-1]
 
     @commands.command(name='ping', description="Get the ping to discord api and lavalink nodes")
     async def ping_command(self, ctx: FurinaCtx):
