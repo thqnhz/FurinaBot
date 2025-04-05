@@ -38,7 +38,7 @@ class Tags(FurinaCog):
         )
         return await super().cog_load()
     
-    @commands.hybrid_group(name='tag', fallback='tag', description="Get a tag from a query")
+    @commands.hybrid_group(name='tag', fallback='get', description="Get a tag from a query")
     async def tag_group(self, ctx: FurinaCtx, *, name: str):
         tag_content = await self.bot.pool.fetchval(
         """
