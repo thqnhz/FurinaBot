@@ -39,7 +39,7 @@ class Tags(FurinaCog):
         return await super().cog_load()
     
     @commands.hybrid_group(name='tag', fallback='tag', description="Get a tag from a query")
-    async def tag_group(self, ctx: FurinaCtx, name: str):
+    async def tag_group(self, ctx: FurinaCtx, *, name: str):
         tag_content = await self.bot.pool.fetchval(
         """
             SELECT t.content FROM tags t WHERE t.name = $1 and t.guild_id = $2
@@ -112,7 +112,7 @@ class Tags(FurinaCog):
         return False
 
     @tag_group.command(name='delete', aliases= ['del'], description="Delete a tag")
-    async def tag_delete(self, ctx: FurinaCtx, name: str):
+    async def tag_delete(self, ctx: FurinaCtx, *, name: str):
         name = name.lower()
         if ctx.author.guild_permissions.manage_guild:
             result = await self.__force_delete_tag(guild_id=ctx.guild.id, name=name)
