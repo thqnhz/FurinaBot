@@ -1,19 +1,17 @@
 from __future__ import annotations
 
-import io
-from typing import Optional, Tuple, TYPE_CHECKING
-
+from typing import Optional, TYPE_CHECKING
 
 import discord
 from discord.ext import commands
 from discord import app_commands, Embed, Color
 
-
+from furina import FurinaCog
 from settings import *
 
 
 if TYPE_CHECKING:
-    from bot import FurinaBot
+    from furina import FurinaBot
 
 
 class SendEmbedView(discord.ui.View):
@@ -32,11 +30,8 @@ class SendEmbedView(discord.ui.View):
             await interaction.channel.send(embed=self.embed)
 
 
-class Hidden(commands.Cog):
+class Hidden(FurinaCog):
     """Hidden Commands"""
-    def __init__(self, bot: FurinaBot):
-        self.bot = bot
-
     @app_commands.command(name='embed', description="Send an embed.")
     @app_commands.default_permissions(manage_permissions=True)
     async def send_embed(self, interaction: discord.Interaction,
@@ -111,7 +106,7 @@ class Hidden(commands.Cog):
             embed.add_field(name=field2, value=field2_value if field2_value else "", inline=False)
         if field3:
             embed.add_field(name=field3, value=field3_value if field3_value else "", inline=False)
-        view: SendEmbedView = SendEmbedView(embed, channel)
+        view = SendEmbedView(embed, channel)
         await interaction.response.send_message(embed=embed, ephemeral=True, view=view)
 
 

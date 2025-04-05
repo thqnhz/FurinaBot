@@ -6,17 +6,17 @@ from typing import TYPE_CHECKING
 from discord import app_commands, Interaction, Message
 from discord.ext import commands
 
+from furina import FurinaCog
 from settings import GUILD_SPECIFIC
 
-
 if TYPE_CHECKING:
-    from bot import FurinaBot
+    from furina import FurinaBot
 
 
-class Fun(commands.Cog):
+class Fun(FurinaCog):
     """Funni Commands haha XD"""
     def __init__(self, bot: FurinaBot) -> None:
-        self.bot = bot
+        super().__init__(bot)
         self.ctx_menu_liemeter = app_commands.ContextMenu(name="Lie Detector", callback=self.lie_detector)
         self.bot.tree.add_command(self.ctx_menu_liemeter)
 

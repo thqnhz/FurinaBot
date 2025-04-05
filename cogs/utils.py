@@ -17,14 +17,14 @@ from discord.ext import commands
 from discord.ui import Select
 from wavelink import NodeStatus, Pool
 
-from bot import FurinaCtx
+from furina import FurinaCog, FurinaCtx
 from settings import *
 from cogs.utility.views import PaginatedView, View
 from cogs.utility.sql import PrefixSQL, TagSQL
 
 
 if TYPE_CHECKING:
-    from bot import FurinaBot
+    from furina import FurinaBot
 
 
 class HelpSelect(Select):
@@ -63,17 +63,14 @@ NODE_STATUSES: Dict[NodeStatus, str] = {
 }
 
 
-class Utils(commands.Cog):
+class Utils(FurinaCog):
     """Utility Commands"""
-    def __init__(self, bot: FurinaBot):
-        self.bot = bot
-
     @property
     def embed(self) -> Embed:
         return self.bot.embed
     
     @staticmethod
-    def command_list_embed(*, cog: commands.Cog, prefix: str, embed: Embed) -> Embed:
+    def command_list_embed(*, cog: FurinaCog, prefix: str, embed: Embed) -> Embed:
         embed.title = cog.__cog_name__
         embed.description = "\n".join(
             f"- **{prefix}{command.qualified_name}:** `{command.description}`"
@@ -82,9 +79,10 @@ class Utils(commands.Cog):
         return embed
     
     async def cog_load(self) -> None:
+        await super().cog_load()
         await TagSQL(pool=self.bot.pool).create_tag_table()
 
-    @commands.Cog.listener()
+    @FurinaCog.listener()
     async def on_message(self, message: discord.Message):
         if message.author == self.bot.user:
             return
@@ -161,7 +159,7 @@ class Utils(commands.Cog):
             return
         
         # !help <CogName>
-        cog: commands.Cog = None
+        cog: FurinaCog = None
         for cog_ in self.bot.cogs.keys():
             if cog_.lower() == category_or_command_name.lower():
                 cog = self.bot.get_cog(cog_)

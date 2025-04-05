@@ -7,19 +7,15 @@ from discord import Activity, ActivityType, DMChannel, Message, Member
 from discord.ext import commands
 from wavelink import Player, Playable, TrackStartEventPayload, TrackEndEventPayload
 
-
-from bot import FurinaCtx
+from furina import FurinaCtx, FurinaCog
 from settings import MUSIC_CHANNEL, ACTIVITY_NAME
 
 
 if TYPE_CHECKING:
-    from bot import FurinaBot
+    from furina import FurinaBot
 
 
-class BotEvents(commands.Cog):
-    def __init__(self, bot: FurinaBot) -> None:
-        self.bot = bot
-
+class BotEvents(FurinaCog):
     async def update_activity(self, state: str = "N̸o̸t̸h̸i̸n̸g̸") -> None:
         """
         Update the bot's activity to the playing track.

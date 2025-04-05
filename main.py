@@ -8,7 +8,7 @@ import sys
 import asyncpg
 from aiohttp import ClientSession
 
-from bot import FurinaBot
+from furina import FurinaBot
 from settings import SKIP_LL, TOKEN
 
 

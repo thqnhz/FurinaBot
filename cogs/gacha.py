@@ -2,23 +2,25 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import enka
 from discord.ext import commands
 
-import enka
+from furina import FurinaCog, FurinaCtx
+
 
 if TYPE_CHECKING:
-    from bot import FurinaBot
+    from furina import FurinaBot
 
 
-class Gacha(commands.Cog):
-    """Genshin Related Commands"""
+class Gacha(FurinaCog):
+    """Gacha Related Commands"""
     def __init__(self, bot: FurinaBot):
-        self.bot = bot
+        super().__init__(bot)
         self.gi = enka.GenshinClient()
         self.hsr = enka.HSRClient()
 
     @commands.command(name='gi', description="Get user info")
-    async def enka_gi(self, ctx: commands.Context, uid: str):
+    async def enka_gi(self, ctx: FurinaCtx, uid: str):
         async with self.gi as api:
             response = await api.fetch_showcase(uid)
             player_info = response.player
@@ -36,7 +38,7 @@ class Gacha(commands.Cog):
         await ctx.reply(embed=embed)
 
     @commands.command(name='hsr')
-    async def enka_hsr(self, ctx: commands.Context, uid: str):
+    async def enka_hsr(self, ctx: FurinaCtx, uid: str):
         async with self.hsr as api:
             response = await api.fetch_showcase(uid)
             player_info = response.player

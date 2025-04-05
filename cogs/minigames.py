@@ -16,10 +16,11 @@ from discord.ext import commands
 from .utils import Utils
 from cogs.utility.views import View, PaginatedView
 from cogs.utility.sql import MinigamesSQL
+from furina import FurinaCtx
 
 
 if TYPE_CHECKING:
-    from bot import FurinaBot
+    from furina import FurinaBot
 
 
 class RPSButton(ui.Button):
@@ -594,6 +595,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         self.bot = bot
 
     async def cog_load(self) -> None:
+        logging.info(f"Cog {self.__cog_name__} has been loaded")
         await self.update_wordle_emojis()
 
     async def update_wordle_emojis(self) -> None:
@@ -636,13 +638,13 @@ class Minigames(commands.GroupCog, group_name="minigame"):
 
     @commands.hybrid_command(name='tictactoe', aliases=['ttt', 'xo'], description="XO minigame")
     @app_commands.allowed_installs(guilds=True, users=True)
-    async def tic_tac_toe(self, ctx: commands.Context):
+    async def tic_tac_toe(self, ctx: FurinaCtx):
         view: TicTacToe = TicTacToe()
         view.message = await ctx.reply(embed=view.embed, view=view)
 
     @commands.hybrid_command(name='rockpaperscissor', aliases=['keobuabao'], description="Rock Paper Scissor minigame")
     @app_commands.allowed_installs(guilds=True, users=True)
-    async def keo_bua_bao(self, ctx: commands.Context):
+    async def keo_bua_bao(self, ctx: FurinaCtx):
         view = RPSView()
         view.message = await ctx.reply(embed=view.embed, view=view)
 

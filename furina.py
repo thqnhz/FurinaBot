@@ -2,21 +2,28 @@ from __future__ import annotations
 
 import logging
 import traceback
-from aiohttp import ClientSession
+import typing
 from platform import python_version
-from typing import Dict, List
 
+import aiohttp
+import asyncpg
 import discord
 import wavelink
-from asyncpg import Pool
-from discord import app_commands, utils, Activity, ActivityType, Embed, Intents
-from discord.ext.commands import errors, Bot, Context, when_mentioned_or
+from discord import app_commands, utils
+from discord.ext import commands
+from discord.ext.commands import errors, when_mentioned_or
 
 from cogs.utility.sql import PrefixSQL
-from settings import DEFAULT_PREFIX, ACTIVITY_NAME, DEBUG_WEBHOOK, CHECKMARK
+from settings import ACTIVITY_NAME, CHECKMARK, DEFAULT_PREFIX, DEBUG_WEBHOOK 
 
 
-class FurinaCtx(Context):
+class FurinaCtx(commands.Context):
+    """Custom Context class with some shortcuts"""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.bot: FurinaBot
+        self.message: discord.Message
+    
     async def tick(self) -> None:
         """Reacts checkmark to the command message"""
         try:
@@ -25,22 +32,22 @@ class FurinaCtx(Context):
             pass
     
     @property
-    def pool(self) -> Pool:
+    def pool(self) -> asyncpg.Pool:
         """Shortcut for `FurinaBot.pool`"""
         return self.bot.pool
     
     @property
-    def cs(self) -> ClientSession:
+    def cs(self) -> aiohttp.ClientSession:
         """Shortcut for `FurinaBot.cs`"""
         return self.bot.cs
     
     @property
-    def embed(self) -> Embed:
+    def embed(self) -> discord.Embed:
         """Shortcut for FurinaBot.embed"""
         return self.bot.embed
     
 
-class FurinaBot(Bot):
+class FurinaBot(commands.Bot):
     """
     Customized `commands.Bot` class
 
@@ -58,15 +65,15 @@ class FurinaBot(Bot):
             async with FurinaBot(pool=pool, client_session=client_session) as bot:
                 await bot.start(TOKEN)
     """
-    def __init__(self, *, pool: Pool, client_session: ClientSession, skip_lavalink: bool) -> None:
+    def __init__(self, *, pool: asyncpg.Pool, client_session: aiohttp.ClientSession, skip_lavalink: bool) -> None:
         super().__init__(
             command_prefix     = self.get_pre,
             case_insensitive   = True,
             strip_after_prefix = True,
-            intents            = Intents.all(),
+            intents            = discord.Intents.all(),
             help_command       = None,
             allowed_contexts   = app_commands.AppCommandContext(dm_channel=False, guild=True),
-            activity           = Activity(type=ActivityType.playing,
+            activity           = discord.Activity(type=discord.ActivityType.playing,
                                           name=ACTIVITY_NAME,
                                           state="Playing: N̸o̸t̸h̸i̸n̸g̸")
         )
@@ -76,7 +83,7 @@ class FurinaBot(Bot):
 
     @property
     def embed(self):
-        return Embed().set_footer(text="Coded by ThanhZ")
+        return discord.Embed().set_footer(text="Coded by ThanhZ")
     
     async def get_context(self, message: discord.Message, *, cls = FurinaCtx):
         return await super().get_context(message, cls=cls)
@@ -88,13 +95,13 @@ class FurinaBot(Bot):
     async def update_prefixes(self) -> None:
         """Retrieve all prefixes in the `custom_prefixes` table and cache them in `Furina.prefixes`"""
         prefixes = await PrefixSQL(pool=self.pool).get_custom_prefixes()
-        self.prefixes: Dict[int, str] = {prefix["guild_id"]: prefix["prefix"] for prefix in prefixes}
+        self.prefixes: typing.Dict[int, str] = {prefix["guild_id"]: prefix["prefix"] for prefix in prefixes}
             
     async def create_minigame_stats_db(self):
         from cogs.utility.sql import MinigamesSQL
         await MinigamesSQL(pool=self.pool).init_tables()
 
-    def get_pre(self, _, message: discord.Message) -> List[str]:
+    def get_pre(self, _, message: discord.Message) -> typing.List[str]:
         """Custom `get_prefix` method"""
         if not message.guild:
             return when_mentioned_or(DEFAULT_PREFIX)(self, message)
@@ -125,16 +132,24 @@ class FurinaBot(Bot):
 
         # loads the extensions
         from cogs import EXTENSIONS
+        logging.info("Loading extensions")
         for extension in EXTENSIONS:
+            extension_name = extension[5:]
             try:
                 await self.load_extension(f"{extension}")
-                logging.info(f"Loaded extension: {extension}")
             except errors.NoEntryPointError:
-                logging.error(f"Extension {extension} has no setup function so it cannot be loaded")
+                logging.error(f"Extension {extension_name} has no setup function so it cannot be loaded")
             except Exception as e:
                 traceback.print_exc()
-                logging.error(f"An error occured when trying to load {extension}\n{e}")
+                logging.error(f"An error occured when trying to load {extension_name}\n{e}")
         await self.load_extension("jishaku")
         logging.info("Loaded Jishaku extension")
+  
 
-
+class FurinaCog(commands.Cog):
+    """Base class for all cogs"""
+    def __init__(self, bot: FurinaBot):
+        self.bot = bot
+        
+    async def cog_load(self):
+        logging.info(f"Cog {self.__cog_name__} has been loaded")

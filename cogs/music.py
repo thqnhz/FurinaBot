@@ -18,12 +18,12 @@ from wavelink import (Player, Playable, Playlist, TrackSource, TrackStartEventPa
 from youtube_search import YoutubeSearch
 
 
-from bot import FurinaCtx
+from furina import FurinaCog, FurinaCtx
 from cogs.utility.views import PaginatedView
 from settings import *
 
 if TYPE_CHECKING:
-    from bot import FurinaBot
+    from furina import FurinaBot
 
 
 class TrackUtils:
@@ -248,10 +248,10 @@ class LoopView(ui.View):
         await self.message.edit(view=self)
 
 
-class Music(commands.Cog):
+class Music(FurinaCog):
     """Music Related Commands"""
     def __init__(self, bot: FurinaBot):
-        self.bot = bot
+        super().__init__(bot)
         self.webhook = discord.SyncWebhook.from_url(MUSIC_WEBHOOK)
 
     @property
@@ -259,6 +259,7 @@ class Music(commands.Cog):
         return self.bot.embed
 
     async def cog_load(self) -> None:
+        await super().cog_load()
         if not self.bot.skip_lavalink:
             version = await self.get_lavalink_jar()
             self.start_lavalink(version)
