@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import aiohttp
-import asyncio
-import asyncpg
 import numpy as np
 import platform
 import psutil
@@ -12,7 +10,7 @@ from typing import TYPE_CHECKING, Dict, Optional
 
 import discord
 import wavelink
-from discord import app_commands, Color, Embed, Message
+from discord import app_commands, Color, Embed
 from discord.ext import commands
 from discord.ui import Select
 from wavelink import NodeStatus, Pool
@@ -20,7 +18,7 @@ from wavelink import NodeStatus, Pool
 from furina import FurinaCog, FurinaCtx
 from settings import *
 from cogs.utility.views import PaginatedView, View
-from cogs.utility.sql import PrefixSQL, TagSQL
+from cogs.utility.sql import PrefixSQL
 
 
 if TYPE_CHECKING:
@@ -77,10 +75,6 @@ class Utils(FurinaCog):
             for command in cog.walk_commands()
         )
         return embed
-    
-    async def cog_load(self) -> None:
-        await super().cog_load()
-        await TagSQL(pool=self.bot.pool).create_tag_table()
 
     @FurinaCog.listener()
     async def on_message(self, message: discord.Message):
@@ -386,107 +380,6 @@ class Utils(FurinaCog):
         """
         view = await self.dictionary_call(word.split()[0])
         view.message = await ctx.reply(embed=view.embeds[0], view=view)
-
-    @commands.group(name='tag', description="Tags related command")
-    @commands.guild_only()
-    async def tag_command(self, ctx: FurinaCtx,
-                          action: str = None,
-                          *,
-                          name: str = None):
-        """Tags related command
-
-        Parameters
-        ----------
-        action: `str = None`
-            - create/delete/edit/info a tag
-        name: `str = None`
-            - just for help command
-        """
-        if action == 'create':
-            return await self.__create_tag(ctx, name)
-        if action == 'delete':
-            return await self.__delete_tag(ctx, name)
-        if action == 'edit':
-            return await self.__edit_tag()
-        name = action + " " + name if name else action
-        tag = await TagSQL(pool=ctx.pool).get_tag(guild_id=ctx.guild.id, name=name)
-        if not tag:
-            await ctx.send(f"No tags found for query: `{name}`")
-        else:
-            await ctx.send(tag)
-            
-    async def __create_tag(self, ctx: FurinaCtx, data: str = None):
-        def check(m: Message):
-            return (m.author == ctx.author and 
-                    m.channel == ctx.channel and 
-                    m.content != "" and 
-                    not m.content.startswith((self.bot.prefixes.get(ctx.guild.id) or DEFAULT_PREFIX, self.bot.user.mention)))
-        if not data:
-            try:
-                pending = await ctx.send("What is the name of the tag?")
-                name: Message = await self.bot.wait_for('message', check=check, timeout=60)
-                pending = await ctx.send("What is the content of the tag?")
-                content: Message = await self.bot.wait_for('message', check=check, timeout=300)
-                await TagSQL(pool=self.bot.pool).create_tag(guild_id=ctx.guild.id, owner=ctx.author.id, name=name.content, content=content.content)
-                return await ctx.send(f"Tag `{name.content}` created!")
-            except asyncio.TimeoutError:
-                await ctx.send("Timed out waiting for input. Cancelling tag creation...", reference=pending)
-            except asyncpg.UniqueViolationError:
-                await ctx.send(f"Tag `{name.content}` already exists`")
-        # TODO: get the name and content out of the data
-            
-    async def __delete_tag(self, ctx: FurinaCtx, name: str):
-        if ctx.author.guild_permissions.manage_guild:
-            result = await TagSQL(pool=self.bot.pool).force_delete_tag(guild_id=ctx.guild.id, name=name)
-        else:
-            result = await TagSQL(pool=self.bot.pool).delete_tag(guild_id=ctx.guild.id, owner=ctx.author.id, name=name)
-        await ctx.send(result)
-    
-    async def __edit_tag(self):
-        raise NotImplemented
-
-    @tag_command.command(name="create", description="Create a tag")
-    async def tag_create(self, ctx: FurinaCtx, name: str, *, content: str):
-        """Create a tag
-
-        This is just a placeholder for help command
-
-        Parameters
-        ----------
-        name: `str`
-            - The name of the tag
-        content: `str`
-            - The content of the tag
-        """
-        pass
-        
-    @tag_command.command(name="delete", description="Delete a tag")
-    async def tag_delete(self, ctx: FurinaCtx, name: str):
-        """Delete a tag
-
-        This is just a placeholder for help command
-
-        Parameters
-        ----------
-        name: `str`
-            - The name of the tag
-        """
-        pass
-
-    @tag_command.command(name="edit", description="Edit a tag")
-    async def tag_edit(self, ctx: FurinaCtx, name: str, *, content: str):
-        """Edit a tag
-
-        This is just a placeholder for help command
-
-        Parameters
-        ----------
-        name: `str`
-            - The name of the tag
-        content: `str`
-            - The new content of the tag
-        """
-        pass
 
 async def setup(bot: FurinaBot):
     await bot.add_cog(Utils(bot))
