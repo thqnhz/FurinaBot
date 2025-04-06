@@ -29,8 +29,8 @@ class Fun(FurinaCog):
             await interaction.response.send_message("https://tenor.com/kXIbVjdMB8x.gif")
 
     @staticmethod
-    def generate_random_number(min_num: int, max_num: int, number: int = 1) -> int:
-        return np.random.randint(min_num, max_num, 100*number)
+    def generate_random_number(min_num: int, max_num: int, number: int = 1) -> List[int]:
+        return np.random.randint(min_num, max_num, 100*number).tolist()
 
     @commands.command(name='fortune', aliases=['lucky', 'slip', 'fortuneslip'], description="Draw a fortune slip")
     async def fortune_slip(self, ctx: FurinaCtx, number: Optional[int] = 1) -> None:
@@ -41,15 +41,15 @@ class Fun(FurinaCog):
         fortunes = [misfortune]*4 + [risingfortune]*3 + [fortune] * 2 + [grandfortune]
         embed = self.bot.embed
         if number == 1 or number not in range(1, 10_000):
-            rand_num = self.generate_random_number(1, 10)[-1]
+            rand_num = self.generate_random_number(0, 9)[-1]
             embed.set_author(name=f"{ctx.author.display_name} thought very hard before drawing a fortune slip",
                             icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
         else:
-            rand_num = self.generate_random_number(1, 10, number)[-1]
+            rand_num = self.generate_random_number(0, 9, number)[-1]
             embed.set_author(name=f"{ctx.author.display_name} thought {number} times before drawing a fortune slip",
                             icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
-        embed.color = fortunes[rand_num - 1]["color"]
-        embed.title = fortunes[rand_num - 1]["name"]
+        embed.color = fortunes[rand_num]["color"]
+        embed.title = fortunes[rand_num]["name"]
         await ctx.send(embed=embed)
     
 
