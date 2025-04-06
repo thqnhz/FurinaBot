@@ -62,7 +62,7 @@ class Fun(FurinaCog):
                             icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
         else:
             rand_num = self.generate_random_number(1, 6, number)
-            embed.add_field("History:", f"```\n{' '.join(rand_num[:500]) + ('...' if len(rand_num) > 500 else '')}\n")
+            embed.add_field(name="History:", value=f"```\n{' '.join(rand_num[:500]) + ('...' if len(rand_num) > 500 else '')}\n")
             embed.set_author(name=f"{ctx.author.display_name} rolled a dice {number} times",
                             icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
         embed.title = f"The current number is: {rand_num[-1]}"
