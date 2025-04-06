@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import random
-from typing import TYPE_CHECKING
+from typing import Optional, List, TYPE_CHECKING
 
-from discord import app_commands, Interaction, Message
+import numpy as np
+from discord import app_commands, Color, Interaction, Message
 from discord.ext import commands
 
-from furina import FurinaCog
-from settings import GUILD_SPECIFIC
+from furina import FurinaCog, FurinaCtx
 
 if TYPE_CHECKING:
     from furina import FurinaBot
@@ -22,65 +21,70 @@ class Fun(FurinaCog):
 
     async def cog_unload(self):
         self.bot.tree.remove_command(self.ctx_menu_liemeter.name, type=self.ctx_menu_liemeter.type)
-
-    @commands.Cog.listener()
-    async def on_message(self, message: Message) -> None:
-        if message.author.bot:
-            return
-        
-        if message.guild != GUILD_SPECIFIC:
-            return
-        
-        msg = message.content.lower()
-        if any(_ in msg for _ in ["viettel", "vietteo", "vitteo", "mạng 7 chữ",
-                                  "vnpt", "vienpiti", "vê en pê tê",
-                                  "mạng 4 chữ", "fpt", "ép pê tê", "mạng 3 chữ"]):
-            lag: str = self._random_lag_emote()
-            await message.channel.send(lag)
-            return
-
-        if any(_ in msg for _ in ["doan tom", "tôm", "đoàn tân", "tân"]):
-            await message.channel.send(
-                """# <@889183721389953115> lolicon + đuôi + mù + điếc + fan MU + đáy xã hội + vấn đề kĩ năng""",
-                silent=True
-            )
-            return
-
-        if "nowaying" in msg:
-            await message.channel.send("https://cdn.7tv.app/emote/63c8a6c330027778647b3de8/3x.gif")
-            return
-
-        if "aintnoway" in msg:
-            await message.channel.send("https://cdn.7tv.app/emote/6329da94345c8855a28db877/3x.gif")
-            return
-
-        if any(_ in msg for _ in ["skill issue", "skillissue",
-                                  "van de ky nang", "van de ki nang",
-                                  "vấn đề kĩ năng", "vấn đề kỹ năng"]):
-            await message.channel.send("https://cdn.7tv.app/emote/63d806d6f3396825289f86b4/3x.webp")
-
-    @staticmethod
-    def _random_lag_emote() -> str:
-        emote = random.choice([
-            'https://cdn.7tv.app/emote/60ae9173f39a7552b68f9730/4x.gif',
-            'https://cdn.7tv.app/emote/63c9080bec685e58d1727476/4x.gif',
-            'https://cdn.7tv.app/emote/60afcde452a13d1adba73d29/4x.gif',
-            'https://cdn.7tv.app/emote/62fd78283b5817bb65704cb6/4x.gif',
-            'https://cdn.7tv.app/emote/616ecf20ffc7244d797c6ef8/4x.gif',
-            'https://cdn.7tv.app/emote/6121af3d5277086f91cd6f03/4x.gif',
-            'https://cdn.7tv.app/emote/61ab007b15b3ff4a5bb954f4/4x.gif',
-            'https://cdn.7tv.app/emote/64139e886b843cb8a7001681/4x.gif',
-            'https://cdn.7tv.app/emote/64dacca4bd944cda3ad5971f/4x.gif',
-            'https://cdn.7tv.app/emote/62ff9b877de1b22af65895d7/4x.webp',
-            'https://cdn.7tv.app/emote/646748346989b9b0d46adc50/4x.webp'
-        ])
-        return emote
     
     async def lie_detector(self, interaction: Interaction, message: Message):
-        if random.random() < 0.5:
+        if np.random.random() < 0.5:
             await interaction.response.send_message("This message is verified to be the truth")
         else:
             await interaction.response.send_message("https://tenor.com/kXIbVjdMB8x.gif")
+
+    @staticmethod
+    def generate_random_number(min_num: int, max_num: int, number: int = 1) -> int:
+        return np.random.randint(min_num, max_num, 100*number)[-1]
+
+    @commands.command(name='fortune', aliases=['lucky', 'slip', 'fortuneslip'], description="Draw a fortune slip")
+    async def fortune_slip(self, ctx: FurinaCtx, number: Optional[int] = 1) -> None:
+        misfortune = { "name": "Misfortune", "color": Color.darker_gray() }
+        risingfortune = { "name": "Rising Fortune", "color": Color.dark_purple() }
+        fortune = { "name": "Fortune", "color": Color.pink() }
+        grandfortune = { "name": "Grand Fortune", "color": Color.red() }
+        fortunes = [misfortune]*4 + [risingfortune]*3 + [fortune] * 2 + [grandfortune]
+        embed = self.bot.embed
+        if number == 1 or number not in range(1, 10_000):
+            rand_num = self.generate_random_number(1, 10)
+            embed.set_author(name=f"{ctx.author.display_name} thought very hard before drawing a fortune slip",
+                            icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
+        else:
+            rand_num = self.generate_random_number(1, 10, number)
+            embed.set_author(name=f"{ctx.author.display_name} thought {number} times before drawing a fortune slip",
+                            icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
+        embed.color = fortunes[rand_num - 1]["color"]
+        embed.title = fortunes[rand_num - 1]["name"]
+        await ctx.send(embed=embed)
+    
+
+    @commands.command(name='dice', aliases=['roll'], description="Roll a dice 6")
+    async def dice(self, ctx: FurinaCtx, number: Optional[int] = 1) -> None:
+        embed = self.bot.embed
+        if number == 1 or number not in range(1, 1000):
+            rand_num = self.generate_random_number(1, 6)
+            embed.set_author(name=f"{ctx.author.display_name} rolled a dice",
+                            icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
+        else:
+            rand_num = self.generate_random_number(1, 6, number)
+            embed.add_field("History:", f"```\n{' '.join(rand_num[:500]) + ('...' if len(rand_num) > 500 else '')}\n")
+            embed.set_author(name=f"{ctx.author.display_name} rolled a dice {number} times",
+                            icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
+        embed.title = f"The current number is: {rand_num[-1]}"
+        await ctx.send(embed=embed)
+
+    @commands.command(name='flip', aliases=['coin', 'coinflip'], description="Flip a coin")
+    async def flip(self, ctx: FurinaCtx, number: Optional[int] = 1) -> None:
+        embed = self.bot.embed
+        if number == 1 or number not in range(1, 1000):
+            rand_flip: List[str] = np.random.choice(["Head", "Tail"], size=100).tolist()[-1]
+            embed.set_author(name=f"{ctx.author.display_name} flipped a coin",
+                            icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
+        else:
+            seq: List[str] = np.random.choice(["Head", "Tail"], size=100*number).tolist()
+            rand_flip = seq[-1]
+            seq = [seq_[0] for seq_ in seq]
+            embed.add_field(name="History:", value=f"```\n{''.join(seq[:500]) + ('...' if len(seq) > 500 else '')}\n```")
+            embed.set_author(name=f"{ctx.author.display_name} flipped a coin {number} times",
+                            icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
+        embed.title = f"{rand_flip}"
+        await ctx.send(embed=embed)
+
 
 
 async def setup(bot: FurinaBot) -> None:

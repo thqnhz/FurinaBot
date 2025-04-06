@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-import aiohttp
-import numpy as np
 import platform
 import psutil
-import random
 from enum import Enum
+from time import perf_counter
 from typing import TYPE_CHECKING, Dict, Optional
 
+import aiohttp
 import discord
-import wavelink
 from discord import app_commands, Color, Embed
 from discord.ext import commands
 from discord.ui import Select
@@ -76,8 +74,8 @@ class Utils(FurinaCog):
         )
         return embed
 
-    @FurinaCog.listener()
-    async def on_message(self, message: discord.Message):
+    @FurinaCog.listener("on_message")
+    async def on_mention(self, message: discord.Message):
         if message.author == self.bot.user:
             return
 
@@ -95,27 +93,30 @@ class Utils(FurinaCog):
             uptime_td = discord.utils.utcnow() - self.bot.uptime
             uptime: str = f"{uptime_td.days}d {uptime_td.seconds // 3600}h {(uptime_td.seconds // 60) % 60}m"
             api_ping: str = f"{round(self.bot.latency * 1000)}ms"
-            embed.add_field(name="More info", value=f"Uptime: `{uptime}`\nPing: `{api_ping}`")
+            time = perf_counter()
+            await self.bot.pool.execute("""SELECT 1""")
+            db_ping = f"{round((perf_counter() - time) * 1000)}ms"
+            embed.add_field(name="More info", 
+                            value=f"Uptime: `{uptime}`\nAPI Ping: `{api_ping}`\nDatabase Ping: `{db_ping}`")
             embed.timestamp = message.created_at
             view = View().add_item(HelpSelect(self.bot))
             view.message = await message.channel.send(embed=embed, view=view, reference=message)
-
-    @staticmethod
-    def generate_random_number(min_num: int, max_num: int, number: int = 1) -> int:
-        return np.random.randint(min_num, max_num, 100*number)[-1]
 
     @commands.command(name='ping', description="Get the ping to discord api and lavalink nodes")
     async def ping_command(self, ctx: FurinaCtx):
         await ctx.defer()
         bot_latency = self.bot.latency
         voice_latency = ctx.guild.voice_client.ping if ctx.guild.voice_client else -1
+        time = perf_counter()
+        await self.bot.pool.execute("""SELECT 1""")
+        db_latency = perf_counter() - time
 
         embed = self.embed
         embed.title = "Pong!"
-        embed.add_field(name="Ping:", value=f"**Text:** {bot_latency * 1000:.2f}ms\n**Voice:** {voice_latency}ms")
+        embed.add_field(name="Ping:", value=f"**Text:** {bot_latency * 1000:.2f}ms\n**Voice:** {voice_latency}ms\n**Database:** {db_latency * 1000:.2f}ms")
 
         for i, node in enumerate(Pool.nodes, 1):
-            node_ = wavelink.Pool.get_node(node)
+            node_ = Pool.get_node(node)
             node_status = NODE_STATUSES[node_.status]
             embed.add_field(name=f"Node {i}: {node_status}", value="", inline=False)
         await ctx.reply(embed=embed)
@@ -247,61 +248,6 @@ class Utils(FurinaCog):
             )
         embed.timestamp = ctx.message.created_at
         await ctx.reply(embed=embed)
-
-    @commands.command(name='fortune', aliases=['lucky', 'slip', 'fortuneslip'], description="Draw a fortune slip")
-    async def fortune_slip(self, ctx: FurinaCtx, number: Optional[int] = 1) -> None:
-        misfortune = { "name": "Miss Fortune", "color": Color.darker_gray() }
-        risingfortune = { "name": "Rising Fortune", "color": Color.dark_purple() }
-        fortune = { "name": "Fortune", "color": Color.pink() }
-        grandfortune = { "name": "Grand Fortune", "color": Color.red() }
-        fortunes = [misfortune]*4 + [risingfortune]*3 + [fortune] * 2 + [grandfortune]
-        embed = self.bot.embed
-        if number == 1 or number not in range(1, 10_000):
-            rand_num = self.generate_random_number(1, 10)
-            embed.set_author(name=f"{ctx.author.display_name} thought very hard before drawing a fortune slip",
-                             icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
-        else:
-            rand_num = self.generate_random_number(1, 10, number)
-            embed.set_author(name=f"{ctx.author.display_name} thought {number} times before drawing a fortune slip",
-                             icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
-        embed.color = fortunes[rand_num - 1]["color"]
-        embed.title = fortunes[rand_num - 1]["name"]
-        await ctx.send(embed=embed)
-        
-
-    @commands.command(name='dice', aliases=['roll'], description="Roll a dice 6")
-    async def dice(self, ctx: FurinaCtx, number: Optional[int] = 1) -> None:
-        embed = discord.Embed()
-        if number == 1 or number not in range(1, 1000):
-            rand_num = self.generate_random_number(1, 6)
-        else:
-            seq = ""
-            for i in range(number):
-                rand_num = self.generate_random_number(1, 6)
-                seq += f"{rand_num} "
-            embed.add_field(name="History:", value=f"```\n{seq[:-1]}\n```")
-        embed.set_author(name=f"{ctx.author.display_name} rolled a dice {number} times",
-                         icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
-        embed.title = f"The current number is: {rand_num}"
-        await ctx.send(embed=embed)
-
-    @commands.command(name='flip', aliases=['coin', 'coinflip'], description="Flip a coin")
-    async def flip(self, ctx: FurinaCtx, number: Optional[int] = 1) -> None:
-        embed = discord.Embed()
-        if number == 1 or number not in range(1, 1000):
-            for _ in range(100):
-                rand_flip = random.choice(["Head", "Tail"])
-        else:
-            seq = ""
-            for i in range(number):
-                for i in range(100):
-                    rand_flip = random.choice(["Head", "Tail"])
-                seq += f"{rand_flip[:-3]} "
-            embed.add_field(name="History:", value=f"```\n{seq[:1000]}...\n```")
-        embed.set_author(name=f"{ctx.author.display_name} flipped a coin {number} times",
-                         icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
-        embed.title = f"{rand_flip}"
-        await ctx.send(embed=embed)
 
     @staticmethod
     async def dictionary_call(word: str) -> PaginatedView:
