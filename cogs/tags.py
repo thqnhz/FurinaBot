@@ -113,7 +113,7 @@ class Tags(FurinaCog):
 
     @tag_group.command(name='delete', aliases= ['del'], description="Delete a tag")
     async def tag_delete(self, ctx: FurinaCtx, *, name: str):
-        name = name.lower()
+        name = name.lower().replace('"', '').replace("'", "")
         if ctx.author.guild_permissions.manage_guild:
             result = await self.__force_delete_tag(guild_id=ctx.guild.id, name=name)
         else:

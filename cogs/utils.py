@@ -140,7 +140,7 @@ class Utils(FurinaCog):
         await ctx.reply("https://github.com/Th4nhZ/FurinaBot")
 
     @commands.command(name='help', description="Help command")
-    async def help_command(self, ctx: FurinaCtx, category_or_command_name: str = None):
+    async def help_command(self, ctx: FurinaCtx, *, category_or_command_name: str = None):
         """
         Parameters
         -----------
