@@ -30,7 +30,7 @@ class Fun(FurinaCog):
 
     @staticmethod
     def generate_random_number(min_num: int, max_num: int, number: int = 1) -> int:
-        return np.random.randint(min_num, max_num, 100*number)[-1]
+        return np.random.randint(min_num, max_num, 100*number)
 
     @commands.command(name='fortune', aliases=['lucky', 'slip', 'fortuneslip'], description="Draw a fortune slip")
     async def fortune_slip(self, ctx: FurinaCtx, number: Optional[int] = 1) -> None:
@@ -41,11 +41,11 @@ class Fun(FurinaCog):
         fortunes = [misfortune]*4 + [risingfortune]*3 + [fortune] * 2 + [grandfortune]
         embed = self.bot.embed
         if number == 1 or number not in range(1, 10_000):
-            rand_num = self.generate_random_number(1, 10)
+            rand_num = self.generate_random_number(1, 10)[-1]
             embed.set_author(name=f"{ctx.author.display_name} thought very hard before drawing a fortune slip",
                             icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
         else:
-            rand_num = self.generate_random_number(1, 10, number)
+            rand_num = self.generate_random_number(1, 10, number)[-1]
             embed.set_author(name=f"{ctx.author.display_name} thought {number} times before drawing a fortune slip",
                             icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
         embed.color = fortunes[rand_num - 1]["color"]
@@ -57,15 +57,16 @@ class Fun(FurinaCog):
     async def dice(self, ctx: FurinaCtx, number: Optional[int] = 1) -> None:
         embed = self.bot.embed
         if number == 1 or number not in range(1, 1000):
-            rand_num = self.generate_random_number(1, 6)
+            rand_num = self.generate_random_number(1, 6)[-1]
             embed.set_author(name=f"{ctx.author.display_name} rolled a dice",
                             icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
         else:
-            rand_num = self.generate_random_number(1, 6, number)
-            embed.add_field(name="History:", value=f"```\n{' '.join(rand_num[:500]) + ('...' if len(rand_num) > 500 else '')}\n")
+            seq = self.generate_random_number(1, 6, number)
+            rand_num = seq[-1]
+            embed.add_field(name="History:", value=f"```\n{' '.join(seq[:500]) + ('...' if len(seq) > 500 else '')}\n")
             embed.set_author(name=f"{ctx.author.display_name} rolled a dice {number} times",
                             icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
-        embed.title = f"The current number is: {rand_num[-1]}"
+        embed.title = f"The current number is: {rand_num}"
         await ctx.send(embed=embed)
 
     @commands.command(name='flip', aliases=['coin', 'coinflip'], description="Flip a coin")
