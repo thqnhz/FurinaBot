@@ -62,6 +62,7 @@ class Fun(FurinaCog):
                             icon_url="https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif")
         else:
             seq = self.generate_random_number(1, 6, number)
+            seq = [str(seq_) for seq_ in seq]
             rand_num = seq[-1]
             embed.add_field(name="History:", value=f"```\n{' '.join(seq[:500]) + ('...' if len(seq) > 500 else '')}\n")
             embed.set_author(name=f"{ctx.author.display_name} rolled a dice {number} times",
