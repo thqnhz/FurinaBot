@@ -45,7 +45,7 @@ class HelpSelect(Select):
             prefix=self.bot.prefixes.get(interaction.guild.id) or DEFAULT_PREFIX,
             embed=self.bot.embed
         )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.response.edit_message(embed=embed)
 
 
 class MemberStatus(Enum):
@@ -152,8 +152,9 @@ class Utils(FurinaCog):
         """
         # !help
         if category_or_command_name is None:
+            embed = self.embed.set_author(name="Help Command", icon_url=ctx.author.display_avatar.url)
             view = View().add_item(HelpSelect(self.bot))
-            view.message = await ctx.reply(view=view)
+            view.message = await ctx.reply(embed=embed, view=view)
             return
         
         # !help <CogName>
