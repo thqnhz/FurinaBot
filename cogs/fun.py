@@ -30,7 +30,7 @@ class Fun(FurinaCog):
 
     @staticmethod
     def generate_random_number(min_num: int, max_num: int, number: int = 1) -> List[int]:
-        return np.random.randint(min_num, max_num, 100*number).tolist()
+        return np.random.randint(min_num, max_num + 1, 100*number).tolist()
 
     @commands.command(name='fortune', aliases=['lucky', 'slip', 'fortuneslip'], description="Draw a fortune slip")
     async def fortune_slip(self, ctx: FurinaCtx, number: Optional[int] = 1) -> None:
