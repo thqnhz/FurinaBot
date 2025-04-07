@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import pathlib
 from typing import TYPE_CHECKING
 
+import asqlite
 from discord import app_commands, Interaction, Message
 from discord.ext import commands
 
@@ -17,42 +19,50 @@ if TYPE_CHECKING:
 class Tags(FurinaCog):
     """Tags Related Commands"""
     async def cog_load(self):
-        await self.bot.pool.execute(
-        """
-            CREATE TABLE IF NOT EXISTS tags
-            (
-                guild_id BIGINT NOT NULL,
-                owner BIGINT NOT NULL,
-                name TEXT NOT NULL,
-                content TEXT NOT NULL,
-                PRIMARY KEY (guild_id, owner, name)
-            );
-            CREATE TABLE IF NOT EXISTS tag_aliases -- for tag aliases and look up table
-            (
-                guild_id BIGINT NOT NULL,
-                owner BIGINT NOT NULL, -- owner of the alias, not the tag owner
-                name TEXT NOT NULL,
-                alias TEXT NOT NULL,
-                PRIMARY KEY (guild_id, owner, name, alias)
-            )
-        """
-        )
+        self.pool = await asqlite.create_pool(pathlib.Path() / 'db' / 'tags.db')
+        await self.__create_tag_tables()
         return await super().cog_load()
+    
+    async def __create_tag_tables(self):
+        async with self.pool.acquire() as db:
+            await db.execute(
+                """
+                CREATE TABLE IF NOT EXISTS tags
+                (
+                    guild_id INTEGER NOT NULL,
+                    owner INTEGER NOT NULL,
+                    name TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    PRIMARY KEY (guild_id, owner, name)
+                )
+                """)
+            await db.execute(
+                """
+                CREATE TABLE IF NOT EXISTS tag_aliases -- for tag aliases and look up table
+                (
+                    guild_id INTEGER NOT NULL,
+                    owner INTEGER NOT NULL, -- owner of the alias, not the tag owner
+                    name TEXT NOT NULL,
+                    alias TEXT NOT NULL,
+                    PRIMARY KEY (guild_id, name, alias)
+                )
+                """)
     
     @commands.hybrid_group(name='tag', fallback='get', description="Get a tag from a query")
     async def tag_group(self, ctx: FurinaCtx, *, name: str):
-        tag_content = await self.bot.pool.fetchval(
-        """
-            SELECT t.content FROM tags t WHERE t.name = $1 and t.guild_id = $2
-            UNION 
-            SELECT t.content FROM tags t 
-            JOIN tag_aliases ta ON t.guild_id = ta.guild_id and t.name = ta.name
-            WHERE t.guild_id = $2 AND (t.name = $1 OR ta.alias = $1)
-        """, name, ctx.guild.id)
+        async with self.pool.acquire() as db:
+            tag_content = await db.fetchone(
+            """
+                SELECT t.content FROM tags t WHERE t.name = ? and t.guild_id = ?
+                UNION 
+                SELECT t.content FROM tags t 
+                JOIN tag_aliases ta ON t.guild_id = ta.guild_id and t.name = ta.name
+                WHERE t.guild_id = ? AND (t.name = ? OR ta.alias = ?)
+            """, name, ctx.guild.id, ctx.guild.id, name, name)
         if not tag_content:
             await ctx.send(f"No tags found for query: `{name}`")
         else:
-            await ctx.send(tag_content)
+            await ctx.send(tag_content[0])
 
 
     @tag_group.command(name='create', description="Create a tag")
@@ -89,25 +99,27 @@ class Tags(FurinaCog):
         check_exist = await self.__check_tag_name(ctx, name)
         if check_exist:
             return await ctx.send(f"Tag `{name}` already exists")
-        await self.bot.pool.execute(
-            """
+        async with self.pool.acquire() as db:
+            await db.execute(
+                """
                 INSERT INTO tags (guild_id, owner, name, content)
-                VALUES ($1, $2, $3, $4)
-            """, ctx.guild.id, ctx.author.id, name, content)
+                VALUES (?, ?, ?, ?)
+                """, ctx.guild.id, ctx.author.id, name, content)
         await ctx.send(f"Created tag `{name}`")
 
     def __name_check(self, ctx: FurinaCtx, name: str) -> bool:
         return not name.lower().startswith((self.bot.prefixes.get(ctx.guild.id) or DEFAULT_PREFIX, self.bot.user.mention))
     
     async def __check_tag_name(self, ctx: FurinaCtx, name: str) -> bool:
-        fetched = await self.bot.pool.fetchrow(
-            """
-                SELECT t.content FROM tags t WHERE t.name = $1 and t.guild_id = $2
+        async with self.pool.acquire() as db:
+            fetched = await db.fetchone(
+                """
+                SELECT t.content FROM tags t WHERE t.name = ? and t.guild_id = ?
                 UNION 
                 SELECT t.content FROM tags t 
                 JOIN tag_aliases ta ON t.guild_id = ta.guild_id and t.name = ta.name
-                WHERE t.guild_id = $2 AND (t.name = $1 OR ta.alias = $1)
-            """, name, ctx.guild.id)
+                WHERE t.guild_id = ? AND (t.name = ? OR ta.alias = ?)
+                """, name, ctx.guild.id, ctx.guild.id, name, name)
         if fetched is not None:
             return True
         return False
@@ -122,27 +134,37 @@ class Tags(FurinaCog):
         await ctx.send(result)
 
     async def __force_delete_tag(self, *, guild_id: int, name: str) -> str:
-        deleted = await self.bot.pool.fetchrow(
-            """
+        async with self.pool.acquire() as db:
+            deleted = await db.fetchone(
+                """
                 DELETE FROM tags
-                WHERE guild_id = $1 AND name = $2
+                WHERE guild_id = ? AND name = ?
                 RETURNING *
-            """, guild_id, name)
+                """, guild_id, name)
+            if deleted is None:
+                deleted = await db.fetchone(
+                    """
+                    DELETE FROM tag_aliases
+                    WHERE guild_id = ? AND alias = ?
+                    """, guild_id, name)
+            else:
+                await db.execute(
+                    """
+                    DELETE FROM tag_aliases
+                    WHERE guild_id = ? AND name = ?
+                    """, guild_id, name)
         if deleted is None:
-            return f"Tag `{name}` not found!"
-        await self.bot.pool.execute(
-            """
-                DELETE FROM tag_aliases
-                WHERE guild_id = $1 AND name = $2
-            """, guild_id, name)
+            return f"No tags or aliases with query `{name}` for deletion"
         return f"Deleted tag `{name}`!"
          
     async def __delete_tag(self, *, guild_id: int, owner: int, name: str) -> str:
-        tag_owner: int = await self.bot.pool.fetchval("""
-            SELECT owner FROM tags
-            WHERE guild_id = $1 AND name = $2
-            """, guild_id, name)
-        if tag_owner != owner:
+        async with self.pool.acquire() as db:
+            tag_owner: int = await db.fetchone(
+                """
+                SELECT owner FROM tags
+                WHERE guild_id = ? AND name = ?
+                """, guild_id, name)
+        if tag_owner[0] != owner:
             return "You do not own this tag!"
         return await self.__force_delete_tag(guild_id=guild_id, name=name)
         
@@ -154,24 +176,26 @@ class Tags(FurinaCog):
         check_name_exist = await self.__check_tag_name(ctx, name)
         if not check_name_exist:
             return await ctx.send(f"Cannot create alias for non-existent tag `{name}`")
-        await self.bot.pool.execute(
-            """
+        async with self.pool.acquire() as db:
+            await db.execute(
+                """
                 INSERT INTO tag_aliases (guild_id, owner, name, alias)
-                VALUES ($1, $2, $3, $4)
-            """, ctx.guild.id, ctx.author.id, name, alias)
+                VALUES (?, ?, ?, ?)
+                """, ctx.guild.id, ctx.author.id, name, alias)
         await ctx.reply(f"Successfully created tag alias `{alias}` for `{name}`")
 
     @tag_group.command(name='info', description="Get info of a tag")
     async def tag_info(self, ctx: FurinaCtx, *, name: str):
         name = name.lower().replace('"', '').replace("'", "")
-        fetched = await self.bot.pool.fetchrow(
-        """
-            SELECT t.name, t.content, t.owner FROM tags t WHERE t.name = $1 and t.guild_id = $2
-            UNION 
-            SELECT t.name, t.content, t.owner FROM tags t 
-            JOIN tag_aliases ta ON t.guild_id = ta.guild_id and t.name = ta.name
-            WHERE t.guild_id = $2 AND (t.name = $1 OR ta.alias = $1)
-        """, name, ctx.guild.id)
+        async with self.pool.acquire() as db:
+            fetched = await db.fetchone(
+            """
+                SELECT t.name, t.content, t.owner FROM tags t WHERE t.name = ? and t.guild_id = ?
+                UNION 
+                SELECT t.name, t.content, t.owner FROM tags t 
+                JOIN tag_aliases ta ON t.guild_id = ta.guild_id and t.name = ta.name
+                WHERE t.guild_id = ? AND (t.name = ? OR ta.alias = ?)
+            """, name, ctx.guild.id, ctx.guild.id, name, name)
         if fetched is None:
             return await ctx.send(f"No tags found for query: `{name}`")
         embed = self.bot.embed

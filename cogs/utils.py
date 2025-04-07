@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime
-import dateutil.parser
+import pathlib
 import platform
 import psutil
 import re
@@ -10,6 +10,8 @@ from time import perf_counter
 from typing import TYPE_CHECKING, Dict, Optional
 
 import aiohttp
+import asqlite
+import dateutil.parser
 import discord
 from discord import app_commands, Color, Embed
 from discord.ext import commands
@@ -19,7 +21,6 @@ from wavelink import NodeStatus, Pool
 from furina import FurinaCog, FurinaCtx
 from settings import *
 from cogs.utility.views import PaginatedView, View
-from cogs.utility.sql import PrefixSQL
 
 
 if TYPE_CHECKING:
@@ -64,9 +65,23 @@ NODE_STATUSES: Dict[NodeStatus, str] = {
 
 class Utils(FurinaCog):
     """Utility Commands"""
-    @property
-    def embed(self) -> Embed:
-        return self.bot.embed
+    async def cog_load(self):
+        self.pool = await asqlite.create_pool(pathlib.Path() / 'db' / 'utils.db')
+        await self.__update_custom_prefixes()
+        return await super().cog_load()
+    
+    async def __update_custom_prefixes(self):
+        async with self.pool.acquire() as db:
+            await db.execute(
+                """
+                CREATE TABLE IF NOT EXISTS custom_prefixes
+                (
+                    guild_id INTEGER NOT NULL PRIMARY KEY,
+                    prefix TEXT NOT NULL
+                )
+                """)
+            prefixes = await db.fetchall("""SELECT * FROM custom_prefixes""")
+            self.bot.prefixes = {prefix["guild_id"]: prefix["prefix"] for prefix in prefixes}
     
     @staticmethod
     def command_list_embed(*, cog: FurinaCog, prefix: str, embed: Embed) -> Embed:
@@ -97,7 +112,8 @@ class Utils(FurinaCog):
             uptime: str = f"{uptime_td.days}d {uptime_td.seconds // 3600}h {(uptime_td.seconds // 60) % 60}m"
             api_ping: str = f"{round(self.bot.latency * 1000)}ms"
             time = perf_counter()
-            await self.bot.pool.execute("""SELECT 1""")
+            async with self.pool.acquire() as db:
+                await db.fetchone("""SELECT 1""")
             db_ping = f"{round((perf_counter() - time) * 1000)}ms"
             embed.add_field(name="More info", 
                             value=f"Uptime: `{uptime}`\nAPI Ping: `{api_ping}`\nDatabase Ping: `{db_ping}`")
@@ -111,7 +127,8 @@ class Utils(FurinaCog):
         bot_latency = self.bot.latency
         voice_latency = ctx.guild.voice_client.ping if ctx.guild.voice_client else -1
         time = perf_counter()
-        await self.bot.pool.execute("""SELECT 1""")
+        async with self.pool.acquire() as db:
+            await db.execute("""SELECT 1""")
         db_latency = perf_counter() - time
 
         embed = self.embed
@@ -128,13 +145,23 @@ class Utils(FurinaCog):
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def prefix_command(self, ctx: FurinaCtx, prefix: str):
+        prefix = prefix.strip().replace('"', "").replace("'", "")
+        embed = self.embed
+        async with self.pool.acquire() as db:
+            if prefix in ['clear', 'reset', 'default', DEFAULT_PREFIX]:
+                await db.execute("""DELETE FROM custom_prefixes WHERE guild_id = ?""", ctx.guild.id)
+            else:
+                if len(prefix) > 3 or not prefix:
+                    await ctx.cross()
+                    embed.description = "Prefix is too long or is empty, try again with different prefix"
+                    return await ctx.reply(embed=embed)
+                await db.execute(
+                    """
+                    INSERT OR REPLACE INTO custom_prefixes (guild_id, prefix) VALUES (?, ?)
+                    """, ctx.guild.id, prefix)
+            await db.commit()
+        await self.__update_custom_prefixes()
         await ctx.tick()
-        if prefix in ['clear', 'reset', 'default', DEFAULT_PREFIX]:
-            await PrefixSQL(pool=self.bot.pool).delete_custom_prefix(guild_id=ctx.guild.id)
-        else:
-            await PrefixSQL(pool=self.bot.pool).set_custom_prefix(guild_id=ctx.guild.id, prefix=prefix)
-        await self.bot.update_prefixes()
-        embed = ctx.embed
         embed.description = f"Prefix for this server has been changed to `{self.bot.prefixes.get(ctx.guild.id) or DEFAULT_PREFIX}`"
         await ctx.reply(embed=embed)
 
@@ -366,7 +393,5 @@ class Utils(FurinaCog):
         await ctx.reply(embed=embed)
         
         
-
-
 async def setup(bot: FurinaBot):
     await bot.add_cog(Utils(bot))

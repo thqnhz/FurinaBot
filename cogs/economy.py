@@ -50,7 +50,7 @@ class Economy(FurinaCog):
 
     @commands.command(name='daily')
     async def eco_daily(self, ctx: FurinaCtx):
-        raise NotImplemented
+        raise NotImplementedError
 
 
 async def setup(bot: FurinaBot) -> None:

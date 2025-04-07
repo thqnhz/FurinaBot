@@ -20,6 +20,7 @@ SKIP_EMOJI = "https://cdn.discordapp.com/emojis/1174966018280529931.png?size=64&
 
 # Emotes
 CHECKMARK = "<a:check:1238796460569657375>"
+CROSS = "<a:crossout:1358833476979261702>"
 
 # Music Cog
 MUSIC_CHANNEL = 1089851760425848923

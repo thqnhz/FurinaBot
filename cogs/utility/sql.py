@@ -40,7 +40,7 @@ class PrefixSQL:
 
     async def delete_custom_prefix(self, *, guild_id: int):
         async with self.pool.acquire() as conn:
-            await conn.execute("""DELETE FROM custom_prefixes WHERE guild_id = $1""", guild_id)
+            await conn.execute("""""", guild_id)
 
 
 class MinigamesSQL:

@@ -6,20 +6,18 @@ import typing
 from platform import python_version
 
 import aiohttp
-import asyncpg
 import discord
 import wavelink
 from discord import app_commands, utils
 from discord.ext import commands
 from discord.ext.commands import errors, when_mentioned_or
 
-from cogs.utility.sql import PrefixSQL
-from settings import ACTIVITY_NAME, CHECKMARK, DEFAULT_PREFIX, DEBUG_WEBHOOK 
+from settings import ACTIVITY_NAME, CHECKMARK, CROSS, DEFAULT_PREFIX, DEBUG_WEBHOOK 
 
 
 class FurinaCtx(commands.Context):
     """Custom Context class with some shortcuts"""
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.bot: FurinaBot
         self.message: discord.Message
@@ -30,11 +28,13 @@ class FurinaCtx(commands.Context):
             await self.message.add_reaction(CHECKMARK)
         except discord.HTTPException:
             pass
-    
-    @property
-    def pool(self) -> asyncpg.Pool:
-        """Shortcut for `FurinaBot.pool`"""
-        return self.bot.pool
+
+    async def cross(self) -> None:
+        """Reacts a cross to the command message"""
+        try:
+            await self.message.add_reaction(CROSS)
+        except discord.HTTPException:
+            pass
     
     @property
     def cs(self) -> aiohttp.ClientSession:
@@ -53,19 +53,17 @@ class FurinaBot(commands.Bot):
 
     Attributes
     -----------
-    - pool: `asyncpg.Pool`
-        - The database pool for the bot for easier database access
     - client_session: `aiohttp.ClientSession`
         - The client session for the bot for easier http request
 
     Example
     -----------
     .. code-block:: python
-        async with aiohttp.ClientSession() as client_session, asynpg.create_pool(user="postgres", command_timeout=30) as pool:
-            async with FurinaBot(pool=pool, client_session=client_session) as bot:
+        async with aiohttp.ClientSession() as client_session:
+            async with FurinaBot(client_session=client_session) as bot:
                 await bot.start(TOKEN)
     """
-    def __init__(self, *, pool: asyncpg.Pool, client_session: aiohttp.ClientSession, skip_lavalink: bool) -> None:
+    def __init__(self, *, client_session: aiohttp.ClientSession, skip_lavalink: bool) -> None:
         super().__init__(
             command_prefix     = self.get_pre,
             case_insensitive   = True,
@@ -78,28 +76,15 @@ class FurinaBot(commands.Bot):
                                           state="Playing: N̸o̸t̸h̸i̸n̸g̸")
         )
         self.skip_lavalink = skip_lavalink
-        self.pool = pool
         self.cs = client_session
+        self.prefixes: typing.Dict[int, str] = {}
 
     @property
-    def embed(self):
+    def embed(self) -> discord.Embed:
         return discord.Embed().set_footer(text="Coded by ThanhZ")
     
-    async def get_context(self, message: discord.Message, *, cls = FurinaCtx):
+    async def get_context(self, message: discord.Message, *, cls = FurinaCtx) -> FurinaCtx:
         return await super().get_context(message, cls=cls)
-
-    async def create_prefix_table(self) -> None:
-        """Create a `custom_prefixes` table in the database"""
-        await PrefixSQL(pool=self.pool).create_prefix_table()
-            
-    async def update_prefixes(self) -> None:
-        """Retrieve all prefixes in the `custom_prefixes` table and cache them in `Furina.prefixes`"""
-        prefixes = await PrefixSQL(pool=self.pool).get_custom_prefixes()
-        self.prefixes: typing.Dict[int, str] = {prefix["guild_id"]: prefix["prefix"] for prefix in prefixes}
-            
-    async def create_minigame_stats_db(self):
-        from cogs.utility.sql import MinigamesSQL
-        await MinigamesSQL(pool=self.pool).init_tables()
 
     def get_pre(self, _, message: discord.Message) -> typing.List[str]:
         """Custom `get_prefix` method"""
@@ -117,7 +102,9 @@ class FurinaBot(commands.Bot):
             embed.color = self.user.accent_color
             embed.timestamp = utils.utcnow()
             webhook = discord.Webhook.from_url(DEBUG_WEBHOOK, client=self)
-            await webhook.send(embed=embed, avatar_url=self.user.display_avatar.url, username=self.user.display_name)
+            await webhook.send(embed=embed, 
+                               avatar_url=self.user.display_avatar.url, 
+                               username=self.user.display_name)
         except ValueError:
             logging.warning("Cannot get the Webhook url for on_ready events."
                             "If you don't want to get a webhook message when the bot is ready, please ignore this")
@@ -126,9 +113,6 @@ class FurinaBot(commands.Bot):
         logging.info(f"discord.py v{discord.__version__}")
         logging.info(f"Wavelink v{wavelink.__version__}")
         logging.info(f"Running Python {python_version()}")
-        await self.create_prefix_table()
-        await self.update_prefixes()
-        await self.create_minigame_stats_db()
 
         # loads the extensions
         from cogs import EXTENSIONS
@@ -153,3 +137,7 @@ class FurinaCog(commands.Cog):
         
     async def cog_load(self):
         logging.info(f"Cog {self.__cog_name__} has been loaded")
+
+    @property
+    def embed(self) -> discord.Embed:
+        return self.bot.embed

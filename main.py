@@ -5,7 +5,6 @@ import os
 import logging
 import sys
 
-import asyncpg
 from aiohttp import ClientSession
 
 from furina import FurinaBot
@@ -55,10 +54,11 @@ def handle_setup_logging() -> None:
     root_logger.addHandler(console_handler)
 
 async def main(skip_ll: bool) -> None:
-    os.makedirs("logs", exist_ok=True)
+    os.makedirs('logs', exist_ok=True)
+    os.makedirs('db', exist_ok=True)
     handle_setup_logging()
-    async with ClientSession() as client_session, asyncpg.create_pool(user="postgres", command_timeout=30) as pool:
-        async with FurinaBot(pool=pool, client_session=client_session, skip_lavalink=skip_ll) as bot:
+    async with ClientSession() as client_session:
+        async with FurinaBot(client_session=client_session, skip_lavalink=skip_ll) as bot:
             await bot.start(TOKEN)
 
 
