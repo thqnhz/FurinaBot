@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
 
 class Tags(FurinaCog):
+    """Tags Related Commands"""
     async def cog_load(self):
         await self.bot.pool.execute(
         """

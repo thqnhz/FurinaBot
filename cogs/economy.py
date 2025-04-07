@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 class Economy(FurinaCog):
-    """Tag Related Commands"""
+    """Economy Related Commands"""
     def __init__(self, bot):
         super().__init__(bot)
         self.pool: asqlite.Pool = asqlite.create_pool('furina.db')
