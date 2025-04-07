@@ -29,3 +29,6 @@ LAVA_URI = "http://localhost:1710"
 LAVA_PW = "thanhz"
 BACKUP_LL = os.getenv("BACKUP_LL")
 BACKUP_LL_PW = os.getenv("BACKUP_LL_PW")
+
+# Utils Cog
+WORDNIK_API = os.getenv("WORDNIK_API")

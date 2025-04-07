@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import datetime
+import dateutil.parser
 import platform
 import psutil
+import re
 from enum import Enum
 from time import perf_counter
 from typing import TYPE_CHECKING, Dict, Optional
@@ -326,6 +329,43 @@ class Utils(FurinaCog):
         """
         view = await self.dictionary_call(word.split()[0])
         view.message = await ctx.reply(embed=view.embeds[0], view=view)
+
+    @commands.command(name='wordoftheday', aliases=['wotd'], description="View today's word")
+    async def wotd_command(self, ctx: FurinaCtx, day: str = None):
+        """View today's word, or any past day's word
+
+        Parameters
+        -----------
+        day: `str`
+            - The day you want to view, with yyyy-mm-dd format
+        """
+        embed = self.bot.embed
+        if day:
+            try:
+                date = dateutil.parser.parse(day)
+                day = date.strftime(r"%Y-%m-%d")
+            except ValueError:
+                date = datetime.datetime.now()
+                day = date.strftime(r"%Y-%m-%d")
+        else:
+            date = datetime.datetime.now()
+            day = date.strftime(r"%Y-%m-%d")
+        day_check = r"202\d-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])"
+        if not re.match(day_check, day):
+            return await ctx.reply("You entered a very old date, try a newer one")
+        ddmmyyyy = date.strftime(r"%d/%m/%Y")
+        embed.set_author(name=f"Word of the Day ({ddmmyyyy})")
+        async with self.bot.cs.get(f"https://api.wordnik.com/v4/words.json/wordOfTheDay?date={day}&api_key={WORDNIK_API}") as response:
+            if not response.ok:
+                return await ctx.reply("Something went wrong")
+            content: Dict = await response.json()
+        embed.title = f"{content['word']} ({content['definitions'][0]['partOfSpeech']})"
+        embed.description = ">>> " + content['definitions'][0]['text']
+        embed.add_field(name="Note:", value=content['note'])
+        await ctx.reply(embed=embed)
+        
+        
+
 
 async def setup(bot: FurinaBot):
     await bot.add_cog(Utils(bot))
