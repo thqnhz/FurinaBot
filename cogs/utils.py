@@ -384,7 +384,7 @@ class Utils(FurinaCog):
         ddmmyyyy = date.strftime(r"%d/%m/%Y")
         embed.set_author(name=f"Word of the Day ({ddmmyyyy})")
         async with self.bot.cs.get(f"https://api.wordnik.com/v4/words.json/wordOfTheDay?date={day}&api_key={WORDNIK_API}") as response:
-            if not response.ok:
+            if not response.status == 200:
                 return await ctx.reply("Something went wrong")
             content: Dict = await response.json()
         embed.title = f"{content['word']} ({content['definitions'][0]['partOfSpeech']})"
