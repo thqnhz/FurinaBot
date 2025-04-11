@@ -392,13 +392,13 @@ class WordleABC(View):
 
 
 class Wordle(WordleABC):
-    def __init__(self, *, bot: FurinaBot, word: str, owner: User, solo: bool):
+    def __init__(self, *, bot: FurinaBot, word: str, owner: User, solo: bool, pool: asqlite.Pool) -> None:
         self.embed = bot.embed
         self.embed.title = f"WORDLE ({len(word)} LETTERS)"
         self.embed.description = ""
         self.embed.color = 0x2F3136
         self.embed.set_footer(text="Coded by ThanhZ | v0.3.3-beta")
-        super().__init__(bot=bot, word=word, owner=owner, solo=solo, attempt=6)
+        super().__init__(bot=bot, word=word, owner=owner, solo=solo, attempt=6, pool=pool)
         self.helped_guess: WordleHelpGuessSelect = WordleHelpGuessSelect()
         self.selected_guess: Optional[str] = None
         self.remaining_attempt_button.label = f"Attempts: {self.attempt}"
@@ -500,13 +500,14 @@ class Wordle(WordleABC):
 
 
 class Letterle(WordleABC):
-    def __init__(self, *, bot: FurinaBot, letter: str, owner: User, init_guess: str):
+    def __init__(self, *, bot: FurinaBot, letter: str, owner: User, init_guess: str, pool: asqlite.Pool) -> None:
         self.embed = bot.embed
         self.embed.title = "LETTERLE"
         self.embed.description = ""
         self.embed.set_footer(text="Coded by ThanhZ | v0.3.2-beta")
-        super().__init__(bot=bot, word=letter, owner=owner, solo=False, attempt=24)
+        super().__init__(bot=bot, word=letter, owner=owner, solo=False, attempt=24, pool=pool)
         self.init_guess = init_guess
+        self.pool = pool
         self.remaining_attempt_button.label = f"Attempts: {self.attempt}"
         for letter in self.ALPHABET:
             if letter != init_guess:
@@ -711,7 +712,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         await interaction.response.defer()
         async with self.bot.cs.get(f"https://random-word-api.vercel.app/api?length={letters}") as response:
             word = str(await response.text()).replace('"', '').replace('[', '').replace(']', '')
-        view = Wordle(bot=self.bot, word=word.upper(), owner=interaction.user, solo=solo)
+        view = Wordle(bot=self.bot, word=word.upper(), owner=interaction.user, solo=solo, pool=self.pool)
         await interaction.followup.send(embed=view.embed, view=view)
         view.message = await interaction.original_response()
         await view.update_game_status(game_name="wordle", win=False)
@@ -734,7 +735,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         letter = Letterle.ALPHABET[randint(0, 25)]
         if first_guess not in Letterle.ALPHABET or len(first_guess) != 1:
             first_guess = Letterle.ALPHABET[randint(0, 25)]
-        view = Letterle(bot=self.bot, letter=letter, owner=interaction.user, init_guess=first_guess)
+        view = Letterle(bot=self.bot, letter=letter, owner=interaction.user, init_guess=first_guess, pool=self.pool)
         embed = view.embed
         init_result = view.check_guess(first_guess)
         embed.description = f"{init_result} by {interaction.user.mention}\n"
