@@ -12,7 +12,7 @@ from discord import app_commands, utils
 from discord.ext import commands
 from discord.ext.commands import errors, when_mentioned_or
 
-from settings import ACTIVITY_NAME, CHECKMARK, CROSS, DEFAULT_PREFIX, DEBUG_WEBHOOK 
+from settings import ACTIVITY_NAME, CHECKMARK, CROSS, DEBUG_WEBHOOK, DEFAULT_PREFIX
 
 
 class FurinaCtx(commands.Context):
@@ -113,6 +113,8 @@ class FurinaBot(commands.Bot):
         logging.info(f"discord.py v{discord.__version__}")
         logging.info(f"Wavelink v{wavelink.__version__}")
         logging.info(f"Running Python {python_version()}")
+        logging.info("Fetching bot emojis")
+        self.emojis: typing.List[discord.Emoji] = await self.fetch_application_emojis()
 
         # loads the extensions
         from cogs import EXTENSIONS
@@ -132,10 +134,10 @@ class FurinaBot(commands.Bot):
 
 class FurinaCog(commands.Cog):
     """Base class for all cogs"""
-    def __init__(self, bot: FurinaBot):
+    def __init__(self, bot: FurinaBot) -> None:
         self.bot = bot
         
-    async def cog_load(self):
+    async def cog_load(self) -> None:
         logging.info(f"Cog {self.__cog_name__} has been loaded")
 
     @property

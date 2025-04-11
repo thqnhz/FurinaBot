@@ -1,21 +1,22 @@
 from __future__ import annotations
 
-import ast
 import asyncio
 import logging
 import os
+import pathlib
 from abc import abstractmethod
 from collections import Counter
 from enum import Enum
 from typing import Dict, List, Optional, Tuple, Union, TYPE_CHECKING
 
+import asqlite
 import discord
 from discord import app_commands, ui, Color, Embed, ButtonStyle, Message, Interaction, User
 from discord.ext import commands
+from tqdm import tqdm
 
 from .utils import Utils
 from cogs.utility.views import View, PaginatedView
-from cogs.utility.sql import MinigamesSQL
 from furina import FurinaCtx
 
 
@@ -164,11 +165,11 @@ class TicTacToeButton(ui.Button['TicTacToe']):
         if winner is not None:
             view.embed.set_author(name="")
             if winner == view.X:
-                view.embed.description = f"### {view.player_one.mention} Thắng!"
+                view.embed.description = f"### {view.player_one.mention} Won!"
             elif winner == view.O:
-                view.embed.description = f"### {view.player_two.mention} Thắng!"
+                view.embed.description = f"### {view.player_two.mention} Won!"
             else:
-                view.embed.description = f"### Hòa!"
+                view.embed.description = "### Draw!"
 
             for child in view.children:
                 child.disabled = True
@@ -256,13 +257,21 @@ WORDLE_EMOJIS: Dict[str, Dict[WordleLetterStatus, str]]
 
 class WordleABC(View):
     ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-    def __init__(self, *, bot: FurinaBot, word: str, owner: User, solo: bool, attempt: int) -> None:
+    def __init__(self, 
+                 *, 
+                 bot: FurinaBot, 
+                 word: str, 
+                 owner: User, 
+                 solo: bool, 
+                 attempt: int, 
+                 pool: asqlite.Pool) -> None:
         super().__init__(timeout=600)
         self.bot = bot
         self.word = word
         self.owner = owner
         self.solo = solo
         self.attempt = attempt
+        self.pool = pool
         
         self._is_winning = False
         self._availability: List[WordleLetterStatus] = [WordleLetterStatus.UNUSED] * len(self.ALPHABET)
@@ -281,13 +290,15 @@ class WordleABC(View):
         await self.message.edit(view=self)
 
     async def update_game_status(self, game_name: str, win: bool):
-        await MinigamesSQL(pool=self.bot.pool).update_game_status(
-            game_id=self.message.id, 
-            game_name=game_name, 
-            user_id=self.owner.id, 
-            attempts=self.attempt, 
-            win=win
-        )
+        async with self.pool.acquire() as conn:
+            await conn.execute(
+                """
+                INSERT INTO singleplayer_games (game_id, game_name, user_id, attempts, win)
+                VALUES ($1, $2, $3, $4, $5)
+                ON CONFLICT (game_id) DO UPDATE SET
+                attempts = EXCLUDED.attempts,
+                win = EXCLUDED.win
+                """, self.message.id, game_name, self.owner.id, self.attempt, win)
 
     def update_availabilities(self):
         """Update letters availability"""
@@ -595,14 +606,42 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         self.bot = bot
 
     async def cog_load(self) -> None:
+        self.pool = await asqlite.create_pool(pathlib.Path() / 'db' / 'minigames.db')
         logging.info(f"Cog {self.__cog_name__} has been loaded")
-        await self.update_wordle_emojis()
+        await self.__update_wordle_emojis()
+        await self.__create_minigame_tables()
 
-    async def update_wordle_emojis(self) -> None:
+    async def __create_minigame_tables(self) -> None:
+        async with self.pool.acquire() as conn:
+            await conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS singleplayer_games
+                (
+                    game_id INTEGER NOT NULL PRIMARY KEY,
+                    game_name TEXT NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    attempts INT NOT NULL,
+                    win BOOLEAN DEFAULT NULL
+                )
+                """)
+            await conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS twoplayers_games
+                (
+                    game_id INTEGER NOT NULL PRIMARY KEY,
+                    game_name TEXT NOT NULL,
+                    user1_id INTEGER NOT NULL,
+                    user2_id INTEGER,
+                    attempts INT NOT NULL,
+                    win BOOLEAN DEFAULT NULL
+                )
+                """)
+
+    async def __update_wordle_emojis(self) -> None:
         global WORDLE_EMOJIS
         WORDLE_EMOJIS = {letter: {} for letter in Wordle.ALPHABET}
 
-        emojis = await self.bot.fetch_application_emojis()
+        emojis = self.bot.emojis
         for emoji in emojis:
             if "_BLACK" in emoji.name:
                 WORDLE_EMOJIS[emoji.name[0]][WordleLetterStatus.INCORRECT] = str(emoji)
@@ -614,18 +653,16 @@ class Minigames(commands.GroupCog, group_name="minigame"):
                 WORDLE_EMOJIS[emoji.name[0]][WordleLetterStatus.WRONG_POS] = str(emoji)
         for letter in WORDLE_EMOJIS:
             if len(WORDLE_EMOJIS[letter]) != 4:
-                logging.warning(f"Missing emojis for wordle game")
-                return await self.upload_missing_emojis()
+                logging.warning("Missing emojis for wordle game")
+                return await self.__upload_missing_emojis()
 
-    async def upload_missing_emojis(self) -> None:
+    async def __upload_missing_emojis(self) -> None:
         logging.info("Uploading missing wordle emojis...")
 
-        from pathlib import Path
-        from tqdm import tqdm
-        wordle_letters_path = Path("./assets/wordle")
+        wordle_letters_path = pathlib.Path() / 'assets' / 'wordle'
         filenames = os.listdir(wordle_letters_path)
         for _, filename in enumerate(tqdm(filenames, desc="Uploading", unit=" emojis"), 1):
-            with open(Path(f"{wordle_letters_path}/{filename}"), "rb") as file:
+            with open(wordle_letters_path / filename, "rb") as file:
                 try:
                     await self.bot.create_application_emoji(name=filename.split(".")[0], image=file.read())
                 except discord.HTTPException:
@@ -634,12 +671,12 @@ class Minigames(commands.GroupCog, group_name="minigame"):
                     pass
             await asyncio.sleep(0.5)
         logging.info("Uploaded missing wordle emojis")
-        return await self.update_wordle_emojis()
+        return await self.__update_wordle_emojis()
 
     @commands.hybrid_command(name='tictactoe', aliases=['ttt', 'xo'], description="XO minigame")
     @app_commands.allowed_installs(guilds=True, users=True)
     async def tic_tac_toe(self, ctx: FurinaCtx):
-        view: TicTacToe = TicTacToe()
+        view = TicTacToe()
         view.message = await ctx.reply(embed=view.embed, view=view)
 
     @commands.hybrid_command(name='rockpaperscissor', aliases=['keobuabao'], description="Rock Paper Scissor minigame")
@@ -667,7 +704,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         """
         await interaction.response.defer()
         async with self.bot.cs.get(f"https://random-word-api.vercel.app/api?length={letters}") as response:
-            word: str = ast.literal_eval(await response.text())[0]
+            word = str(await response.text()).replace('"', '').replace('[', '').replace(']', '')
         view = Wordle(bot=self.bot, word=word.upper(), owner=interaction.user, solo=solo)
         await interaction.followup.send(embed=view.embed, view=view)
         view.message = await interaction.original_response()
@@ -713,7 +750,31 @@ class Minigames(commands.GroupCog, group_name="minigame"):
     async def minigame_stats_all(self, interaction: Interaction):
         await interaction.response.defer()
         embeds: List[Embed] = []
-        rows = await MinigamesSQL(pool=self.bot.pool).get_minigame_stats_all()
+        async with self.pool.acquire() as conn:
+            rows = await conn.fetchall(
+                """
+                WITH ranked_players AS (
+                    SELECT 
+                        game_name,
+                        user_id,
+                        COUNT(*) FILTER (WHERE win = TRUE) AS wins,
+                        ROW_NUMBER() OVER (PARTITION BY game_name ORDER BY COUNT(*) FILTER (WHERE win = TRUE) DESC) AS rank
+                    FROM 
+                        singleplayer_games
+                    GROUP BY 
+                        game_name, user_id
+                )
+                SELECT 
+                    game_name,
+                    user_id,
+                    wins
+                FROM 
+                    ranked_players
+                WHERE 
+                    rank <= 3
+                ORDER BY 
+                    game_name, rank;
+                """)
         sorted_by_minigame: Dict[str, List[Dict[str, int]]] = {}
         for row in rows:
             minigame = row['game_name']
@@ -751,9 +812,25 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         """
         await interaction.response.defer()
         user = user or interaction.user
-        rows = await MinigamesSQL(pool=self.bot.pool).get_minigame_stats_user(user.id)
+        async with self.pool.acquire() as conn:
+            rows = await conn.fetchall(
+                """
+                SELECT 
+                    game_name,
+                    COUNT(*) FILTER (WHERE win = TRUE) AS wins,
+                    COUNT(*) FILTER (WHERE win = FALSE) AS losses,
+                    COUNT(*) AS total_games
+                FROM 
+                    singleplayer_games
+                WHERE 
+                    user_id = $1
+                GROUP BY 
+                    game_name
+                ORDER BY 
+                    game_name;
+                """, user.id)
         embed = self.bot.embed
-        embed.title = f"Minigame Stats"
+        embed.title = "Minigame Stats"
         embed.description = f"User: {user.mention}"
         for row in rows:
             embed.add_field(name=row['game_name'].capitalize(), 
@@ -775,7 +852,49 @@ class Minigames(commands.GroupCog, group_name="minigame"):
 
     async def get_minigame_stats(self, interaction: Interaction, minigame: str):
         await interaction.response.defer()
-        rows_top = await MinigamesSQL(pool=self.bot.pool).get_top_players_by_minigame(minigame)
+        async with self.pool.acquire() as conn:
+            rows_top = await conn.fetchall(
+                """
+                SELECT 
+                    user_id,
+                    COUNT(*) FILTER (WHERE win = TRUE) AS wins,
+                    COUNT(*) FILTER (WHERE win = FALSE) AS losses,
+                    COUNT(*) AS total_games,
+                    ROUND((COUNT(*) FILTER (WHERE win = TRUE) * 100.0 / NULLIF(COUNT(*), 0)), 2) AS win_percentage
+                FROM 
+                    singleplayer_games
+                WHERE 
+                    game_name = $1
+                GROUP BY 
+                    user_id
+                HAVING 
+                    COUNT(*) >= 5
+                ORDER BY 
+                    win_percentage DESC,
+                    total_games DESC
+                LIMIT 3
+                """, minigame)
+            rows_bottom = await conn.fetchall(
+                """
+                SELECT 
+                    user_id,
+                    COUNT(*) FILTER (WHERE win = TRUE) AS wins,
+                    COUNT(*) FILTER (WHERE win = FALSE) AS losses,
+                    COUNT(*) AS total_games,
+                    ROUND((COUNT(*) FILTER (WHERE win = TRUE) * 100.0 / NULLIF(COUNT(*), 0)), 2) AS win_percentage
+                FROM 
+                    singleplayer_games
+                WHERE 
+                    game_name = $1
+                GROUP BY 
+                    user_id
+                HAVING 
+                    COUNT(*) >= 5
+                ORDER BY 
+                    win_percentage ASC,  
+                    total_games DESC 
+                LIMIT 3
+                """, minigame)
         embed = self.bot.embed
         embed.title = f"{minigame.capitalize()} Minigame Stats"
         top_players = ""
@@ -784,7 +903,6 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         if not top_players:
             top_players = "There is no one here"
         embed.add_field(name=f"Top 3 {minigame} players\n", value=top_players)
-        rows_bottom = await MinigamesSQL(pool=self.bot.pool).get_bottom_players_by_minigame(minigame)
         bottom_players = ""
         for index, row in enumerate(rows_bottom, 1):
             bottom_players += f"{index}. <@{row['user_id']}>: `{row['losses']:04d}` loses\n"
