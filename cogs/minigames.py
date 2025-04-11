@@ -641,7 +641,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         global WORDLE_EMOJIS
         WORDLE_EMOJIS = {letter: {} for letter in Wordle.ALPHABET}
 
-        emojis = self.bot.emojis
+        emojis = self.bot.app_emojis
         for emoji in emojis:
             if "_BLACK" in emoji.name:
                 WORDLE_EMOJIS[emoji.name[0]][WordleLetterStatus.INCORRECT] = f"<:{emoji.name}:{emoji.id}>"
