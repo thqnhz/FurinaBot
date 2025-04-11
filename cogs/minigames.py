@@ -912,7 +912,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         embed.add_field(name=f"Top 3 {minigame} players\n", value=top_players)
         bottom_players = ""
         for index, row in enumerate(rows_bottom, 1):
-            bottom_players += f"{index}. <@{row['user_id']}>: `{row['losses']:04d}` loses\n"
+            bottom_players += f"{index}. <@{row['user_id']}>: `{row['losses']:04d}` losses\n"
         if not bottom_players:
             bottom_players = "No one is here either"
         embed.add_field(name=f"Bottom 3 {minigame} players\n", value=bottom_players, inline=False)
