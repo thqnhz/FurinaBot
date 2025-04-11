@@ -644,13 +644,13 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         emojis = self.bot.emojis
         for emoji in emojis:
             if "_BLACK" in emoji.name:
-                WORDLE_EMOJIS[emoji.name[0]][WordleLetterStatus.INCORRECT] = str(emoji)
+                WORDLE_EMOJIS[emoji.name[0]][WordleLetterStatus.INCORRECT] = f"<:{emoji.name}:{emoji.id}>"
             elif "_GREEN" in emoji.name:
-                WORDLE_EMOJIS[emoji.name[0]][WordleLetterStatus.CORRECT] = str(emoji)
+                WORDLE_EMOJIS[emoji.name[0]][WordleLetterStatus.CORRECT] = f"<:{emoji.name}:{emoji.id}>"
             elif "_WHITE" in emoji.name:
-                WORDLE_EMOJIS[emoji.name[0]][WordleLetterStatus.UNUSED] = str(emoji)
+                WORDLE_EMOJIS[emoji.name[0]][WordleLetterStatus.UNUSED] = f"<:{emoji.name}:{emoji.id}>"
             elif "_YELLOW" in emoji.name:
-                WORDLE_EMOJIS[emoji.name[0]][WordleLetterStatus.WRONG_POS] = str(emoji)
+                WORDLE_EMOJIS[emoji.name[0]][WordleLetterStatus.WRONG_POS] = f"<:{emoji.name}:{emoji.id}>"
         for letter in WORDLE_EMOJIS:
             if len(WORDLE_EMOJIS[letter]) != 4:
                 logging.warning("Missing emojis for wordle game")
