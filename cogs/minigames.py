@@ -604,6 +604,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
     """Some minigames that you can play"""
     def __init__(self, bot: FurinaBot):
         self.bot = bot
+        self.emoji_loading_attempts: int = 0
 
     async def cog_load(self) -> None:
         self.pool = await asqlite.create_pool(pathlib.Path() / 'db' / 'minigames.db')
@@ -638,6 +639,9 @@ class Minigames(commands.GroupCog, group_name="minigame"):
                 """)
 
     async def __update_wordle_emojis(self) -> None:
+        if self.emoji_loading_attempts >= 3:
+            logging.warning("Failed to load emojis for wordle game")
+            return
         global WORDLE_EMOJIS
         WORDLE_EMOJIS = {letter: {} for letter in Wordle.ALPHABET}
 
@@ -672,6 +676,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
                     pass
             await asyncio.sleep(0.5)
         logging.info("Uploaded missing wordle emojis")
+        self.emoji_loading_attempts += 1
         return await self.__update_wordle_emojis()
 
     @commands.hybrid_command(name='tictactoe', aliases=['ttt', 'xo'], description="XO minigame")
