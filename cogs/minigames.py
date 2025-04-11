@@ -651,6 +651,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
                 WORDLE_EMOJIS[emoji.name[0]][WordleLetterStatus.UNUSED] = f"<:{emoji.name}:{emoji.id}>"
             elif "_YELLOW" in emoji.name:
                 WORDLE_EMOJIS[emoji.name[0]][WordleLetterStatus.WRONG_POS] = f"<:{emoji.name}:{emoji.id}>"
+
         for letter in WORDLE_EMOJIS:
             if len(WORDLE_EMOJIS[letter]) != 4:
                 logging.warning("Missing emojis for wordle game")

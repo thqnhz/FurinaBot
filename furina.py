@@ -114,7 +114,7 @@ class FurinaBot(commands.Bot):
         logging.info(f"Wavelink v{wavelink.__version__}")
         logging.info(f"Running Python {python_version()}")
         logging.info("Fetching bot emojis")
-        self.emojis: typing.List[discord.Emoji] = await self.fetch_application_emojis()
+        self.app_emojis: typing.List[discord.Emoji] = await self.fetch_application_emojis()
 
         # loads the extensions
         from cogs import EXTENSIONS
