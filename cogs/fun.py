@@ -51,7 +51,6 @@ class Fun(FurinaCog):
         embed.color = fortunes[rand_num]["color"]
         embed.title = fortunes[rand_num]["name"]
         await ctx.send(embed=embed)
-    
 
     @commands.command(name='dice', aliases=['roll'], description="Roll a dice 6")
     async def dice(self, ctx: FurinaCtx, number: Optional[int] = 1) -> None:
@@ -87,6 +86,34 @@ class Fun(FurinaCog):
         embed.title = f"{rand_flip}"
         await ctx.send(embed=embed)
 
+    @commands.command(name='8ball', description="Ask the magic 8 ball")
+    async def magic_eight_ball(self, ctx: FurinaCtx, *, question: str) -> None:
+        answers: List[str] = [
+            "It is certain",
+            "It is decidedly so",
+            "Without a doubt",
+            "Yes - definitely",
+            "You may rely on it",
+            "As I see it, yes",
+            "Most likely",
+            "Outlook good",
+            "Yes",
+            "Signs point to yes",
+            "Don't count on it",
+            "My reply is no",
+            "My sources say no",
+            "Outlook not so good",
+            "Very doubtful",
+            "Reply hazy, try again",
+            "Ask again later",
+            "Better not tell you now",
+            "Cannot predict now",
+            "Concentrate and ask again"]
+        embed = self.bot.embed
+        embed.set_author(name=f"{ctx.author.display_name} asked the magic 8 ball", 
+                         icon_url=r"https://th.bing.com/th/id/R.94318dc029cf3858ebbd4a5bd95617d9?rik=%2bjjVGtbqXgWhQA&pid=ImgRaw&r=0")
+        embed.description = f"> {question}\n- **Magic 8 Ball:** `{np.random.choice(answers)}`"
+        await ctx.send(embed=embed)
 
 
 async def setup(bot: FurinaBot) -> None:
