@@ -76,7 +76,7 @@ class Gacha(FurinaCog):
         await ctx.reply(embed=embed)
 
     @gi_group.command(name='set', description='Set your UID')
-    async def set_uid(self, ctx: FurinaCtx, uid: str):
+    async def set_uid(self, ctx: FurinaCtx, *, uid: str):
         async with self.gi as api, self.pool.acquire() as db:
             try:
                 await api.fetch_showcase(uid, info_only=True)
@@ -113,7 +113,7 @@ class Gacha(FurinaCog):
         await ctx.reply(embed=embed)
 
     @hsr_group.command(name='set', description='Set your UID')
-    async def set_uid(self, ctx: FurinaCtx, uid: str):
+    async def set_uid(self, ctx: FurinaCtx, *, uid: str):
         async with self.hsr as api, self.pool.acquire() as db:
             try:
                 await api.fetch_showcase(uid, info_only=True)
