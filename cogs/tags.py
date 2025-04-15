@@ -5,7 +5,7 @@ import pathlib
 from typing import TYPE_CHECKING
 
 import asqlite
-from discord import app_commands, Interaction, Message
+from discord import Message
 from discord.ext import commands
 
 from furina import FurinaCog, FurinaCtx
@@ -23,7 +23,7 @@ class Tags(FurinaCog):
         await self.__create_tag_tables()
         return await super().cog_load()
     
-    async def __create_tag_tables(self):
+    async def __create_tag_tables(self) -> None:
         async with self.pool.acquire() as db:
             await db.execute(
                 """
