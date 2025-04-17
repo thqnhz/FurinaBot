@@ -109,7 +109,6 @@ class Gacha(FurinaCog):
                              f"**Characters**: `{player_stats.character_count}`\n"
                              f"**Lightcones**: `{player_stats.light_cone_count}`"
         )
-        embed.set_footer(text="Coded by ThanhZ | Powered by Enka Network")
         await ctx.reply(embed=embed)
 
     @hsr_group.command(name='set', description='Set your UID')

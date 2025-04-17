@@ -5,6 +5,7 @@ import pathlib
 from typing import TYPE_CHECKING
 
 import asqlite
+import discord
 from discord import Message
 from discord.ext import commands
 
@@ -83,12 +84,14 @@ class Tags(FurinaCog):
         name = name.lower().replace('"', '').replace("'", "")
         if name == 'cancel':
             return await ctx.send("Cancelling tag creation")
+        if content:
+            content = await commands.clean_content().convert(ctx, content)
         # tag create <name> /BLANK/
         if name and not content:
             try:
                 await ctx.send("What is the content of the tag?")
                 content_input: Message = await self.bot.wait_for("message", check=check, timeout=120)
-                content = content_input.content
+                content = content_input.clean_content
             except asyncio.TimeoutError:
                 await ctx.reply("No user input, cancelling tag creation")
         if content.lower() == 'cancel':
