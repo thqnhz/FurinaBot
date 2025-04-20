@@ -23,6 +23,9 @@ class Fun(FurinaCog):
         self.bot.tree.remove_command(self.ctx_menu_liemeter.name, type=self.ctx_menu_liemeter.type)
     
     async def lie_detector(self, interaction: Interaction, message: Message):
+        if message.author.id == self.bot.user.id:
+            await interaction.response.send_message("I always tell the truth")
+            return
         if np.random.random() < 0.5:
             await interaction.response.send_message("This message is verified to be the truth")
         else:
