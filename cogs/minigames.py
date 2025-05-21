@@ -736,11 +736,10 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         self._randomized_words: list[set[str]] = [set() for _ in range(5)]
 
     async def cog_load(self) -> None:
-        self.pool = await asqlite.create_pool(pathlib.Path() / 'db' / 'minigames.db')
+        self.pool = self.bot.pool
         self.wordle_db = await asqlite.create_pool(pathlib.Path() / 'db' / 'wordle.db')
         await self.__update_wordle_emojis()
         await self.__create_valid_guess_table()
-        await self.__create_minigame_tables()
         logging.info("Cog %s has been loaded", self.__cog_name__)
 
     async def get_random_word(self, length: int) -> str:
@@ -754,32 +753,6 @@ class Minigames(commands.GroupCog, group_name="minigame"):
             words = set(ast.literal_eval(await response.text()))
         self._randomized_words[index] = words
         return self._randomized_words[index].pop()
-
-    async def __create_minigame_tables(self) -> None:
-        async with self.pool.acquire() as conn:
-            await conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS singleplayer_games
-                (
-                    game_id INTEGER NOT NULL PRIMARY KEY,
-                    game_name TEXT NOT NULL,
-                    user_id INTEGER NOT NULL,
-                    attempts INT NOT NULL,
-                    win BOOLEAN DEFAULT NULL
-                )
-                """)
-            await conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS twoplayers_games
-                (
-                    game_id INTEGER NOT NULL PRIMARY KEY,
-                    game_name TEXT NOT NULL,
-                    user1_id INTEGER NOT NULL,
-                    user2_id INTEGER,
-                    attempts INT NOT NULL,
-                    win BOOLEAN DEFAULT NULL
-                )
-                """)
 
     async def __create_valid_guess_table(self) -> None:
         async with self.wordle_db.acquire() as conn, conn.transaction():
@@ -884,12 +857,14 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         """
         await ctx.defer()
         word = await self.get_random_word(letters)
-        view = WordleView(bot=self.bot,
-                          word=word,
-                          owner=ctx.author,
-                          solo=solo,
-                          pool=self.pool,
-                          word_db=self.wordle_db)
+        view = WordleView(
+            bot=self.bot,
+            word=word,
+            owner=ctx.author,
+            solo=solo,
+            pool=self.pool,
+            word_db=self.wordle_db
+        )
         view.message = await ctx.send(view=view)
 
     @commands.hybrid_command(name='letterle')

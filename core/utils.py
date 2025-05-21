@@ -80,6 +80,3 @@ def setup_logging() -> None:
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(LogFormatter())
     root_logger.addHandler(console_handler)
-
-
-

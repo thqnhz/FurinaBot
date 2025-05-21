@@ -14,6 +14,12 @@ limitations under the License.
 
 from __future__ import annotations
 
+__all__ = [
+    "LayoutView",
+    "PaginatedView",
+    "View",
+]
+
 from typing import Literal
 
 from discord import Button, ButtonStyle, Embed, Interaction, Message, User, ui
@@ -53,11 +59,10 @@ class View(ui.View):
             await super().on_error(interaction, error, item)
 
     async def on_timeout(self) -> None:
-        if self.message is None:
-            return
-        for child in self.children:
-            child.disabled = True
-        await self.message.edit(view=self)
+        if hasattr(self, 'message'):
+            for child in self.children:
+                child.disabled = True
+            await self.message.edit(view=self)
 
 
 class PaginatedView(View):
@@ -112,6 +117,10 @@ class PaginatedView(View):
 
 
 class LayoutView(ui.LayoutView):
+    """
+    A :class:`discord.ui.LayoutView` that auto disable its children when timed out
+    and has per user rate limit
+    """
     def __init__(self, *, timeout: float = 180) -> None:
         super().__init__(timeout=timeout)
         self.cd = CooldownMapping.from_cooldown(rate=1, per=1, type=self.key)
@@ -135,10 +144,9 @@ class LayoutView(ui.LayoutView):
             await super().on_error(interaction, error, item)
 
     async def on_timeout(self) -> None:
-        if self.message is None:
-            return
-        for child in self.walk_children():
-            child.disabled = True
-        await self.message.edit(view=self)
+        if hasattr(self, 'message'):
+            for child in self.walk_children():
+                child.disabled = True
+            await self.message.edit(view=self)
 
 

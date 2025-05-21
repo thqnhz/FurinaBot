@@ -27,12 +27,15 @@ async def main(*, skip_ll: bool) -> None:
     
     Parameters
     ----------
-    skip_ll : :obj:`bool`
+    skip_ll : :class:`bool`
         Whether to skip Lavalink or not.
     """
     utils.setup_logging()
     async with ClientSession() as client_session, \
-        FurinaBot(client_session=client_session, skip_lavalink=skip_ll) as bot:
+        FurinaBot(
+            client_session=client_session,
+            skip_lavalink=skip_ll
+        ) as bot:
         if not skip_ll:
             with Lavalink().start():
                 await bot.start()

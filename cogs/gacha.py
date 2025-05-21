@@ -14,10 +14,8 @@ limitations under the License.
 
 from __future__ import annotations
 
-import pathlib
 from typing import TYPE_CHECKING
 
-import asqlite
 import discord
 import enka
 from discord import ui
@@ -42,30 +40,6 @@ class Gacha(FurinaCog):
         self.gi = enka.GenshinClient()
         self.hsr = enka.HSRClient()
         
-    async def cog_load(self) -> None:
-        self.pool = await asqlite.create_pool(pathlib.Path() / 'db' / 'gacha.db')
-        await self.__create_gacha_tables()
-        return await super().cog_load()
-
-    async def __create_gacha_tables(self) -> None:
-        async with self.pool.acquire() as db:
-            await db.execute(
-                """
-                CREATE TABLE IF NOT EXISTS gi_uid
-                (
-                    user_id INTEGER NOT NULL PRIMARY KEY,
-                    uid TEXT NOT NULL
-                )
-                """)
-            await db.execute(
-                """
-                CREATE TABLE IF NOT EXISTS hsr_uid
-                (
-                    user_id INTEGER NOT NULL PRIMARY KEY,
-                    uid TEXT NOT NULL
-                )
-                """)
-
     @property
     def embed(self) -> discord.Embed:
         """Shortcut for `FurinaBot.embed`, with extra footer"""
@@ -83,8 +57,7 @@ class Gacha(FurinaCog):
         uid : :class:`str`
             UID to set
         """
-        async with self.pool.acquire() as conn:
-            await conn.execute(sql, (user_id, uid))
+        await self.pool.execute(sql, user_id, uid)
 
     async def get_uid(self, sql: str, user_id: int) -> str:
         """Get a user's UID from the database
@@ -106,11 +79,7 @@ class Gacha(FurinaCog):
         NotFoundError
             UID not found
         """
-        async with self.pool.acquire() as conn:
-            uid = await conn.fetchone(sql, (user_id,))
-            if not uid:
-                raise NotFoundError("UID not found")
-            return uid[0]
+        return await self.pool.fetchval(sql, user_id)
 
     @commands.hybrid_group(name='gi', fallback='get')
     async def gi_group(self, ctx: FurinaCtx, uid: str | None = None) -> None:

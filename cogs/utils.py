@@ -91,23 +91,13 @@ NODE_STATUSES: dict[NodeStatus, str] = {
 class Utils(FurinaCog):
     """Utility Commands"""
     async def cog_load(self) -> None:
-        self.pool = await asqlite.create_pool(pathlib.Path() / 'db' / 'utils.db')
         await self.__update_custom_prefixes()
         return await super().cog_load()
 
     async def __update_custom_prefixes(self) -> None:
         """Fetch and update custom prefixes"""
-        async with self.pool.acquire() as db:
-            await db.execute(
-                """
-                CREATE TABLE IF NOT EXISTS custom_prefixes
-                (
-                    guild_id INTEGER NOT NULL PRIMARY KEY,
-                    prefix TEXT NOT NULL
-                )
-                """)
-            prefixes = await db.fetchall("""SELECT * FROM custom_prefixes""")
-            self.bot.prefixes = {prefix["guild_id"]: prefix["prefix"] for prefix in prefixes}
+        prefixes = await self.pool.fetchall("""SELECT * FROM custom_prefixes""")
+        self.bot.prefixes = {prefix["guild_id"]: prefix["prefix"] for prefix in prefixes}
 
     @staticmethod
     def list_cog_commands(*, cog: FurinaCog, bot_prefix: str) -> ui.Container:
@@ -157,7 +147,7 @@ class Utils(FurinaCog):
                 accessory=ui.Button(
                     label="Click me to view source code",
                     style=discord.ButtonStyle.link,
-                    url=r"https://github.com/Th4nhZ/FurinaBot/tree/master"
+                    url=r"https://gitlab.com/thanhz/FurinaBot/-/tree/master"
                 )
             )
             container = ui.Container(
@@ -197,8 +187,7 @@ class Utils(FurinaCog):
         bot_latency: float = self.bot.latency
         voice_latency: float | int = ctx.guild.voice_client.ping if ctx.guild.voice_client else -1
         time = perf_counter()
-        async with self.pool.acquire() as db:
-            await db.execute("""SELECT * from custom_prefixes LIMIT 1""")
+        await self.pool.execute("""SELECT * from custom_prefixes LIMIT 1""")
         db_latency = perf_counter() - time
         node_statuses = ""
         for i, node in enumerate(Pool.nodes, 1):
@@ -239,17 +228,21 @@ class Utils(FurinaCog):
             container.add_item(ui.TextDisplay(f"{settings.CROSS} **Invalid prefix**"))
             await ctx.reply(view=LayoutView().add_item(container))
             return
-        async with self.pool.acquire() as db:
-            if prefix in ['clear', 'reset', 'default', settings.DEFAULT_PREFIX]:
-                await db.execute(
-                    """
-                    DELETE FROM custom_prefixes WHERE guild_id = ?
-                    """, ctx.guild.id)
-            else:
-                await db.execute(
-                    """
-                    INSERT OR REPLACE INTO custom_prefixes (guild_id, prefix) VALUES (?, ?)
-                    """, ctx.guild.id, prefix)
+        if prefix in ['clear', 'reset', 'default', settings.DEFAULT_PREFIX]:
+            await self.pool.execute(
+                """
+                DELETE FROM custom_prefixes WHERE guild_id = ?
+                """,
+                ctx.guild.id
+            )
+        else:
+            await self.pool.execute(
+                """
+                INSERT OR REPLACE INTO custom_prefixes (guild_id, prefix) VALUES (?, ?)
+                """,
+                ctx.guild.id,
+                prefix
+            )
         await self.__update_custom_prefixes()
         prefix = self.bot.prefixes.get(ctx.guild.id) or settings.DEFAULT_PREFIX
         container.add_item(
@@ -274,9 +267,9 @@ class Utils(FurinaCog):
         """
         cmd: commands.Command | None = self.bot.get_command(command.lower())
         file: discord.File | None = None
-        github: str = r"https://github.com/Th4nhZ/FurinaBot"
+        git: str = r"https://gitlab.com/thanhz/FurinaBot/-/tree/master"
         if not command:
-            res = github
+            res = git
         elif not cmd:
             res = f"No commands named {command.lower()}"
         else:
@@ -292,8 +285,8 @@ class Utils(FurinaCog):
                 )
             else:
                 res = f"```py\n{source}\n```"
-            github = f"<{github}/tree/master/{path}#L{start_line}-L{end_line}>"
-            res += f"\nHere is the corresponding github link: {github}"
+            git = f"<{git}/{path}#L{start_line}-L{end_line}>"
+            res += f"\nHere is the corresponding git link: {git}"
         await ctx.reply(res, file=file)
 
     @commands.command(name='help')

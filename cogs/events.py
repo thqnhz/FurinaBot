@@ -15,9 +15,20 @@ limitations under the License.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from collections import defaultdict
+from typing import TYPE_CHECKING, Any, ClassVar
 
-from discord import Activity, ActivityType, DMChannel, Member, Message, ui
+from discord import (
+    Activity,
+    ActivityType,
+    DMChannel,
+    Guild,
+    Interaction,
+    Member,
+    Message,
+    app_commands,
+    ui,
+)
 from discord.ext import commands
 
 from core import FurinaCog, FurinaCtx, settings
@@ -29,6 +40,13 @@ if TYPE_CHECKING:
 
 
 class BotEvents(FurinaCog):
+    def __init__(self, bot: FurinaBot) -> None:
+        super().__init__(bot)
+        self.pool = bot.pool
+        self.bot = bot
+        self.bot.command_cache = defaultdict(list)
+        self.bot.app_command_cache = defaultdict(list)
+
     async def update_activity(self, state: str = "N̸o̸t̸h̸i̸n̸g̸") -> None:
         """Update the bot's activity to the playing track.
 
@@ -43,6 +61,53 @@ class BotEvents(FurinaCog):
                 name=settings.ACTIVITY_NAME, 
                 state=f"Playing: {state}"
             )
+        )
+
+    @commands.Cog.listener()
+    async def on_guild_join(self, guild: Guild) -> None:
+        """Add the guild to the database when the bot joins a new server"""
+        await self.pool.execute("INSERT INTO guilds (id) VALUES (?)", guild.id)
+        logging.info("Joined guild: %s (%s)", guild.name, guild.id)
+
+    @commands.Cog.listener()
+    async def on_guild_remove(self, guild: Guild) -> None:
+        """Remove the guild from the database when the bot leaves a server"""
+        await self.pool.execute("DELETE FROM guilds WHERE id = ?", guild.id)
+        logging.info("Left guild: %s (%s)", guild.name, guild.id)
+
+    @commands.Cog.listener()
+    async def on_command_completion(self, ctx: FurinaCtx) -> None:
+        """Save users to the database when they successfully use a command"""
+        if ctx.guild is None:
+            return
+        if len(self.bot.command_cache[ctx.guild.id]) == 10:
+            self.bot.command_cache[ctx.guild.id].pop(0)
+        self.bot.command_cache[ctx.guild.id].append(ctx.command.qualified_name)
+        await self.pool.execute("INSERT OR REPLACE INTO users (id) VALUES (?)", ctx.author.id)
+        await self.pool.execute(
+            "INSERT INTO prefix_commands (guild_id, author_id, command) VALUES (?, ?, ?)",
+            ctx.guild.id,
+            ctx.author.id,
+            ctx.command.qualified_name
+        )
+
+    @commands.Cog.listener()
+    async def on_app_command_completion(
+        self,
+        interaction: Interaction,
+        command: app_commands.Command | app_commands.ContextMenu) -> None:
+        """Save users to the database when they successfully use a command"""
+        if interaction.guild is None:
+            return
+        if len(self.bot.app_command_cache[interaction.guild.id]) == 10:
+            self.bot.app_command_cache[interaction.guild.id].pop(0)
+        self.bot.app_command_cache[interaction.guild.id].append(command.qualified_name)
+        await self.pool.execute("INSERT OR REPLACE INTO users (id) VALUES (?)", interaction.user.id)
+        await self.pool.execute(
+            "INSERT INTO app_commands (guild_id, author_id, command) VALUES (?, ?, ?)",
+            interaction.guild.id,
+            interaction.user.id,
+            command.qualified_name
         )
 
     @commands.Cog.listener()
