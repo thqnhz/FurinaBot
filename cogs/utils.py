@@ -65,7 +65,7 @@ class HelpSelect(Select):
     async def callback(self, interaction: discord.Interaction) -> None:
         container = Utils.list_cog_commands(
             cog=self.bot.get_cog(self.values[0]),
-            prefix=self.bot.prefixes.get(interaction.guild.id) or settings.DEFAULT_PREFIX,
+            bot_prefix=self.bot.prefixes.get(interaction.guild.id) or settings.DEFAULT_PREFIX,
         )
         container.add_item(ui.Separator()).add_item(HelpActionRow(bot=self.bot))
         view = LayoutView().add_item(container)
@@ -110,7 +110,7 @@ class Utils(FurinaCog):
             self.bot.prefixes = {prefix["guild_id"]: prefix["prefix"] for prefix in prefixes}
 
     @staticmethod
-    def list_cog_commands(*, cog: FurinaCog, prefix: str) -> ui.Container:
+    def list_cog_commands(*, cog: FurinaCog, bot_prefix: str) -> ui.Container:
         container = ui.Container(
             ui.TextDisplay(f"## {cog.__cog_name__} Commands")
         )
@@ -119,7 +119,7 @@ class Utils(FurinaCog):
             if command.hidden:
                 continue
             doc = docstring_parser.parse(command.callback.__doc__)
-            prefix += f"- **{prefix}{command.qualified_name}:** `{doc.short_description}`\n"
+            prefix += f"- **{bot_prefix}{command.qualified_name}:** `{doc.short_description}`\n"
 
         if prefix:
             container.add_item(ui.TextDisplay("### Prefix commands\n" + prefix))
@@ -336,7 +336,7 @@ class Utils(FurinaCog):
                 cog = self.bot.get_cog(cog_)
                 break
         if cog and cog.__cog_name__ not in ['Hidden', 'Jishaku']:
-            container = self.list_cog_commands(cog=cog, prefix=ctx.prefix)
+            container = self.list_cog_commands(cog=cog, bot_prefix=ctx.prefix)
             container.add_item(ui.Separator()).add_item(HelpActionRow(bot=self.bot))
             view = LayoutView().add_item(container)
             view.message = await ctx.reply(view=view)
