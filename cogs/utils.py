@@ -15,6 +15,7 @@ limitations under the License.
 from __future__ import annotations
 
 import ast
+import asyncio
 import datetime
 import inspect
 import io
@@ -186,9 +187,7 @@ class Utils(FurinaCog):
         """
         bot_latency: float = self.bot.latency
         voice_latency: float | int = ctx.guild.voice_client.ping if ctx.guild.voice_client else -1
-        time = perf_counter()
-        await self.pool.execute("""SELECT * from custom_prefixes LIMIT 1""")
-        db_latency = perf_counter() - time
+        db_latency = await self.db_ping()
         node_statuses = ""
         for i, node in enumerate(Pool.nodes, 1):
             node_statuses += f"**Node {i}:** {NODE_STATUSES[Pool.nodes[node].status]}"
@@ -204,6 +203,21 @@ class Utils(FurinaCog):
             container.add_item(ui.Separator())
             container.add_item(ui.TextDisplay(node_statuses))
         await ctx.reply(view=LayoutView().add_item(container))
+
+    async def db_ping(self) -> float:
+        """|coro|
+        
+        Ping the database
+
+        Returns
+        -------
+        :class:`float`
+            The time it takes for the database to respond
+        """
+        time = perf_counter()
+        async with self.pool.acquire() as db:
+            await db.execute("""SELECT * FROM custom_prefixes LIMIT 1""")
+        return perf_counter() - time
 
     @commands.command(name="prefix")
     @commands.guild_only()
@@ -222,8 +236,8 @@ class Utils(FurinaCog):
         prefix : str
             The new prefix
         """
-        prefix: str = prefix.strip().replace('"', "").replace("'", "")
-        container = ui.Container(ui.TextDisplay("-# Coded by ThanhZ", row=9))
+        prefix: str = prefix.replace('"', "").replace("'", "").strip()
+        container = ui.Container(ui.TextDisplay("-# Coded by ThanhZ", row=39))
         if len(prefix) > 3 or not prefix:
             container.add_item(ui.TextDisplay(f"{settings.CROSS} **Invalid prefix**"))
             await ctx.reply(view=LayoutView().add_item(container))
@@ -247,7 +261,8 @@ class Utils(FurinaCog):
         prefix = self.bot.prefixes.get(ctx.guild.id) or settings.DEFAULT_PREFIX
         container.add_item(
             ui.TextDisplay(
-                f"{settings.CHECKMARK} **Prefix set to** `{prefix}`"
+                f"{settings.CHECKMARK} **Prefix set to** `{prefix}`",
+                row=0
             )
         )
         await ctx.reply(view=LayoutView().add_item(container))
