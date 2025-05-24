@@ -15,8 +15,7 @@ limitations under the License.
 from __future__ import annotations
 
 import logging
-from collections import defaultdict
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any
 
 from discord import (
     Activity,
@@ -44,8 +43,6 @@ class BotEvents(FurinaCog):
         super().__init__(bot)
         self.pool = bot.pool
         self.bot = bot
-        self.bot.command_cache = defaultdict(list)
-        self.bot.app_command_cache = defaultdict(list)
 
     async def update_activity(self, state: str = "N̸o̸t̸h̸i̸n̸g̸") -> None:
         """Update the bot's activity to the playing track.
@@ -78,7 +75,7 @@ class BotEvents(FurinaCog):
     @commands.Cog.listener()
     async def on_command_completion(self, ctx: FurinaCtx) -> None:
         """Save users to the database when they successfully use a command"""
-        if ctx.guild is None:
+        if ctx.guild is None and 'jishaku' not in ctx.command.qualified_name:
             return
         if len(self.bot.command_cache[ctx.guild.id]) == 10:
             self.bot.command_cache[ctx.guild.id].pop(0)

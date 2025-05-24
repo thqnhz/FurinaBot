@@ -101,7 +101,7 @@ CUSTOM_PREFIX_SQL = """
     (
         guild_id INTEGER NOT NULL PRIMARY KEY,
         prefix TEXT NOT NULL,
-        FOREIGN KEY (guild_id) REFERENCES guilds (id) ON DELETE CASCADE
+        FOREIGN KEY (guild_id) REFERENCES guilds (id)
     )
 """
 
@@ -140,6 +140,7 @@ class SQL:
         self.create_table_queries = [
             GUILDS_SQL,
             USERS_SQL,
+            CUSTOM_PREFIX_SQL,
             PREFIX_COMMANDS_SQL,
             APP_COMMANDS_SQL,
             GI_UID_SQL,

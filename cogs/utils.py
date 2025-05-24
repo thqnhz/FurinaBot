@@ -159,8 +159,7 @@ class Utils(FurinaCog):
             )
             bot_latency: str = f"{round(bot.latency * 1000)}ms"
             time = perf_counter()
-            async with self.pool.acquire() as db:
-                await db.fetchone("""SELECT * FROM custom_prefixes LIMIT 1""")
+            await self.pool.fetchone("""SELECT * FROM custom_prefixes LIMIT 1""")
             db_latency = f"{round((perf_counter() - time) * 1000)}ms"
             container.add_item(
                 ui.TextDisplay("### More info\n"
@@ -215,8 +214,7 @@ class Utils(FurinaCog):
             The time it takes for the database to respond
         """
         time = perf_counter()
-        async with self.pool.acquire() as db:
-            await db.execute("""SELECT * FROM custom_prefixes LIMIT 1""")
+        await self.pool.execute("""SELECT * FROM custom_prefixes LIMIT 1""")
         return perf_counter() - time
 
     @commands.command(name="prefix")
@@ -604,7 +602,45 @@ class Utils(FurinaCog):
         - Number of slash commands have been completed.
         - Most recent 10 slash commands.
         """
-        raise NotImplementedError
+        container = self.container.add_item(
+            ui.TextDisplay(f"## {self.bot.user.display_name} Stats", row=0)
+        )
+        container.add_item(ui.Separator(row=1))
+        container.add_item(ui.TextDisplay(f"### Uptime: {self.bot.uptime}", row=2))
+        container.add_item(ui.TextDisplay(f"### Servers: {len(self.bot.guilds)}", row=3))
+        container.add_item(ui.Separator(row=4))
+        guild_id = ctx.guild.id
+        prefix_cmds = ""
+        if guild_id in self.bot.command_cache:
+            prefix_cmds = self.bot.command_cache[guild_id]
+        if prefix_cmds:
+            prefix_cmds = "- " + "\n- ".join(prefix_cmds)
+        else:
+            prefix_cmds = "No prefix commands history from this server"
+        app_cmds = ""
+        if guild_id in self.bot.app_command_cache:
+            app_cmds = self.bot.app_command_cache[guild_id]
+        if app_cmds:
+            app_cmds = "- " + "\n- ".join(app_cmds)
+        else:
+            app_cmds = "No app commands history from this server"
+        total_prefix = await self.pool.fetchval(
+            """SELECT COUNT(*) FROM prefix_commands"""
+        )
+        total_slash = await self.pool.fetchval(
+            """SELECT COUNT(*) FROM app_commands"""
+        )
+        container.add_item(ui.TextDisplay("### Most recent prefix commands", row=5))
+        container.add_item(ui.TextDisplay(prefix_cmds, row=6))
+        container.add_item(
+            ui.TextDisplay(f"### Total prefix commands completed: {total_prefix}", row=7)
+        )
+        container.add_item(ui.TextDisplay("### Most recent slash commands", row=8))
+        container.add_item(ui.TextDisplay(app_cmds, row=9))
+        container.add_item(
+            ui.TextDisplay(f"### Total slash commands completed: {total_slash}", row=10)
+        )
+        await ctx.reply(view=LayoutView().add_item(container))
 
 
 async def setup(bot: FurinaBot) -> None:

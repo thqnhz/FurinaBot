@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import typing
+from collections import defaultdict
 from pathlib import Path
 from platform import python_version
 
@@ -118,6 +119,8 @@ class FurinaBot(commands.Bot):
         self.cs = client_session
         # custom prefixes, in `{guild_id: prefix}` format
         self.prefixes: dict[int, str] = {}
+        self.command_cache = defaultdict(list)
+        self.app_command_cache = defaultdict(list)
 
     @property
     def container(self) -> ui.Container:
@@ -194,8 +197,8 @@ class FurinaBot(commands.Bot):
         logging.info("Fetching bot emojis...")
         self.app_emojis: list[discord.Emoji] = await self.fetch_application_emojis()
         self.pool = SQL(await asqlite.create_pool(Path() / 'db' / 'furina.db'))
-        await self.__load_extensions()
         await self.pool.create_tables()
+        await self.__load_extensions()
 
     async def __load_extensions(self) -> None:
         """Load bot extensions"""
