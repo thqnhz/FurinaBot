@@ -234,7 +234,7 @@ class Utils(FurinaCog):
         prefix : str
             The new prefix
         """
-        prefix: str = prefix.replace('"', "").replace("'", "").strip()
+        prefix: str = prefix.strip("'\" ")
         container = ui.Container(ui.TextDisplay("-# Coded by ThanhZ", row=39))
         if len(prefix) > 3 or not prefix:
             container.add_item(ui.TextDisplay(f"{settings.CROSS} **Invalid prefix**"))
