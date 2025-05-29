@@ -196,6 +196,8 @@ class FurinaBot(commands.Bot):
         logging.info("Running Python %s", python_version())
         logging.info("Fetching bot emojis...")
         self.app_emojis: list[discord.Emoji] = await self.fetch_application_emojis()
+        db_path = Path() / 'db'
+        db_path.mkdir(exist_ok=True)
         self.pool = SQL(await asqlite.create_pool(Path() / 'db' / 'furina.db'))
         await self.pool.create_tables()
         await self.__load_extensions()
