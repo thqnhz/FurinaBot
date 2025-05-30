@@ -24,7 +24,7 @@ from core import FurinaBot, Lavalink, settings, utils
 
 async def main(*, skip_ll: bool) -> None:
     """Setting up loggings and starting the bot.
-
+    
     Parameters
     ----------
     skip_ll : :class:`bool`
@@ -44,5 +44,5 @@ async def main(*, skip_ll: bool) -> None:
 
 
 if __name__ == "__main__":
-    skip_ll: bool = bool("--skip-ll" in sys.argv or settings.SKIP_LL)
+    skip_ll = bool("--skip-ll" in sys.argv or settings.SKIP_LL)
     asyncio.run(main(skip_ll=skip_ll))

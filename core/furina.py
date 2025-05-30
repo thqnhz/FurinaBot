@@ -144,7 +144,7 @@ class FurinaBot(commands.Bot):
         self,
         message: discord.Message,
         *,
-        cls: FurinaCtx = FurinaCtx  # type: ignore[invalid-parameter-default]
+        cls: FurinaCtx = FurinaCtx
     ) -> FurinaCtx:
         return await super().get_context(message, cls=cls)
 
@@ -164,10 +164,9 @@ class FurinaBot(commands.Bot):
         :class:`list[str]`
             The prefix for the bot, including mention
         """
-        guild: discord.Guild = typing.cast("discord.Guild", message.guild)
-        if not guild:
+        if not message.guild:
             return when_mentioned_or(self.DEFAULT_PREFIX)(self, message)
-        prefix: str = self.prefixes.get(guild.id) or self.DEFAULT_PREFIX
+        prefix = self.prefixes.get(message.guild.id) or self.DEFAULT_PREFIX
         return when_mentioned_or(prefix)(self, message)
 
     async def on_ready(self) -> None:
@@ -177,12 +176,11 @@ class FurinaBot(commands.Bot):
             [(guild.id,) for guild in self.guilds]
         )
         self._startup: datetime = utils.utcnow()
-        container: ui.Container = self.container.add_item(
-            ui.TextDisplay("### BOT IS READY!", row=0)
-        )
-        view: ui.LayoutView = LayoutView().add_item(container)
-        webhook: discord.Webhook = discord.Webhook.from_url(settings.DEBUG_WEBHOOK, client=self)
-        message: discord.WebhookMessage = await webhook.send(
+        container = self.container
+        container.add_item(ui.TextDisplay("### BOT IS READY!", row=0))
+        view = LayoutView().add_item(container)
+        webhook = discord.Webhook.from_url(settings.DEBUG_WEBHOOK, client=self)
+        message = await webhook.send(
             view=view,
             avatar_url=self.user.display_avatar.url,
             username=self.user.display_name,
@@ -198,7 +196,7 @@ class FurinaBot(commands.Bot):
         logging.info("Running Python %s", python_version())
         logging.info("Fetching bot emojis...")
         self.app_emojis: list[discord.Emoji] = await self.fetch_application_emojis()
-        db_path: Path = Path() / 'db'
+        db_path = Path() / 'db'
         db_path.mkdir(exist_ok=True)
         self.pool = SQL(await asqlite.create_pool(Path() / 'db' / 'furina.db'))
         await self.pool.create_tables()
@@ -208,7 +206,7 @@ class FurinaBot(commands.Bot):
         """Load bot extensions"""
         logging.info("Loading extensions...")
         for extension in EXTENSIONS:
-            extension_name: str = extension[5:]
+            extension_name = extension[5:]
             try:
                 await self.load_extension(extension)
             except errors.NoEntryPointError:
