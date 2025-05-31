@@ -14,8 +14,6 @@ limitations under the License.
 
 from __future__ import annotations
 
-import ast
-import asyncio
 import datetime
 import inspect
 import io
@@ -26,19 +24,17 @@ from enum import Enum
 from time import perf_counter
 from typing import TYPE_CHECKING
 
-import aiohttp
-import asqlite
 import dateparser
 import discord
 import docstring_parser
 import psutil
-from discord import Embed, Member, app_commands, ui
+from discord import Member, app_commands, ui
 from discord.ext import commands
 from discord.ui import Select
 from wavelink import NodeStatus, Pool
 
-from core import FurinaBot, FurinaCog, FurinaCtx, settings
-from core.views import LayoutView, PaginatedView
+from core import FurinaBot, FurinaCog, FurinaCtx, settings, utils as cutils
+from core.views import LayoutView
 
 if TYPE_CHECKING:
     from core import FurinaBot
@@ -474,68 +470,6 @@ class Utils(FurinaCog):
             container.add_item(ui.TextDisplay(activities))
         await ctx.reply(view=LayoutView().add_item(container))
 
-    @staticmethod
-    async def dictionary_call(word: str) -> PaginatedView:
-        """Calls the dictionaryapi
-
-        Parameters
-        ----------
-        word : str
-            The word
-
-        Returns
-        -------
-        PaginatedView
-            A view that contains list of embeds and navigate buttons
-        """
-        embeds: list[Embed] = []
-        dictionary_link = f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}"
-        async with aiohttp.ClientSession() as cs, cs.get(dictionary_link) as response:
-            if response.status == 404:
-                embed = Embed(
-                    title=word.capitalize(),
-                    description="No definitions found. API call returned 404."
-                ).set_footer(text="Coded by ThanhZ")
-                return PaginatedView(timeout=300, embeds=[embed])
-            data: list[dict] = ast.literal_eval(await response.text())
-        embed = Embed(title=word.capitalize()).set_footer(text="Coded by ThanhZ")
-
-        for d in data:
-            phonetics = d['phonetic'] if 'phonetic' in d \
-                else ", ".join([p['text'] for p in d['phonetics'] if 'text' in p])
-            # Phiên âm
-            embed.description = f"Pronunciation: `{phonetics}`"
-
-            # Định nghĩa
-            for meaning in d['meanings']:
-                embed.title += f" ({meaning['partOfSpeech']})"
-                if meaning['synonyms']:
-                    embed.add_field(
-                        name="Synonyms:",
-                        value=', '.join(meaning['synonyms'])
-                    )
-                if meaning['antonyms']:
-                    embed.add_field(
-                        name="Antonyms:",
-                        value=', '.join(meaning['antonyms'])
-                    )
-                definition_value = ""
-                for definition in meaning['definitions']:
-                    after = definition_value + ("\n- " + definition['definition'])
-                    if len(after) < 1024:
-                        definition_value = after
-                embed.add_field(
-                    name="Definition",
-                    value=definition_value,
-                    inline=False
-                )
-                embeds.append(embed)
-                embed = Embed(
-                    title=word.capitalize(),
-                    description=f"Pronunciation: `{phonetics}`"
-                ).set_footer(text="Coded by ThanhZ")
-        return PaginatedView(timeout=300, embeds=embeds)
-
     @commands.hybrid_command(name='dictionary', aliases=['dict'])
     @app_commands.allowed_installs(guilds=True, users=True)
     async def dict_command(self, ctx: FurinaCtx, word: str) -> None:
@@ -549,7 +483,7 @@ class Utils(FurinaCog):
         word : str
             The word to look up
         """
-        view = await self.dictionary_call(word.split()[0])
+        view = await cutils.call_dictionary(word.split()[0], self.cs)
         view.message = await ctx.reply(embed=view.embeds[0], view=view)
 
     @commands.command(name='wordoftheday', aliases=['wotd'])

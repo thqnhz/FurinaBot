@@ -31,9 +31,8 @@ from discord import ButtonStyle, Color, Embed, Interaction, Member, Message, Use
 from discord.ext import commands
 from tqdm import tqdm
 
+from core import utils
 from core.views import LayoutView, PaginatedView, View
-
-from .utils import Utils
 
 if TYPE_CHECKING:
     from core import FurinaBot, FurinaCtx
@@ -689,7 +688,7 @@ class LookUpButton(ui.Button):
     async def callback(self, interaction: Interaction) -> None:
         await interaction.response.defer(thinking=True, ephemeral=True)
         if not self.dict:
-            self.dict = await Utils.dictionary_call(self.word)
+            self.dict = await utils.call_dictionary(self.word, interaction.client.cs)
         await interaction.followup.send(embed=self.dict.embeds[0], view=self.dict)
 
 
