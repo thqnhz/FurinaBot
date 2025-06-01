@@ -43,7 +43,7 @@ if TYPE_CHECKING:
 class HelpActionRow(ui.ActionRow):
     """Help Action Row"""
     def __init__(self, *, bot: FurinaBot) -> None:
-        super().__init__(HelpSelect(bot))
+        super().__init__(HelpSelect(bot), row=38)
 
 
 class HelpSelect(Select):
@@ -133,11 +133,17 @@ class Utils(FurinaCog):
 
         if message.content == bot.user.mention:
             prefix = bot.prefixes.get(message.guild.id) or bot.DEFAULT_PREFIX
-            header = ui.Section(
-                ui.TextDisplay("## Miss me that much?"),
-                ui.TextDisplay(f"**My prefix is** `{prefix}`"),
-                ui.TextDisplay(f"**You can also mention me** {bot.user.mention}` <command> `"),
-                accessory=ui.Thumbnail(bot.user.display_avatar.url)
+            header = ui.TextDisplay(
+                "## Miss me that much?\n"
+                f"**My prefix is** `{prefix}`\n"
+                f"**You can also do** {bot.user.mention}` <command> `\n"
+                "**I am also supporting slash commands**\n"
+                "**Type `/` to see what i can do!**"
+            )
+            header_section = ui.Section(
+                header,
+                accessory=ui.Thumbnail(bot.user.display_avatar.url),
+                row=0
             )
             source_section = ui.Section(
                 ui.TextDisplay("### I am also open source"),
@@ -145,28 +151,30 @@ class Utils(FurinaCog):
                     label="Click me to view source code",
                     style=discord.ButtonStyle.link,
                     url=r"https://gitlab.com/thanhz/FurinaBot/-/tree/master"
-                )
+                ),
+                row=2
             )
-            container = ui.Container(
-                header,
-                ui.Separator(),
-                source_section,
-                ui.Separator()
-            )
-            bot_latency: str = f"{round(bot.latency * 1000)}ms"
+            bot_latency: str = f"{round(bot.latency * 1000, 2)}ms"
             time = perf_counter()
             await self.pool.fetchone("""SELECT * FROM custom_prefixes LIMIT 1""")
-            db_latency = f"{round((perf_counter() - time) * 1000)}ms"
-            container.add_item(
-                ui.TextDisplay(
+            db_latency = f"{round((perf_counter() - time) * 1000, 2)}ms"
+            more_info = ui.TextDisplay(
                     "### More info\n"
                     f"- **Uptime:** `{bot.uptime}`\n"
                     f"- **Bot Latency:** `{bot_latency}`\n"
-                    f"- **Database Latency:** `{db_latency}`"
+                    f"- **Database Latency:** `{db_latency}`",
+                    row=4
                 )
+            container = self.bot.container
+            container.add_items(
+                header_section,         # 0
+                ui.Separator(row=1),    # 1
+                source_section,         # 2
+                ui.Separator(row=3),    # 3
+                more_info,              # 4
+                ui.Separator(row=5),    # 5
+                HelpActionRow(bot=bot)  # 6
             )
-            container.add_item(ui.Separator())
-            container.add_item(HelpActionRow(bot=bot))
             view = LayoutView().add_item(container)
             view.message = await message.channel.send(view=view, reference=message)
 

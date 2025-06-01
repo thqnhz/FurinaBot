@@ -31,7 +31,7 @@ from discord.ext.commands import errors, when_mentioned_or
 from cogs import EXTENSIONS
 from core import settings
 from core.sql import SQL
-from core.views import LayoutView
+from core.views import Container, LayoutView
 
 if typing.TYPE_CHECKING:
     from datetime import datetime
@@ -123,9 +123,9 @@ class FurinaBot(commands.Bot):
         self.app_command_cache = defaultdict(list)
 
     @property
-    def container(self) -> ui.Container:
+    def container(self) -> Container:
         """Container with default 'footer'"""
-        return ui.Container(
+        return Container(
             ui.TextDisplay("-# Coded by ThanhZ", row=39)
         )
 

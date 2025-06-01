@@ -20,7 +20,7 @@ __all__ = [
     "View",
 ]
 
-from typing import Literal
+from typing import Literal, Self
 
 from discord import Button, ButtonStyle, Embed, Interaction, Message, User, ui
 from discord.ext.commands import CommandError, CooldownMapping
@@ -114,6 +114,18 @@ class PaginatedView(View):
         self.page = self.length - 1
         self.update_buttons()
         await interaction.response.edit_message(embed=self.embeds[self.page], view=self)
+
+
+class Container(ui.Container):
+    """A subclass from :class:`discord.ui.Container` that has some qol methods"""
+    def __init__(self, *children: ui.Item) -> None:
+        super().__init__(*children)
+
+    def add_items(self, *items: ui.Item) -> Self:
+        """Add multiple items to the container"""
+        for item in items:
+            self.add_item(item)
+        return self
 
 
 class LayoutView(ui.LayoutView):
