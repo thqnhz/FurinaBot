@@ -15,6 +15,7 @@ limitations under the License.
 from __future__ import annotations
 
 import logging
+import traceback
 from typing import TYPE_CHECKING, Any
 
 from discord import (
@@ -128,11 +129,7 @@ class BotEvents(FurinaCog):
         view = ui.LayoutView().add_item(ui.Container(ui.TextDisplay(err)))
         await ctx.reply(view=view, ephemeral=True, delete_after=60)
 
-        logging.exception(
-            "Command: %s | Error: %s",
-            ctx.command,
-            error
-        )
+        traceback.print_exception(error)
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member: Member, before: Any, after: Any) -> None:

@@ -14,7 +14,6 @@ limitations under the License.
 
 from __future__ import annotations
 
-import ast
 import logging
 import logging.handlers
 import pathlib
@@ -111,48 +110,84 @@ async def call_dictionary(word: str, cs: ClientSession) -> PaginatedView:
         The paginated view with embeds of the word's definitions.
     """
     embeds: list[Embed] = []
-    embed = Embed(title=word.capitalize()).set_footer(text="Coded by ThanhZ")
+    base_embed = Embed(title=word.capitalize()).set_footer(text="Coded by ThanhZ")
     dictionary_link = f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}"
     async with cs.get(dictionary_link) as response:
         if response.status == 404:
-            embed.description = "No definitions found. API call returned 404."
-            return PaginatedView(timeout=300, embeds=[embed])
-        data: list[dict] = ast.literal_eval(await response.text())
+            base_embed.description = "No definitions found. API call returned 404."
+            return PaginatedView(timeout=300, embeds=[base_embed])
+        data: list[dict] = await response.json()
     
-    for d in data:
-        phonetics = d['phonetic'] if 'phonetic' in d \
-            else ", ".join([p['text'] for p in d['phonetics'] if 'text' in p])
-        # Pronunciations
-        embed.description = f"Pronunciation: `{phonetics}`"
+    pronunciations = __get_pronunciations(data)
 
-        # Dictionary
-        for meaning in d['meanings']:
-            embed.title += f" ({meaning['partOfSpeech']})"
-            if meaning['synonyms']:
-                embed.add_field(
-                    name="Synonyms:",
-                    value=', '.join(meaning['synonyms'])
-                )
-            if meaning['antonyms']:
-                embed.add_field(
-                    name="Antonyms:",
-                    value=', '.join(meaning['antonyms'])
-                )
+    for i, d in enumerate(data):
+        # Definitions
+        meanings: list[dict] = d.get('meanings', [])
+        for meaning in meanings:
+            embed = base_embed.copy()
+            conjugation: str = meaning.get('partOfSpeech', 'N/A')
+            embed.title += f" ({conjugation})"
+            embed.description = f"Pronunciations: {pronunciations[i] or 'N/A'}"
+
+            synonyms: list[str] = meaning.get('synonyms')
+            embed.add_field(
+                name="Synonyms:",
+                value=', '.join(synonyms) if synonyms else 'N/A'
+            )
+
+            antonyms: list[str] = meaning.get('antonyms')
+            embed.add_field(
+                name="Antonyms:",
+                value=', '.join(antonyms) if antonyms else 'N/A'
+            )
+
+            definitions: list[dict] = meaning.get('definitions')
             definition_value = ""
-            for definition in meaning['definitions']:
-                after = definition_value + ("\n- " + definition['definition'])
-                if len(after) < 1024:
-                    definition_value = after
+            FIELD_LIMIT: int = 1024
+            for definition in definitions:
+                definition_text: str = definition.get('definition')
+                to_add: str = f"\n- {definition_text}"
+                example: str = definition.get('example', '')
+                if example:
+                    to_add += f"\n  - Ex: *{example}*"
+                if len(definition_value) + len(to_add) < FIELD_LIMIT:
+                    definition_value += to_add
+                else:
+                    break
             embed.add_field(
                 name="Definition",
                 value=definition_value,
                 inline=False
             )
             embeds.append(embed)
-            embed = Embed(title=word.capitalize()).set_footer(text="Coded by ThanhZ")
     return PaginatedView(timeout=300, embeds=embeds)
 
 
-
-
+def __get_pronunciations(data: list[dict]) -> list[str, ...]:
+    """Get the word's pronunciations
+    
+    Parameters
+    ----------
+    data : :class:`dict`
+        The returned data from the API call.
+    
+    Returns
+    -------
+    :class:`list[str, ...]`
+        The word's pronunciations.
+        If no pronunciations found for that definition, the string at that index will be empty.
+    """
+    result: list[str] = [''] * len(data)
+    for i, d in enumerate(data):
+        phonetics: str = d.get('phonetic')
+        if not phonetics:
+            phonetics_list: list[dict] = d.get('phonetics', [])
+            phonetics = ', '.join(
+                [phone.get['text'] for phone in phonetics_list if phone.get['text']]
+            )
+            if phonetics:
+                result[i] = f'`{phonetics}`'
+        else:
+            result[i] = f'`{phonetics}`'
+    return result
 

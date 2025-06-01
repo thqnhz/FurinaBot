@@ -132,7 +132,7 @@ class Utils(FurinaCog):
             return
 
         if message.content == bot.user.mention:
-            prefix = bot.prefixes.get(message.guild.id) or settings.DEFAULT_PREFIX
+            prefix = bot.prefixes.get(message.guild.id) or bot.DEFAULT_PREFIX
             header = ui.Section(
                 ui.TextDisplay("## Miss me that much?"),
                 ui.TextDisplay(f"**My prefix is** `{prefix}`"),
@@ -158,10 +158,11 @@ class Utils(FurinaCog):
             await self.pool.fetchone("""SELECT * FROM custom_prefixes LIMIT 1""")
             db_latency = f"{round((perf_counter() - time) * 1000)}ms"
             container.add_item(
-                ui.TextDisplay("### More info\n"
-                               f"- **Uptime:** `{bot.uptime}`\n"
-                               f"- **Bot Latency:** `{bot_latency}`\n"
-                               f"- **Database Latency:** `{db_latency}`"
+                ui.TextDisplay(
+                    "### More info\n"
+                    f"- **Uptime:** `{bot.uptime}`\n"
+                    f"- **Bot Latency:** `{bot_latency}`\n"
+                    f"- **Database Latency:** `{db_latency}`"
                 )
             )
             container.add_item(ui.Separator())
@@ -182,16 +183,17 @@ class Utils(FurinaCog):
         """
         bot_latency: float = self.bot.latency
         voice_latency: float | int = ctx.guild.voice_client.ping if ctx.guild.voice_client else -1
-        db_latency = await self.db_ping()
+        db_latency: float = await self.db_ping()
         node_statuses = ""
         for i, node in enumerate(Pool.nodes, 1):
             node_statuses += f"**Node {i}:** {NODE_STATUSES[Pool.nodes[node].status]}"
         container = ui.Container(
             ui.TextDisplay("## Pong!"),
             ui.Separator(),
-            ui.TextDisplay(f"**Bot Latency:** `{bot_latency * 1000:.2f}ms`\n"
-                           f"**Voice Latency:** `{voice_latency}ms`\n"
-                           f"**Database Latency:** `{db_latency * 1000:.2f}ms`"),
+            ui.TextDisplay(
+                f"**Bot Latency:** `{bot_latency * 1000:.2f}ms`\n"
+                f"**Voice Latency:** `{voice_latency}ms`\n"
+                f"**Database Latency:** `{db_latency * 1000:.2f}ms`"),
             ui.TextDisplay("-# Coded by ThanhZ")
         )
         if node_statuses:
