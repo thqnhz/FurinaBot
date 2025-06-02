@@ -237,6 +237,6 @@ class FurinaCog(commands.Cog):
         return self.bot.embed
 
     @property
-    def container(self) -> ui.Container:
+    def container(self) -> Container:
         """Shortcut for `FurinaBot.container`"""
         return self.bot.container

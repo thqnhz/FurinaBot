@@ -59,10 +59,12 @@ class View(ui.View):
             await super().on_error(interaction, error, item)
 
     async def on_timeout(self) -> None:
-        if hasattr(self, 'message'):
-            for child in self.children:
-                child.disabled = True
+        for child in self.children:
+            child.disabled = True
+        try:
             await self.message.edit(view=self)
+        except AttributeError:
+            pass
 
 
 class PaginatedView(View):
@@ -156,9 +158,11 @@ class LayoutView(ui.LayoutView):
             await super().on_error(interaction, error, item)
 
     async def on_timeout(self) -> None:
-        if hasattr(self, 'message'):
-            for child in self.walk_children():
-                child.disabled = True
+        for child in self.walk_children():
+            child.disabled = True
+        try:
             await self.message.edit(view=self)
+        except AttributeError:
+            pass
 
 

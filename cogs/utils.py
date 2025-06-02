@@ -34,14 +34,14 @@ from discord.ui import Select
 from wavelink import NodeStatus, Pool
 
 from core import FurinaBot, FurinaCog, FurinaCtx, settings, utils as cutils
-from core.views import LayoutView
+from core.views import Container, LayoutView
 
 if TYPE_CHECKING:
     from core import FurinaBot
 
 
 class HelpActionRow(ui.ActionRow):
-    """Help Action Row"""
+    """Help Action Row, with row=38 predefined"""
     def __init__(self, *, bot: FurinaBot) -> None:
         super().__init__(HelpSelect(bot), row=38)
 
@@ -64,7 +64,7 @@ class HelpSelect(Select):
             cog=self.bot.get_cog(self.values[0]),
             bot_prefix=self.bot.prefixes.get(interaction.guild.id) or settings.DEFAULT_PREFIX,
         )
-        container.add_item(ui.Separator()).add_item(HelpActionRow(bot=self.bot))
+        container.add_item(ui.Separator(row=37)).add_item(HelpActionRow(bot=self.bot))
         view = LayoutView().add_item(container)
         view.message = self.view.message
         self.view.message = None
@@ -97,9 +97,9 @@ class Utils(FurinaCog):
         self.bot.prefixes = {prefix["guild_id"]: prefix["prefix"] for prefix in prefixes}
 
     @staticmethod
-    def list_cog_commands(*, cog: FurinaCog, bot_prefix: str) -> ui.Container:
-        container = ui.Container(
-            ui.TextDisplay(f"## {cog.__cog_name__} Commands")
+    def list_cog_commands(*, cog: FurinaCog, bot_prefix: str) -> Container:
+        container = Container(
+            ui.TextDisplay(f"## {cog.__cog_name__} Commands", row=0)
         )
         prefix: str = ""
         for command in cog.walk_commands():
@@ -109,7 +109,7 @@ class Utils(FurinaCog):
             prefix += f"- **{bot_prefix}{command.qualified_name}:** `{doc.short_description}`\n"
 
         if prefix:
-            container.add_item(ui.TextDisplay("### Prefix commands\n" + prefix))
+            container.add_item(ui.TextDisplay("### Prefix commands\n" + prefix, row=1))
 
         slash: str = ""
         for command in cog.walk_app_commands():
@@ -117,11 +117,12 @@ class Utils(FurinaCog):
             slash += f"- **{command.qualified_name}:** `{doc.short_description}`\n"
 
         if slash:
-            container.add_item(ui.Separator())
-            container.add_item(ui.TextDisplay(slash))
+            container.add_item(ui.Separator(row=2))
+            container.add_item(ui.TextDisplay(slash, row=3))
 
         if not prefix and not slash:
-            container.add_item(ui.TextDisplay("This cog has no commands to show"))
+            container.add_item(ui.TextDisplay("This cog has no commands to show", row=4))
+        container.add_item(ui.TextDisplay("-# Coded by ThanhZ", row=39))
         return container
 
     @FurinaCog.listener("on_message")
@@ -165,15 +166,14 @@ class Utils(FurinaCog):
                     f"- **Database Latency:** `{db_latency}`",
                     row=4
                 )
-            container = self.bot.container
-            container.add_items(
+            container = self.container.add_items(
                 header_section,         # 0
                 ui.Separator(row=1),    # 1
                 source_section,         # 2
                 ui.Separator(row=3),    # 3
                 more_info,              # 4
                 ui.Separator(row=5),    # 5
-                HelpActionRow(bot=bot)  # 6
+                HelpActionRow(bot=bot)  # 38
             )
             view = LayoutView().add_item(container)
             view.message = await message.channel.send(view=view, reference=message)
@@ -241,9 +241,9 @@ class Utils(FurinaCog):
             The new prefix
         """
         prefix: str = prefix.strip("'\" ")
-        container = ui.Container(ui.TextDisplay("-# Coded by ThanhZ", row=39))
+        container = self.container
         if len(prefix) > 3 or not prefix:
-            container.add_item(ui.TextDisplay(f"{settings.CROSS} **Invalid prefix**"))
+            container.add_item(ui.TextDisplay(f"{settings.CROSS} **Invalid prefix**", row=0))
             await ctx.reply(view=LayoutView().add_item(container))
             return
         if prefix in ['clear', 'reset', 'default', settings.DEFAULT_PREFIX]:
@@ -312,9 +312,9 @@ class Utils(FurinaCog):
     async def help_command(self, ctx: FurinaCtx, *, query: str | None = None) -> None:
         """The help command
 
-        Shows the command list of a category if it is provided.
-        Shows the command's info if a command name is provided.
-        If no argument is provided, shows the list of categories.
+        Use `help <category>` to get the category commands.
+        Use `help <command>` to get the command help.
+        Otherwise, shows the list of categories.
 
         Parameters
         ----------
@@ -324,18 +324,22 @@ class Utils(FurinaCog):
         # !help
         if query is None:
             prefix = self.bot.prefixes.get(ctx.guild.id) or settings.DEFAULT_PREFIX
-            header = ui.Section(
-                ui.TextDisplay(f"## {self.bot.user.mention} Help Command"),
-                ui.TextDisplay("### To get help with a category\n"
-                               f"- Use `{prefix}help <category>`\n"),
-                ui.TextDisplay("### To get help with a command\n"
-                               f"- Use `{prefix}help <command>`"),
-                accessory=ui.Thumbnail(self.bot.user.display_avatar.url)
+            header_text = (
+                f"## {self.bot.user.mention} Help Command\n"
+                "### To get help with a category\n"
+                f"- Use `{prefix}help <category>`\n"
+                "### To get help with a command\n"
+                f"- Use `{prefix}help <command>`"
             )
-            container = ui.Container(
-                header,
-                ui.Separator(),
-                HelpActionRow(bot=self.bot)
+            header = ui.Section(
+                header_text,
+                accessory=ui.Thumbnail(self.bot.user.display_avatar.url),
+                row=0
+            )
+            container = self.container.add_items(
+                header,  # 0
+                ui.Separator(row=1),
+                HelpActionRow(bot=self.bot)  # 38
             )
             view = LayoutView().add_item(container)
             view.message = await ctx.reply(view=view)
@@ -349,7 +353,7 @@ class Utils(FurinaCog):
                 break
         if cog and cog.__cog_name__ not in ['Hidden', 'Jishaku']:
             container = self.list_cog_commands(cog=cog, bot_prefix=ctx.prefix)
-            container.add_item(ui.Separator()).add_item(HelpActionRow(bot=self.bot))
+            container.add_items(ui.Separator(row=37), HelpActionRow(bot=self.bot))
             view = LayoutView().add_item(container)
             view.message = await ctx.reply(view=view)
             return
@@ -371,24 +375,25 @@ class Utils(FurinaCog):
                 syntax += f"\n{param.arg_name}: {param.type_name}\n"
                 syntax += f"    - {param.description}\n"
 
-            container = ui.Container(
-                ui.TextDisplay("## " + usage),
-                ui.TextDisplay(doc.short_description),
-                ui.Separator(),
-                ui.TextDisplay(doc.long_description),
-                ui.Separator(spacing=discord.SeparatorSize.large),
-                ui.TextDisplay("-# Coded by ThanhZ", row=9)
+            container = self.container.add_items(
+                ui.TextDisplay("## " + usage, row=0),
+                ui.TextDisplay(doc.short_description, row=1),
+                ui.Separator(row=2),
+                ui.TextDisplay(doc.long_description, row=3),
             )
             if syntax:
-                container.add_item(ui.TextDisplay(f"**Syntax:** ```py\n{syntax}```"))
+                container.add_items(
+                    ui.Separator(row=4),
+                    ui.TextDisplay(f"**Syntax:** ```py\n{syntax}```", row=5)
+                )
 
             aliases = "**Alias(es):** " + ", ".join(
                 alias for alias in command.aliases
             ) if command.aliases else ""
 
             if aliases:
-                container.add_item(ui.Separator())
-                container.add_item(ui.TextDisplay(aliases))
+                container.add_item(ui.Separator(row=6))
+                container.add_item(ui.TextDisplay(aliases, row=7))
 
             await ctx.reply(view=LayoutView().add_item(container))
         else:
