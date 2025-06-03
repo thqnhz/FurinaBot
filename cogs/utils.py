@@ -113,12 +113,14 @@ class Utils(FurinaCog):
 
         slash: str = ""
         for command in cog.walk_app_commands():
+            if isinstance(command, app_commands.Group):
+                continue
             doc = docstring_parser.parse(command.callback.__doc__)
             slash += f"- **{command.qualified_name}:** `{doc.short_description}`\n"
 
         if slash:
             container.add_item(ui.Separator(row=2))
-            container.add_item(ui.TextDisplay(slash, row=3))
+            container.add_item(ui.TextDisplay("### Slash commands\n" + slash, row=3))
 
         if not prefix and not slash:
             container.add_item(ui.TextDisplay("This cog has no commands to show", row=4))
