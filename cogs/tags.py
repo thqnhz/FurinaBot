@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import asqlite
+from discord import app_commands
 from discord.ext import commands
 
 from core import FurinaCog, FurinaCtx
@@ -38,20 +39,22 @@ class Tags(FurinaCog):
         await self.pool.create_tables()
         return await super().cog_load()
 
-    @commands.hybrid_group(name='tag', fallback='get')
-    async def tag_group(self, ctx: FurinaCtx, *, name: str) -> None:
-        """Get a tag by name
-
-        Tag is a silly text that is **user** created.
-        Sometimes it is useful and sometime it's not.
-        You can create your own tag with `/tag create` command.
-
+    async def __get_tag_content(self, *, guild_id: int, name: str) -> str | None:
+        """Get tag content from database
+        
         Parameters
         ----------
-        name : str
-            - Name of the tag
+        guild_id : :class:`int`
+            Guild ID that is fetching the tag.
+        name : :class:`str`
+            Name of the tag to fetch
+
+        Returns
+        -------
+        :class:`str`, optional
+            Tag content if it exists, else `None`
         """
-        tag_content = await self.pool.fetchval(
+        return await self.pool.fetchval(
             """
             SELECT t.content FROM tags t WHERE t.name = ? and t.guild_id = ?
             UNION
@@ -60,77 +63,94 @@ class Tags(FurinaCog):
             WHERE t.guild_id = ? AND (t.name = ? OR ta.alias = ?)
             """,
             name,
-            ctx.guild.id,
-            ctx.guild.id,
+            guild_id,
+            guild_id,
             name,
             name
         )
-        if not tag_content:
-            await ctx.send(f"No tags found for query: `{name}`")
-        else:
-            await ctx.send(tag_content)
 
-    @tag_group.command(name='create')
-    async def tag_create(self,
-                         ctx: FurinaCtx,
-                         name: str | None = None,
-                         *,
-                         content: str | None = None) -> None:
-        """Create a tag
-
-        Tag name/content cannot contain the bot's prefix or mention.
-        To make a name that contains spaces, wrap it in quotes.
-        Can be create "interactively" when not specify either name or content. Or neither.
-
-        Parameters
-        ----------
-        name : str, optional
-            Name of the tag
-        content : str, optional
-            Content of the tag
-        """
+    async def __get_user_input(
+        self,
+        ctx: FurinaCtx,
+        *,
+        prompt: str
+    ) -> str | None:
+        """Get user input for tag creation"""
+        # Small check function for input checking
         def check(m: Message) -> bool:
             return (m.author == ctx.author and
                     m.channel == ctx.channel and
                     m.content and not
                     m.content.startswith(tuple(self.bot.get_pre(self.bot, m))))
+        try:
+            await ctx.send(prompt)
+            msg = await self.bot.wait_for('message', check=check, timeout=30)
+            return msg.content.strip("'\" ").lower()
+        except asyncio.TimeoutError:
+            await ctx.send("No user input, cancelling tag creation")
+            return None
+
+    async def __check_tag_name(self, ctx: FurinaCtx, *, name: str) -> bool:
+        """Check if a tag already exists
+        
+        Parameters
+        ----------
+        ctx : :class:`FurinaCtx`
+            Context of the command
+        name : :class:`str`
+            Name of the tag to check
+
+        Returns
+        -------
+        :class:`bool`
+            Whether the tag exists or not
+        """
+        # list of reserved tag names
+        reserved = [
+            command.name for command in self.get_commands()
+            if command.qualified_name.startswith('tag')
+        ]
+        reserved.append('tag')
+        # True if tag name starts with reserved names
+        if name.startswith(tuple(reserved)):
+            return True
+        # None -> Tag does not exist
+        fetched = await self.__get_tag_content(guild_id=ctx.guild.id, name=name)
+        in_fetched = fetched is not None
+        return bool(in_fetched)
+
+    async def __handle_tag_creation_prefix(
+        self,
+        ctx: FurinaCtx,
+        name: str | None = None,
+        content: str | None = None
+    ) -> None:
+        """Handle tag creation when invoked with prefix
+        
+        Parameters
+        ----------
+        ctx : :class:`FurinaCtx`
+            Invoked context
+        name : :class:`str`, optional
+            Name of the tag
+        content : :class:`str`, optional
+            Content of the tag
+        """
         # tag create /BLANK/
         if not name:
-            try:
-                await ctx.send(
-                    "What is the name of the tag\n-# Type 'cancel' to cancel tag creation"
-                )
-                name_input: Message = await self.bot.wait_for("message", check=check, timeout=30)
-                name = name_input.content
-            except asyncio.TimeoutError:
-                await ctx.reply("No user input, cancelling tag creation")
-        name = name.lower().replace('"', '').replace("'", "")
-        if name == 'cancel':
-            await ctx.send("Cancelling tag creation")
+            name = await self.__get_user_input(ctx, prompt="What is the name of the tag?")
+            if name == 'cancel':
+                return
+        if await self.__check_tag_name(ctx, name=name):
+            await ctx.send(f"Tag `{name}` already exists or in reserved names list")
             return
-        if content:
-            content = await commands.clean_content().convert(ctx, content)
         # tag create <name> /BLANK/
-        if name and not content:
-            try:
-                await ctx.send("What is the content of the tag?")
-                content_input: Message = await self.bot.wait_for("message",
-                                                                 check=check,
-                                                                 timeout=120)
-                content = content_input.clean_content
-            except asyncio.TimeoutError:
-                await ctx.reply("No user input, cancelling tag creation")
-        if content.lower() == 'cancel':
-            await ctx.send("Cancelling tag creation")
-            return
+        if not content:
+            content = await self.__get_user_input(ctx, prompt="What is the content of the tag?")
+            if content == 'cancel':
+                return
         # tag create <name> <content>
-        if not self.__name_check(ctx, name):
-            await ctx.send("Invalid tag name")
-            return
-        check_exist = await self.__check_tag_name(ctx, name)
-        if check_exist:
-            await ctx.send(f"Tag `{name}` already exists")
-            return
+        # TODO: The insert is actually currently broken, fix it later
         await self.pool.execute(
             """
             INSERT INTO tags (guild_id, owner, name, content)
@@ -143,11 +163,59 @@ class Tags(FurinaCog):
         )
         await ctx.send(f"Created tag `{name}`")
 
+    @commands.hybrid_group(name='tag', fallback='get')
+    async def tag_group(self, ctx: FurinaCtx, *, name: str) -> None:
+        """Get a tag by name
+
+        What is tag?
+        Tag is a silly text that is **user** created.
+        It may or may not be useful.
+        You can create your own tag with `tag create` command.
+
+        Parameters
+        ----------
+        name : str
+            - Name of the tag
+        """
+        tag_content = await self.__get_tag_content(guild_id=ctx.guild.id, name=name)
+        if not tag_content:
+            await ctx.send(f"No tags found for query: `{name}`")
+        else:
+            await ctx.send(tag_content)
+
+    @tag_group.command(name='create')
+    async def tag_create_prefix_command(
+        self,
+        ctx: FurinaCtx,
+        name: str | None = None,
+        *,
+        content: str | None = None
+    ) -> None:
+        """Create a tag
+
+        Tag name/content cannot contain the bot's prefix or mention.
+        To make a name that contains spaces, wrap it in quotes.
+        Can be create "interactively" when not specify the content. Or neither.
+        Alternatively, use the slash version of this command.
+
+        Parameters
+        ----------
+        name : str, optional
+            Name of the tag
+        content : str, optional
+            Content of the tag
+        """
+        if not ctx.interaction:
+            await self.__handle_tag_creation_prefix(ctx, name, content)
+        else:
+            # TODO: Implement slash command version
+            raise NotImplementedError
+        
     def __name_check(self, ctx: FurinaCtx, name: str) -> bool:
         """Simple check if the name does not start with the bot's prefix or mention"""
         return not name.lower().startswith((self.get_prefix(ctx), self.bot.user.mention))
 
-    async def __check_tag_name(self, ctx: FurinaCtx, name: str) -> bool:
+    async def __check_tag_name1(self, ctx: FurinaCtx, name: str) -> bool:
         """Database checking if a tag name exists"""
         fetched = await self.pool.fetchval(
             """

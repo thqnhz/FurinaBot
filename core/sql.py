@@ -125,6 +125,8 @@ TAG_ALIASES_SQL = """
         owner INTEGER NOT NULL, -- owner of the alias, not the tag owner
         name TEXT NOT NULL,
         alias TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        uses INTEGER DEFAULT 0,
         PRIMARY KEY (guild_id, name, alias),
         FOREIGN KEY (guild_id, owner, name)
         REFERENCES tags (guild_id, owner, name)
@@ -173,7 +175,7 @@ class SQL:
     async def fetchval(self, query: str, *args: typing.Any) -> typing.Any | None:
         async with self.pool.acquire() as conn:
             row = await conn.fetchone(query, *args)
-            return row[0]
+            return None if not row else row[0]
 
 
 class TagSQL(SQL):
