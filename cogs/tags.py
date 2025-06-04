@@ -15,21 +15,43 @@ limitations under the License.
 from __future__ import annotations
 
 import asyncio
+import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import asqlite
-from discord import app_commands
 from discord.ext import commands
 
-from core import FurinaCog, FurinaCtx
+from core import FurinaCog, FurinaCtx, utils
 from core.sql import TagSQL
 from core.views import PaginatedView
 
 if TYPE_CHECKING:
+    import sqlite3
+
     from discord import Message
 
     from core import FurinaBot
+
+
+class TagEntry:
+    """Represent a tag"""
+    def __init__(self, data: sqlite3.Row) -> None:
+        self.guild_id: int = data['guild_id']
+        self.owner: int = data['owner']
+        self.name: str = data['name']
+        self.content: str = data['content']
+        self.content_preview: str = ">>> " + self.content[:100]
+        if len(self.content) > 100:
+            self.content_preview += '...'
+        self._raw_created_at: str = data['created_at']
+        self.created_at: str = f"<t:{int(
+            datetime.datetime.strptime(
+                self._raw_created_at,
+                r'%Y-%m-%d %H:%M:%S.%f%z'
+            ).timestamp()
+        )}"
+        self.uses: int = data['uses']
 
 
 class Tags(FurinaCog):
@@ -107,10 +129,9 @@ class Tags(FurinaCog):
         """
         # list of reserved tag names
         reserved = [
-            command.name for command in self.get_commands()
+            command.name for command in self.walk_commands()
             if command.qualified_name.startswith('tag')
         ]
-        reserved.append('tag')
         # True if tag name starts with reserved names
         if name.startswith(tuple(reserved)):
             return True
@@ -153,13 +174,14 @@ class Tags(FurinaCog):
         # TODO: The insert is actually currently broken, fix it later
         await self.pool.execute(
             """
-            INSERT INTO tags (guild_id, owner, name, content)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO tags (guild_id, owner, name, content, created_at)
+            VALUES (?, ?, ?, ?, ?)
             """,
             ctx.guild.id,
             ctx.author.id,
             name,
-            content
+            content,
+            str(utils.utcnow())
         )
         await ctx.send(f"Created tag `{name}`")
 
@@ -177,10 +199,15 @@ class Tags(FurinaCog):
         name : str
             - Name of the tag
         """
-        tag_content = await self.__get_tag_content(guild_id=ctx.guild.id, name=name)
+        tag_content = await self.__get_tag_content(guild_id=ctx.guild.id, name=name.lower())
         if not tag_content:
             await ctx.send(f"No tags found for query: `{name}`")
         else:
+            await self.pool.execute(
+                """UPDATE tags SET uses = uses + 1 WHERE guild_id = ? AND name = ?""",
+                ctx.guild.id,
+                name
+            )
             await ctx.send(tag_content)
 
     @tag_group.command(name='create')
@@ -315,23 +342,24 @@ class Tags(FurinaCog):
         name : str
             Name of the tag
         """
-        check_alias_exist = await self.__check_tag_name(ctx, alias)
+        check_alias_exist = await self.__check_tag_name(ctx, name=alias)
         if check_alias_exist:
             await ctx.send(f"Tag `{alias}` already exists")
             return
-        check_name_exist = await self.__check_tag_name(ctx, name)
+        check_name_exist = await self.__check_tag_name(ctx, name=name)
         if not check_name_exist:
             await ctx.send(f"Cannot create alias for non-existent tag `{name}`")
             return
         await self.pool.execute(
             """
-            INSERT INTO tag_aliases (guild_id, owner, name, alias)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO tag_aliases (guild_id, owner, name, alias, created_at)
+            VALUES (?, ?, ?, ?, ?)
             """,
             ctx.guild.id,
             ctx.author.id,
             name,
-            alias
+            alias,
+            str(utils.utcnow())
         )
         await ctx.reply(f"Successfully created tag alias `{alias}` for `{name}`")
 
@@ -344,12 +372,14 @@ class Tags(FurinaCog):
         name : str
             Name of the tag
         """
-        name = name.lower().replace('"', '').replace("'", "")
+        name = name.strip("'\"")
         fetched = await self.pool.fetchone(
             """
-                SELECT t.name, t.content, t.owner FROM tags t WHERE t.name = ? and t.guild_id = ?
+                SELECT t.guild_id, t.name, t.content, t.owner, t.created_at, t.uses
+                FROM tags t
+                WHERE t.name = ? and t.guild_id = ?
                 UNION
-                SELECT t.name, t.content, ta.owner FROM tags t
+                SELECT ta.guild_id, ta.name, t.content, ta.owner, ta.created_at, ta.uses FROM tags t
                 JOIN tag_aliases ta ON t.guild_id = ta.guild_id and t.name = ta.name
                 WHERE t.guild_id = ? AND (t.name = ? OR ta.alias = ?)
             """,
@@ -363,13 +393,18 @@ class Tags(FurinaCog):
             await ctx.send(f"No tags found for query: `{name}`")
             return
         embed = self.bot.embed
-        owner = self.bot.get_user(fetched['owner'])
-        embed.description = ">>> " + fetched['content'][:100]
-        if len(fetched['content']) > 100:
-            embed.description += "..."
-        embed.add_field(name="Name", value=f"`{fetched['name']}`")
-        embed.add_field(name="Owner", value=owner.mention)
+        tag = TagEntry(fetched)
+        owner = self.bot.get_user(tag.owner)
+        embed.description = tag.content_preview
+        embed.add_field(name="Name", value=f"`{tag.content}`")
         embed.set_thumbnail(url=owner.display_avatar.url)
+        if owner:
+            embed.add_field(name="Owner", value=owner.mention)
+        else:
+            embed.add_field(name="Owner", value="Owner left the server")
+        embed.add_field(name="Created at", value=tag.created_at)
+        embed.add_field(name="Uses", value=tag.uses)
+        
         await ctx.reply(embed=embed)
 
     @tag_group.command(name='list')

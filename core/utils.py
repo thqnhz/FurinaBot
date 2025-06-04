@@ -21,6 +21,9 @@ from typing import TYPE_CHECKING
 
 from discord import Embed
 
+# since multiple utils will be confusing so just import everything from discord.utils
+from discord.utils import *
+
 from core.views import PaginatedView
 
 if TYPE_CHECKING:
@@ -90,6 +93,7 @@ def setup_logging() -> None:
     root_logger.addHandler(console_handler)
 
 
+# Dictionary related
 async def call_dictionary(word: str, cs: ClientSession) -> PaginatedView:
     """|coro|
 
