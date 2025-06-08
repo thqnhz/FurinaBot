@@ -20,16 +20,18 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import asqlite
+import discord
+from discord import ui
 from discord.ext import commands
 
 from core import FurinaCog, FurinaCtx, utils
 from core.sql import TagSQL
-from core.views import PaginatedView
+from core.views import Container, LayoutView, PaginatedView
 
 if TYPE_CHECKING:
     import sqlite3
 
-    from discord import Message
+    from discord import Interaction, Message
 
     from core import FurinaBot
 
@@ -52,6 +54,87 @@ class TagEntry:
             ).timestamp()
         )}"
         self.uses: int = data['uses']
+
+
+class TagCreateLayoutView(LayoutView):
+    """Layout view for creating a tag"""
+    def __init__(self, *, name: str | None = None, content: str | None = None, cog: Tags) -> None:
+        super().__init__(timeout=180)
+        self.name = name
+        self.content = content
+        self._cog = cog
+        self.add_item(self.container)
+    
+    @property
+    def container(self) -> Container:
+        return Container(
+            self.name_textdisplay,
+            ui.Separator(),
+            self.content_textdisplay,
+            TagCreateActionRow(name=self.name, content=self.content)
+        )
+
+    @property
+    def name_textdisplay(self) -> ui.TextDisplay:
+        return ui.TextDisplay(self.name or "*<!> Name not set <!>*", row=0)
+
+    @property
+    def content_textdisplay(self) -> ui.TextDisplay:
+        return ui.TextDisplay(self.content or "*<!> Content not set <!>*", row=1)
+
+    async def insert_tag(self, *, guild_id: int, owner: int) -> None:
+        await self._cog.__insert_tag(guild_id=guild_id, owner=owner, name=self.name, content=self.content)
+
+
+class TagCreateActionRow(ui.ActionRow):
+    def __init__(self, *, name: str | None = None, content: str | None = None) -> None:
+        super().__init__(row=38)
+        self.name = name
+        self.content = content
+
+    @ui.button(label='Edit', emoji='\U0000270f\U0000fe0f')
+    async def edit_button(self, interaction: Interaction, button: ui.Button) -> None:
+        modal = TagCreateModal(name=self.name, content=self.content)
+        await interaction.response.send_modal(modal)
+        await modal.wait()
+        self.view.message = None
+
+    @ui.button(label='Create', emoji='\U00002705')
+    async def create_button(self, interaction: Interaction, button: ui.Button) -> None:
+        view: TagCreateLayoutView = self.view
+        assert view is not None
+        if not view.name or not view.content:
+            await interaction.response.send("Name or content cannot be empty!", ephemeral=True)
+        elif view.name and view.content:
+            await view.insert_tag(guild_id=interaction.guild.id, owner=interaction.user.id)
+            await interaction.response.send(f"Created tag `{view.name}`", ephemeral=True)
+            await interaction.delete_original_response()
+
+
+class TagCreateModal(ui.Modal, title='Create A Tag'):
+    """Modal for creating a tag"""
+    def __init__(self, *, name: str | None = None, content: str | None = None) -> None:
+        super().__init__()
+        if name:
+            self.name.required = False
+            self._name = name
+        if content:
+            self.content.required = False
+            self._content = content
+    name = ui.TextInput(label='Name', placeholder="Name of the tag", max_length=100)
+    content = ui.TextInput(
+        label='Content',
+        placeholder="Content of the tag",
+        style=discord.TextStyle.long, max_length=1000
+    )
+
+    async def on_submit(self, interaction: Interaction) -> None:
+        await interaction.response.edit_message(
+            view=TagCreateLayoutView(
+                name=self.name.value or self._name,
+                content=self.content.value or self._content
+            )
+        )
 
 
 class Tags(FurinaCog):
@@ -78,11 +161,10 @@ class Tags(FurinaCog):
         """
         return await self.pool.fetchval(
             """
-            SELECT t.content FROM tags t WHERE t.name = ? and t.guild_id = ?
-            UNION
-            SELECT t.content FROM tags t
-            JOIN tag_aliases ta ON t.guild_id = ta.guild_id and t.name = ta.name
-            WHERE t.guild_id = ? AND (t.name = ? OR ta.alias = ?)
+            SELECT T.content FROM tags T
+            LEFT JOIN tag_aliases TA
+            ON T.guild_id = TA.guild_id AND T.name = TA.name
+            WHERE T.guild_id = ? AND (T.name = ? OR TA.alias = ?)
             """,
             name,
             guild_id,
@@ -107,7 +189,10 @@ class Tags(FurinaCog):
         try:
             await ctx.send(prompt)
             msg = await self.bot.wait_for('message', check=check, timeout=30)
-            return msg.content.strip("'\" ").lower()
+            if msg.content.lower() == 'cancel':
+                await ctx.send("Tag creation cancelled")
+                return None
+            return msg.content.strip("'\" ")
         except asyncio.TimeoutError:
             await ctx.send("No user input, cancelling tag creation")
             return None
@@ -143,6 +228,7 @@ class Tags(FurinaCog):
     async def __handle_tag_creation_prefix(
         self,
         ctx: FurinaCtx,
+        *,
         name: str | None = None,
         content: str | None = None
     ) -> None:
@@ -160,7 +246,7 @@ class Tags(FurinaCog):
         # tag create /BLANK/
         if not name:
             name = await self.__get_user_input(ctx, prompt="What is the name of the tag?")
-            if name == 'cancel':
+            if not name:
                 return
         if await self.__check_tag_name(ctx, name=name):
             await ctx.send(f"Tag `{name}` already exists or in reserved names list")
@@ -168,22 +254,72 @@ class Tags(FurinaCog):
         # tag create <name> /BLANK/
         if not content:
             content = await self.__get_user_input(ctx, prompt="What is the content of the tag?")
-            if content == 'cancel':
+            if not content:
                 return
         # tag create <name> <content>
-        # TODO: The insert is actually currently broken, fix it later
+        await self.__insert_tag(
+            guild_id=ctx.guild.id,
+            owner=ctx.author.id,
+            name=name,
+            content=content
+        )
+        await ctx.send(f"Created tag `{name}`")
+
+    async def __handle_tag_creation_slash(
+        self,
+        interaction: Interaction,
+        *,
+        name: str | None = None,
+        content: str | None = None
+    ) -> None:
+        """Handle tag creation when invoked with slash
+        
+        Parameters
+        ----------
+        interaction : :class:`Interaction`
+            Invoked interaction
+        name : :class:`str`, optional
+            Name of the tag
+        content : :class:`str`, optional
+            Content of the tag
+        """
+        await interaction.response.defer(ephemeral=True)
+        if name and content and not await self.__check_tag_name(interaction, name=name):
+            await self.__insert_tag(
+                guild_id=interaction.guild_id,
+                owner=interaction.user.id,
+                name=name,
+                content=content
+            )
+            return
+        view = TagCreateLayoutView(name=name, content=content)
+        view.message = await interaction.followup.send(view=view)
+
+    async def __insert_tag(self, *, guild_id: int, owner: int, name: str, content: str) -> None:
+        """Insert a tag into the database
+
+        Parameters
+        ----------
+        guild_id : :class:`int`
+            Guild ID
+        owner : :class:`int`
+            ID of the owner of the tag
+        name : :class:`str`
+            Name of the tag
+        content : :class:`str`
+            Content of the tag
+        """
         await self.pool.execute(
             """
             INSERT INTO tags (guild_id, owner, name, content, created_at)
             VALUES (?, ?, ?, ?, ?)
             """,
-            ctx.guild.id,
-            ctx.author.id,
+            guild_id,
+            owner,
             name,
             content,
             str(utils.utcnow())
         )
-        await ctx.send(f"Created tag `{name}`")
 
     @commands.hybrid_group(name='tag', fallback='get')
     async def tag_group(self, ctx: FurinaCtx, *, name: str) -> None:
@@ -211,7 +347,7 @@ class Tags(FurinaCog):
             await ctx.send(tag_content)
 
     @tag_group.command(name='create')
-    async def tag_create_prefix_command(
+    async def tag_create_command(
         self,
         ctx: FurinaCtx,
         name: str | None = None,
@@ -233,33 +369,10 @@ class Tags(FurinaCog):
             Content of the tag
         """
         if not ctx.interaction:
-            await self.__handle_tag_creation_prefix(ctx, name, content)
+            await self.__handle_tag_creation_prefix(ctx, name=name, content=content)
         else:
-            # TODO: Implement slash command version
-            raise NotImplementedError
+            await self.__handle_tag_creation_slash(ctx, name=name, content=content)
         
-    def __name_check(self, ctx: FurinaCtx, name: str) -> bool:
-        """Simple check if the name does not start with the bot's prefix or mention"""
-        return not name.lower().startswith((self.get_prefix(ctx), self.bot.user.mention))
-
-    async def __check_tag_name1(self, ctx: FurinaCtx, name: str) -> bool:
-        """Database checking if a tag name exists"""
-        fetched = await self.pool.fetchval(
-            """
-            SELECT t.content FROM tags t WHERE t.name = ? and t.guild_id = ?
-            UNION
-            SELECT t.content FROM tags t
-            JOIN tag_aliases ta ON t.guild_id = ta.guild_id and t.name = ta.name
-            WHERE t.guild_id = ? AND (t.name = ? OR ta.alias = ?)
-            """,
-            name,
-            ctx.guild.id,
-            ctx.guild.id,
-            name,
-            name
-        )
-        return fetched is not None
-
     @tag_group.command(name='delete', aliases=['del'])
     async def tag_delete(self, ctx: FurinaCtx, *, name: str) -> None:
         """Delete a tag by name
