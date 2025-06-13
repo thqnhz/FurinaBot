@@ -64,7 +64,7 @@ class TagCreateLayoutView(LayoutView):
         self.content = content
         self._cog = cog
         self.add_item(self.container)
-    
+
     @property
     def container(self) -> Container:
         return Container(
@@ -83,7 +83,12 @@ class TagCreateLayoutView(LayoutView):
         return ui.TextDisplay(self.content or "*<!> Content not set <!>*", row=1)
 
     async def insert_tag(self, *, guild_id: int, owner: int) -> None:
-        await self._cog.__insert_tag(guild_id=guild_id, owner=owner, name=self.name, content=self.content)
+        await self._cog.__insert_tag(
+            guild_id=guild_id,
+            owner=owner,
+            name=self.name,
+            content=self.content
+        )
 
 
 class TagCreateActionRow(ui.ActionRow):
@@ -146,7 +151,7 @@ class Tags(FurinaCog):
 
     async def __get_tag_content(self, *, guild_id: int, name: str) -> str | None:
         """Get tag content from database
-        
+
         Parameters
         ----------
         guild_id : :class:`int`
@@ -199,7 +204,7 @@ class Tags(FurinaCog):
 
     async def __check_tag_name(self, ctx: FurinaCtx, *, name: str) -> bool:
         """Check if a tag already exists
-        
+
         Parameters
         ----------
         ctx : :class:`FurinaCtx`
@@ -233,7 +238,7 @@ class Tags(FurinaCog):
         content: str | None = None
     ) -> None:
         """Handle tag creation when invoked with prefix
-        
+
         Parameters
         ----------
         ctx : :class:`FurinaCtx`
@@ -273,7 +278,7 @@ class Tags(FurinaCog):
         content: str | None = None
     ) -> None:
         """Handle tag creation when invoked with slash
-        
+
         Parameters
         ----------
         interaction : :class:`Interaction`
@@ -372,7 +377,7 @@ class Tags(FurinaCog):
             await self.__handle_tag_creation_prefix(ctx, name=name, content=content)
         else:
             await self.__handle_tag_creation_slash(ctx, name=name, content=content)
-        
+
     @tag_group.command(name='delete', aliases=['del'])
     async def tag_delete(self, ctx: FurinaCtx, *, name: str) -> None:
         """Delete a tag by name
@@ -517,7 +522,7 @@ class Tags(FurinaCog):
             embed.add_field(name="Owner", value="Owner left the server")
         embed.add_field(name="Created at", value=tag.created_at)
         embed.add_field(name="Uses", value=tag.uses)
-        
+
         await ctx.reply(embed=embed)
 
     @tag_group.command(name='list')
