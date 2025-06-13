@@ -17,12 +17,12 @@ from __future__ import annotations
 import logging
 import logging.handlers
 import pathlib
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from discord import Embed
 
 # since multiple utils will be confusing so just import everything from discord.utils
-from discord.utils import *
+from discord.utils import *  # type: ignore[wildcardImportFromLibrary]
 
 from core.views import PaginatedView
 
@@ -130,26 +130,26 @@ async def call_dictionary(word: str, cs: ClientSession) -> PaginatedView:
         for meaning in meanings:
             embed = base_embed.copy()
             conjugation: str = meaning.get('partOfSpeech', 'N/A')
-            embed.title += f" ({conjugation})"
+            embed.title += f" ({conjugation})"  # type: ignore[reportOperatorIssue]
             embed.description = f"Pronunciations: {pronunciations[i] or 'N/A'}"
 
-            synonyms: list[str] = meaning.get('synonyms')
+            synonyms: list[str] = meaning.get('synonyms')  # type: ignore[reportAssignmentType]
             embed.add_field(
                 name="Synonyms:",
                 value=', '.join(synonyms) if synonyms else 'N/A'
             )
 
-            antonyms: list[str] = meaning.get('antonyms')
+            antonyms: list[str] = meaning.get('antonyms')  # type: ignore[reportAssignmentType]
             embed.add_field(
                 name="Antonyms:",
                 value=', '.join(antonyms) if antonyms else 'N/A'
             )
 
-            definitions: list[dict] = meaning.get('definitions')
+            definitions: list[dict] = meaning.get('definitions')  # type: ignore[reportAssignmentType]
             definition_value = ""
             FIELD_LIMIT: int = 1024
             for definition in definitions:
-                definition_text: str = definition.get('definition')
+                definition_text: str = definition.get('definition')  # type: ignore[reportAssignmentType]
                 to_add: str = f"\n- {definition_text}"
                 example: str = definition.get('example', '')
                 if example:
@@ -167,7 +167,7 @@ async def call_dictionary(word: str, cs: ClientSession) -> PaginatedView:
     return PaginatedView(timeout=300, embeds=embeds)
 
 
-def __get_pronunciations(data: list[dict]) -> list[str, ...]:
+def __get_pronunciations(data: list[dict]) -> list[str]:
     """Get the word's pronunciations
     
     Parameters
@@ -177,17 +177,17 @@ def __get_pronunciations(data: list[dict]) -> list[str, ...]:
     
     Returns
     -------
-    :class:`list[str, ...]`
+    :class:`list[str]`
         The word's pronunciations.
         If no pronunciations found for that definition, the string at that index will be empty.
     """
     result: list[str] = [''] * len(data)
     for i, d in enumerate(data):
-        phonetics: str = d.get('phonetic')
+        phonetics: str | None = d.get('phonetic')
         if not phonetics:
             phonetics_list: list[dict] = d.get('phonetics', [])
             phonetics = ', '.join(
-                [phone.get['text'] for phone in phonetics_list if phone.get['text']]
+                [phone.get['text'] for phone in phonetics_list if phone.get['text']]  # type: ignore[reportIndexIssue]
             )
             if phonetics:
                 result[i] = f'`{phonetics}`'
