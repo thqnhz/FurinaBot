@@ -21,8 +21,8 @@ load_dotenv()
 # Basic
 DEFAULT_PREFIX = "!"
 ACTIVITY_NAME = "Wordle ▪ /minigame wordle"
-TOKEN = os.getenv("BOT_TOKEN")
-DEBUG_WEBHOOK = os.getenv("DEBUG_WEBHOOK")
+TOKEN = os.getenv("BOT_TOKEN") or ""
+DEBUG_WEBHOOK = os.getenv("DEBUG_WEBHOOK") or ""
 OWNER_ID = 596886610214125598
 
 GUILD_SPECIFIC = 872126813411893328
@@ -40,7 +40,7 @@ CROSS = "<a:crossout:1358833476979261702>"
 
 # Music Cog
 MUSIC_CHANNEL = 1089851760425848923
-MUSIC_WEBHOOK = os.getenv("MUSIC_WEBHOOK")
+MUSIC_WEBHOOK = os.getenv("MUSIC_WEBHOOK") or ""
 SKIP_LL = True
 LAVA_URI = "http://localhost:1710"
 LAVA_PW = "thanhz"

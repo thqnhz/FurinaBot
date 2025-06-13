@@ -73,8 +73,6 @@ class FurinaBot(commands.Bot):
     ----------
     client_session : :class:`aiohttp.ClientSession`
         Aiohttp client session for making requests
-    pool : :class:`asqlite.Pool`
-        Main database pool for making queries
     skip_lavalink : :class:`bool`
         Whether to skip Lavalink or not
 
@@ -82,13 +80,11 @@ class FurinaBot(commands.Bot):
     -----
     .. code-block:: python
         async with aiohttp.ClientSession() as client_session, \
-            asqlite.create_pool('path/to/database.db') as pool, \
-                FurinaBot(
-                    client_session=client_session, 
-                    pool=pool,
-                    skip_lavalink=True
-                ) as bot:
-                    await bot.start()
+            FurinaBot(
+                client_session=client_session,
+                skip_lavalink=True
+            ) as bot:
+                await bot.start()
     """
 
     DEFAULT_PREFIX: str = settings.DEFAULT_PREFIX
@@ -144,9 +140,9 @@ class FurinaBot(commands.Bot):
         self,
         message: discord.Message,
         *,
-        cls: FurinaCtx = FurinaCtx
+        cls: FurinaCtx = FurinaCtx  # type: ignore[reportArgumentType]
     ) -> FurinaCtx:
-        return await super().get_context(message, cls=cls)
+        return await super().get_context(message, cls=cls)  # type: ignore[reportArgumentType]
 
     def get_pre(self, _: FurinaBot, message: discord.Message) -> list[str]:
         """Custom `get_prefix` method
@@ -170,6 +166,7 @@ class FurinaBot(commands.Bot):
         return when_mentioned_or(prefix)(self, message)
 
     async def on_ready(self) -> None:
+        self.user: discord.ClientUser
         logging.info("Logged in as %s", self.user.name)
         await self.pool.executemany(
             """INSERT OR REPLACE INTO guilds (id) VALUES (?)""",
@@ -198,7 +195,7 @@ class FurinaBot(commands.Bot):
         self.app_emojis: list[discord.Emoji] = await self.fetch_application_emojis()
         db_path = Path() / 'db'
         db_path.mkdir(exist_ok=True)
-        self.pool = SQL(await asqlite.create_pool(Path() / 'db' / 'furina.db'))
+        self.pool = SQL(await asqlite.create_pool(Path() / 'db' / 'furina.db'))  # type: ignore[reportArgumentType]
         await self.pool.create_tables()
         await self.__load_extensions()
 
