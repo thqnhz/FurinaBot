@@ -22,7 +22,7 @@ __all__ = [
 
 from typing import Literal, Self
 
-from discord import Button, ButtonStyle, Embed, Interaction, Message, User, ui
+from discord import Button, ButtonStyle, Embed, Interaction, Member, Message, User, ui
 from discord.ext.commands import CommandError, CooldownMapping
 
 
@@ -39,7 +39,7 @@ class View(ui.View):
         self.cd = CooldownMapping.from_cooldown(rate=1, per=2, type=self.key)
 
     @staticmethod
-    def key(interaction: Interaction) -> User:
+    def key(interaction: Interaction) -> User | Member:
         return interaction.user
 
     async def interaction_check(self, interaction: Interaction) -> Literal[True]:
@@ -60,7 +60,7 @@ class View(ui.View):
 
     async def on_timeout(self) -> None:
         for child in self.children:
-            child.disabled = True
+            child.disabled = True  # type: ignore[reportAttributeAccessIssue]
         try:
             await self.message.edit(view=self)
         except AttributeError:
@@ -71,7 +71,7 @@ class PaginatedView(View):
     def __init__(self, *, timeout: float, embeds: list[Embed] | Embed) -> None:
         super().__init__(timeout=timeout)
         self.embeds = embeds if isinstance(embeds, list) else [embeds]
-        self.title: list[str] = [embed.title for embed in self.embeds]
+        self.title: list[str] = [embed.title for embed in self.embeds]  # type: ignore[reportAttributeAccessIssue]
         self.length: int = len(self.embeds)
         self.page: int = 0
         self.page_button.label = self.page_button_label
@@ -89,29 +89,29 @@ class PaginatedView(View):
         self.right_button.disabled = self.page == self.length - 1
         self.last_button.disabled = self.page == self.length - 1
 
-    @ui.button(label="<<", disabled=True)
+    @ui.button(label="<<", disabled=True)  # type: ignore[reportArgumentType]
     async def first_button(self, interaction: Interaction, _: Button) -> None:
         self.page = 0
         self.update_buttons()
         await interaction.response.edit_message(embed=self.embeds[self.page], view=self)
 
-    @ui.button(label="<", disabled=True)
+    @ui.button(label="<", disabled=True)  # type: ignore[reportArgumentType]
     async def left_button(self, interaction: Interaction, _: Button) -> None:
         self.page -= 1
         self.update_buttons()
         await interaction.response.edit_message(embed=self.embeds[self.page], view=self)
 
-    @ui.button(style=ButtonStyle.blurple, disabled=True)
+    @ui.button(style=ButtonStyle.blurple, disabled=True)  # type: ignore[reportArgumentType]
     async def page_button(self, _: Interaction, __: Button) -> None:
         pass
 
-    @ui.button(label=">")
+    @ui.button(label=">")  # type: ignore[reportArgumentType]
     async def right_button(self, interaction: Interaction, _: Button) -> None:
         self.page += 1 if self.page <= self.length - 1 else self.page
         self.update_buttons()
         await interaction.response.edit_message(embed=self.embeds[self.page], view=self)
 
-    @ui.button(label=">>")
+    @ui.button(label=">>")  # type: ignore[reportArgumentType]
     async def last_button(self, interaction: Interaction, _: Button) -> None:
         self.page = self.length - 1
         self.update_buttons()
@@ -140,7 +140,7 @@ class LayoutView(ui.LayoutView):
         self.cd = CooldownMapping.from_cooldown(rate=1, per=1, type=self.key)
 
     @staticmethod
-    def key(interaction: Interaction) -> User:
+    def key(interaction: Interaction) -> User | Member:
         return interaction.user
 
     async def interaction_check(self, interaction: Interaction) -> Literal[True]:
@@ -159,9 +159,9 @@ class LayoutView(ui.LayoutView):
 
     async def on_timeout(self) -> None:
         for child in self.walk_children():
-            child.disabled = True
+            child.disabled = True  # type: ignore[reportAttributeAccessIssue]
         try:
-            await self.message.edit(view=self)
+            await self.message.edit(view=self)  # type: ignore[reportAttributeAccessIssue]
         except AttributeError:
             pass
 
