@@ -19,9 +19,12 @@ import pathlib
 import shutil
 import subprocess  # noqa: S404
 from contextlib import contextmanager
-from typing import Any, Generator
+from typing import TYPE_CHECKING, Any
 
 import requests
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 
 class Lavalink:
@@ -57,12 +60,12 @@ class Lavalink:
         return self.LAVALINK_CWD / f"Lavalink-{self.version}.jar"
 
     @property
-    def download_url(self) -> str | None:
+    def download_url(self) -> str:
         jar_info = next(
                 (asset for asset in self.release_info["assets"] if asset["name"] == "Lavalink.jar"),
                 None
             )
-        return jar_info["browser_download_url"] if jar_info else None
+        return jar_info["browser_download_url"] if jar_info else ""
 
     def check_for_update(self) -> None:
         lavalink = self.LAVALINK_CWD / f"Lavalink-{self.version}.jar"
@@ -77,9 +80,12 @@ class Lavalink:
         except IndexError:
             pass
         logging.info("Deleted outdated Lavalink.jar file. Downloading new version...")
-        response = requests.get(self.download_url, timeout=30)
-        (self.LAVALINK_CWD / f"Lavalink-{self.version}.jar").write_bytes(response.content)
-        logging.info("Successfully downloaded Lavalink.jar (v%s)", self.version)
+        if self.download_url:
+            response = requests.get(self.download_url, timeout=30)
+            (self.LAVALINK_CWD / f"Lavalink-{self.version}.jar").write_bytes(response.content)
+            logging.info("Successfully downloaded Lavalink.jar (v%s)", self.version)
+        else:
+            logging.error("Failed to download Lavalink.jar")
 
     @contextmanager
     def start(self) -> Generator[None, Any, None]:
