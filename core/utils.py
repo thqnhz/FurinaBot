@@ -187,7 +187,7 @@ def __get_pronunciations(data: list[dict]) -> list[str]:
         if not phonetics:
             phonetics_list: list[dict] = d.get('phonetics', [])
             phonetics = ', '.join(
-                [phone.get['text'] for phone in phonetics_list if phone.get['text']]  # type: ignore[reportIndexIssue]
+                [phone.get('text') for phone in phonetics_list if phone.get('text')]  # type: ignore[reportIndexIssue]
             )
             if phonetics:
                 result[i] = f'`{phonetics}`'

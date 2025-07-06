@@ -28,12 +28,12 @@ import dateparser
 import discord
 import docstring_parser
 import psutil
-from discord import Member, app_commands, ui
+from discord import Interaction, Member, app_commands, ui
 from discord.ext import commands
 from discord.ui import Select
 from wavelink import NodeStatus, Pool
 
-from core import FurinaBot, FurinaCog, FurinaCtx, settings, utils as cutils
+from core import FurinaBot, FurinaCog, FurinaCtx, settings, utils as utils
 from core.views import Container, LayoutView
 
 if TYPE_CHECKING:
@@ -105,7 +105,7 @@ class Utils(FurinaCog):
         for command in cog.walk_commands():
             if command.hidden:
                 continue
-            doc = docstring_parser.parse(command.callback.__doc__)
+            doc = docstring_parser.parse(command.callback.__doc__ or "No description")
             prefix += f"- **{bot_prefix}{command.qualified_name}:** `{doc.short_description}`\n"
 
         if prefix:
@@ -115,7 +115,7 @@ class Utils(FurinaCog):
         for command in cog.walk_app_commands():
             if isinstance(command, app_commands.Group):
                 continue
-            doc = docstring_parser.parse(command.callback.__doc__)
+            doc = docstring_parser.parse(command.callback.__doc__ or "No description")
             slash += f"- **{command.qualified_name}:** `{doc.short_description}`\n"
 
         if slash:
@@ -213,7 +213,7 @@ class Utils(FurinaCog):
 
     async def db_ping(self) -> float:
         """|coro|
-        
+
         Ping the database
 
         Returns
@@ -242,12 +242,13 @@ class Utils(FurinaCog):
         prefix : str
             The new prefix
         """
-        prefix: str = prefix.strip("'\" ")
+        prefix = prefix.strip("'\" ")
         container = self.container
         if len(prefix) > 3 or not prefix:
             container.add_item(ui.TextDisplay(f"{settings.CROSS} **Invalid prefix**", row=0))
             await ctx.reply(view=LayoutView().add_item(container))
             return
+
         if prefix in ['clear', 'reset', 'default', settings.DEFAULT_PREFIX]:
             await self.pool.execute(
                 """
@@ -348,13 +349,16 @@ class Utils(FurinaCog):
             return
 
         # !help <CogName>
-        cog: FurinaCog = None
+        cog: FurinaCog | None = None
         for cog_ in self.bot.cogs:
             if cog_.lower() == query.lower():
                 cog = self.bot.get_cog(cog_)
                 break
         if cog and cog.__cog_name__ not in ['Hidden', 'Jishaku']:
-            container = self.list_cog_commands(cog=cog, bot_prefix=ctx.prefix)
+            container = self.list_cog_commands(
+                cog=cog,
+                bot_prefix=ctx.prefix or self.bot.DEFAULT_PREFIX
+            )
             container.add_items(ui.Separator(row=37), HelpActionRow(bot=self.bot))
             view = LayoutView().add_item(container)
             view.message = await ctx.reply(view=view)
@@ -500,7 +504,7 @@ class Utils(FurinaCog):
         word : str
             The word to look up
         """
-        view = await cutils.call_dictionary(word.split()[0], self.cs)
+        view = await utils.call_dictionary(word.split(maxsplit=1)[0], self.cs)
         view.message = await ctx.reply(embed=view.embeds[0], view=view)
 
     @commands.command(name='wordoftheday', aliases=['wotd'])

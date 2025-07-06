@@ -91,15 +91,17 @@ class PaginatedView(View):
 
     @ui.button(label="<<", disabled=True)  # type: ignore[reportArgumentType]
     async def first_button(self, interaction: Interaction, _: Button) -> None:
+        await interaction.response.defer()
         self.page = 0
         self.update_buttons()
-        await interaction.response.edit_message(embed=self.embeds[self.page], view=self)
+        await interaction.edit_original_response(embed=self.embeds[self.page], view=self)
 
     @ui.button(label="<", disabled=True)  # type: ignore[reportArgumentType]
     async def left_button(self, interaction: Interaction, _: Button) -> None:
+        await interaction.response.defer()
         self.page -= 1
         self.update_buttons()
-        await interaction.response.edit_message(embed=self.embeds[self.page], view=self)
+        await interaction.edit_original_response(embed=self.embeds[self.page], view=self)
 
     @ui.button(style=ButtonStyle.blurple, disabled=True)  # type: ignore[reportArgumentType]
     async def page_button(self, _: Interaction, __: Button) -> None:
@@ -107,15 +109,17 @@ class PaginatedView(View):
 
     @ui.button(label=">")  # type: ignore[reportArgumentType]
     async def right_button(self, interaction: Interaction, _: Button) -> None:
+        await interaction.response.defer()
         self.page += 1 if self.page <= self.length - 1 else self.page
         self.update_buttons()
-        await interaction.response.edit_message(embed=self.embeds[self.page], view=self)
+        await interaction.edit_original_response(embed=self.embeds[self.page], view=self)
 
     @ui.button(label=">>")  # type: ignore[reportArgumentType]
     async def last_button(self, interaction: Interaction, _: Button) -> None:
+        await interaction.response.defer()
         self.page = self.length - 1
         self.update_buttons()
-        await interaction.response.edit_message(embed=self.embeds[self.page], view=self)
+        await interaction.edit_original_response(embed=self.embeds[self.page], view=self)
 
 
 class Container(ui.Container):
@@ -138,6 +142,7 @@ class LayoutView(ui.LayoutView):
     def __init__(self, *, timeout: float = 180) -> None:
         super().__init__(timeout=timeout)
         self.cd = CooldownMapping.from_cooldown(rate=1, per=1, type=self.key)
+        self.message: Message
 
     @staticmethod
     def key(interaction: Interaction) -> User | Member:
