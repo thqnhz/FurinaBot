@@ -32,7 +32,7 @@ from discord.ext import commands
 from tqdm import tqdm
 
 from core import utils
-from core.views import LayoutView, PaginatedView, View
+from core.views import LayoutView, PaginatedView
 
 if TYPE_CHECKING:
     from core import FurinaBot, FurinaCtx
@@ -90,7 +90,7 @@ class RPSButton(ui.Button):
             await interaction.edit_original_response(embed=view.embed, view=view)
 
 
-class RPSView(View):
+class RPSView(ui.View):
     def __init__(self) -> None:
         super().__init__(timeout=300)
         # A dict to store players and their move
@@ -202,7 +202,7 @@ class TicTacToeButton(ui.Button['TicTacToe']):
         await interaction.response.edit_message(embed=view.embed, view=view)
 
 
-class TicTacToe(View):
+class TicTacToe(ui.View):
     children: list[TicTacToeButton]
     X: int = -1
     O: int = 1  # noqa: E741

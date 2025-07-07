@@ -105,6 +105,11 @@ class FurinaBot(commands.Bot):
                 dm_channel=False,
                 guild=True
             ),
+            allowed_mentions=discord.AllowedMentions(
+                everyone=False,
+                roles=False,
+                users=True
+            ),
             activity=discord.Activity(
                 type=discord.ActivityType.playing,
                 name=settings.ACTIVITY_NAME
