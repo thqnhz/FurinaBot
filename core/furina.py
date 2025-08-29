@@ -23,11 +23,11 @@ from platform import python_version
 
 import asqlite
 import discord
-import wavelink
 from discord import app_commands, ui, utils
 from discord.ext import commands
 from discord.ext.commands import errors, when_mentioned_or
 
+import lavalink
 from cogs import EXTENSIONS
 from core import settings
 from core.sql import SQL
@@ -41,6 +41,8 @@ if typing.TYPE_CHECKING:
 
 class FurinaCtx(commands.Context):
     """Custom Context class with some shortcuts"""
+    bot: FurinaBot
+    
     async def tick(self) -> None:
         """React checkmark to the command message"""
         try:
@@ -141,6 +143,17 @@ class FurinaBot(commands.Bot):
         uptime_td = utils.utcnow() - self._startup
         return f"`{uptime_td.days}d {uptime_td.seconds // 3600}h {(uptime_td.seconds // 60) % 60}m`"
 
+    @property
+    def lavalink(self) -> lavalink.Client:
+        if not self._lavalink:
+            self._lavalink = lavalink.Client(self.user.id)
+            self._lavalink.add_node(
+                host=settings.LAVA_URI,
+                port=1710,
+                password=settings.LAVA_PW
+            )
+        return self._lavalink
+
     async def get_context(
         self,
         message: discord.Message,
@@ -194,7 +207,7 @@ class FurinaBot(commands.Bot):
 
     async def setup_hook(self) -> None:
         logging.info("discord.py v%s", discord.__version__)
-        logging.info("Wavelink v%s", wavelink.__version__)
+        logging.info("Lavalink.py v%s", lavalink.__version__)
         logging.info("Running Python %s", python_version())
         logging.info("Fetching bot emojis...")
         self.app_emojis: list[discord.Emoji] = await self.fetch_application_emojis()

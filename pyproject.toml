@@ -1,25 +1,24 @@
-license = "Apache 2.0"
-
 [project]
 name = "Furina"
 version = "1.0.0"
 description = "A discord.py bot i made while learning python"
 authors = [{name = "Nguyễn Duy Thanh", email = "thvnhz@gmail.com"}]
+license = "Apache 2.0"
 dependencies = [
     "aiohttp",
     "asqlite",
     "dateparser",
-    "discord.py",
-    "docstring_parser",
+    "discord-py",
+    "docstring-parser",
     "enka",
     "jishaku",
     "numpy",
     "psutil",
-    "PyNaCl",
+    "pynacl",
     "python-dotenv",
     "tqdm",
-    "wavelink",
-    "youtube-search"
+    "lavalink",
+    "requests>=2.32.4",
 ]
 
 requires-python = "<4.0.0,>=3.10.0"

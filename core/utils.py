@@ -17,6 +17,7 @@ from __future__ import annotations
 import logging
 import logging.handlers
 import pathlib
+import re
 from typing import TYPE_CHECKING, Any
 
 from discord import Embed
@@ -28,6 +29,9 @@ from core.views import PaginatedView
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
+
+
+URL_REGEX = re.compile(r'https?://(?:www\.)?.+')
 
 
 class LogFormatter(logging.Formatter):

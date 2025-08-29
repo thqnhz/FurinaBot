@@ -16,284 +16,168 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import textwrap
-from typing import TYPE_CHECKING, List, Union, cast
+import typing
+from typing import TYPE_CHECKING
 
 import discord
-import wavelink
 from discord import ButtonStyle, Color, Embed, Interaction, Message, app_commands, ui
 from discord.ext import commands
-from wavelink import (
-    AutoPlayMode,
-    Node,
-    Playable,
-    Player,
-    Playlist,
-    Pool,
-    QueueMode,
-    TrackEndEventPayload,
-    TrackExceptionEventPayload,
-    TrackSource,
-    TrackStartEventPayload,
-)
-from youtube_search import YoutubeSearch
+from lavalink.errors import ClientError
+from lavalink.events import TrackEndEvent, TrackExceptionEvent, TrackStartEvent, TrackStuckEvent
+from lavalink.server import LoadType
 
+import lavalink
 from core import FurinaCog, FurinaCtx, settings
+from core.utils import URL_REGEX
 from core.views import PaginatedView
 
 if TYPE_CHECKING:
     from core import FurinaBot
 
 
-class TrackUtils:
-    """Some utilities for `wavelink.Playable`"""
-    def __init__(self, track: Playable) -> None:
-        self.__track = track
+class VoiceProtocol(discord.VoiceProtocol):
+    def __init__(self, client: FurinaBot, channel: discord.abc.Connectable) -> None:
+        super().__init__(client, channel)
+        self.guild_id = self.channel.guild.id
+        self._destroyed = False
 
-    @staticmethod
-    def format_len(length: int) -> str:
-        minutes, seconds = divmod(length // 1000, 60)
-        return f"{minutes:02d}:{seconds:02d}"
+        self.lavalink = client.lavalink
 
-    @property
-    def formatted_len(self) -> str:
-        """Convert track len from `ms` to `mm:ss` format"""
-        return self.format_len(self.__track.length)
+    async def _transform_voice_update_data(self, *, type_: str, data: typing.Any) -> None:
+        """Transform voice update data and pass it into lavalink handler"""
+        lavalink_data: dict[str, typing.Any] = {"t": type_, "d": data}
+        await self.lavalink.voice_update_handler(lavalink_data)
 
-    @property
-    def shortened_name(self) -> str:
-        """Shorten the track name to 50 characters long"""
-        return textwrap.shorten(self.__track.title,
-                                width=50, 
-                                break_long_words=False, 
-                                placeholder="...")
+    async def on_voice_server_update(self, data: typing.Any) -> None:
+        await self._transform_voice_update_data(type_="VOICE_SERVER_UPDATE", data=data)
 
+    async def on_voice_state_update(self, data: typing.Any) -> None:
+        channel_id = data["channel_id"]
 
-class PlayerUtils:
-    @property
-    def __embed(self) -> Embed:
-        return self.__ctx.embed if isinstance(self.__ctx, FurinaCtx) else self.__ctx.client.embed
+        if not channel_id:
+            await self._destroy()
+            return
 
-    @staticmethod
-    async def __search_for_tracks(*, query: str, source: TrackSource = None) -> wavelink.Search:
-        if "https://" not in query:
-            ytsearch = YoutubeSearch(query, 1).to_dict()[0]
-            query = f"https://youtu.be/{ytsearch['id']}"
-            return await Playable.search(query)
-        return await Playable.search(query, source=source)
+        self.channel = self.client.get_channel(int(channel_id))
 
-    async def play(self,
-                   ctx: FurinaCtx | Interaction, 
-                   query: str, 
-                   source: TrackSource = None) -> None:
-        self.__ctx = ctx
-        if isinstance(ctx, Interaction):
-            try:
-                await self.__ctx.response.defer()
-            except discord.errors.InteractionResponded:
-                pass
-        else:
-            await self.__ctx.tick()
+        await self._transform_voice_update_data(type_="VOICE_STATE_UPDATE", data=data)
 
-        self.__searched = await self.__search_for_tracks(query=query, source=source)
-        if not self.__searched:
-            embed = self.__embed
-            embed.title = "Cannot find any tracks with the given query"
-            embed.color = Color.red()
-            await self.__ctx.reply(embed=embed)
-
-        await self.__add_to_queue()
-
-    async def __add_to_queue(self) -> None:
-        embed = self.__embed
-        embed.color = Color.blue()
-        embed.set_author(name="Loading...")
-        if isinstance(self.__ctx, Interaction):
-            interaction = self.__ctx
-            msg = await interaction.edit_original_response(embed=embed, view=None)
-        else:
-            msg = await self.__ctx.reply(embed=embed, view=None)
-        self.__player = await self.ensure_voice_connection()
-
-        # If the bot is in a StageChannel, request to speak
-        if isinstance(self.__player.channel, discord.StageChannel):
-            await self.__player.channel.guild.me.edit(suppress=False)
-
-        if isinstance(self.__searched, Playlist):
-            embeds = await self.__add_playlist()
-            view = PaginatedView(timeout=180, embeds=embeds)
-            embed = embeds[0]
-        else:
-            view = None
-            embed = await self.__add_song()
-        await msg.edit(embed=embed, view=view)
-
-    async def __add_playlist(self) -> list[Embed]:
-        self.__searched = cast("Playlist", self.__searched)
-        track_added: int = 0
-        track_skipped: int = 0
-        embed = self.__embed
-        embed.description = ""
-        embeds = []
-        for track in self.__searched.tracks:
-            if not track.is_stream:
-                embed.description += f"- Added `{track}` to the queue\n"
-                await self.__player.queue.put_wait(track)
-                track_added += 1
-            else:
-                embed.description += f"- Skipped `{track}`\n"
-                track_skipped += 1
-
-            if (track_added + track_skipped) % 10 == 0:  # Pagination
-                embeds.append(embed)
-                embed = self.__embed
-                embed.description = ""
-
-        if embed.description:
-            embeds.append(embed)
-
-        for embed in embeds:
-            tracks = len(self.__searched.tracks)
-            embed.title = f"Added {track_added}, skipped {track_skipped} out of {tracks} tracks"
-        if not self.__player.playing:
-            await self.__player.play(self.__player.queue.get(), populate=True)
-        return embeds
-
-    async def __add_song(self) -> Embed:
-        self.__searched = cast("list[Playable]", self.__searched)
-        track = self.__searched[0]
-        embed = self.__embed
-        if track.is_stream:
-            embed.title = "Cannot play a livestream"
-            embed.color = Color.red()
-            return embed
-        await self.__player.queue.put_wait(track)
-
-        if not self.__player.playing:
-            await self.__player.play(self.__player.queue.get(), populate=True)
-        embed.title = "Added to queue"
-        embed.color = Color.green()
-        embed.description = f"### Track: [{track}]({track.uri}) ({TrackUtils(track).formatted_len})"
-        embed.set_author(name=track.author)
-        embed.set_image(url=track.artwork)
-        if self.__player.queue.count > 0:
-            embed.add_field(name="Number in queue", value=self.__player.queue.count)
-        return embed
-
-    async def ensure_voice_connection(self, ctx: FurinaCtx = None) -> Player:
-        ctx = ctx or self.__ctx
-        try:
-            if ctx.guild.voice_client:
-                return cast("Player", self.__ctx.guild.voice_client)
-            channel = ctx.author.voice.channel if isinstance(
-                ctx,
-                FurinaCtx
-            ) else ctx.user.voice.channel
-            return await channel.connect(cls=Player, self_deaf=True)
-        except wavelink.exceptions.ChannelTimeoutException:
-            await ctx.channel.send("Bot cannot connect to the channel...", delete_after=10.0)
-
-
-class SelectTrackView(ui.View):
-    def __init__(self, yt_tracks: list[Playable], sc_tracks: list[Playable]) -> None:
-        super().__init__(timeout=180)
-        self.message: Message | None = None
-        self.add_item(SelectTrack(yt_tracks, placeholder="YouTube"))
-        self.add_item(SelectTrack(sc_tracks, placeholder="SoundCloud"))
-
-    async def on_timeout(self) -> None:
-        self.stop()
-        for child in self.children:
-            child.disabled = True
-        if self.message:
-            await self.message.edit(view=self)
-
-
-class SelectTrack(ui.Select):
-    def __init__(self, tracks: list[Playable], *, placeholder: str) -> None:
-        super().__init__(
-            placeholder=placeholder,
-            options=[]
+    async def connect(
+        self, *, timeout: float, reconnect: bool, self_deaf: bool = False, self_mute: bool = False
+    ) -> None:
+        """
+        Connect the bot to the voice channel and create a player_manager
+        if it doesn't exist yet.
+        """
+        # ensure there is a player_manager when creating a new voice_client
+        self.lavalink.player_manager.create(guild_id=self.channel.guild.id)
+        await self.channel.guild.change_voice_state(
+            channel=self.channel, self_mute=self_mute, self_deaf=self_deaf
         )
-        self.tracks = tracks
 
-        for i, track in enumerate(tracks):
-            track = TrackUtils(track)  # noqa: PLW2901
-            self.options.append(
-                discord.SelectOption(
-                    label=f"{track.shortened_name} ({track.formatted_len})",
-                    value=str(i)
-                )
-            )
+    async def disconnect(self, *, force: bool = False) -> None:
+        """
+        Handles the disconnect.
+        Cleans up running player and leaves the voice client.
+        """
+        player: lavalink.DefaultPlayer = self.lavalink.player_manager.get(self.channel.guild.id)
 
-    async def callback(self, interaction: Interaction) -> None:
-        await interaction.response.defer()
-        self.view.message = None
-        await PlayerUtils().play(interaction, self.tracks[int(self.values[0])].uri)
+        # no need to disconnect if we are not connected
+        if not force and not player.is_connected:
+            return
+
+        # None means disconnect
+        await self.channel.guild.change_voice_state(channel=None)
+
+        # update the channel_id of the player to None
+        # this must be done because the on_voice_state_update that would set channel_id
+        # to None doesn't get dispatched after the disconnect
+        player.channel_id = None
+        await self._destroy()
+
+    async def _destroy(self) -> None:
+        self.cleanup()
+
+        if self._destroyed:
+            # Idempotency handling, if `disconnect()` is called, the changed voice state
+            # could cause this to run a second time.
+            return
+
+        self._destroyed = True
+
+        try:
+            await self.lavalink.player_manager.destroy(self.guild_id)
+        except ClientError:
+            pass
 
 
-class LoopView(ui.View):
-    def __init__(self, *, player: Player) -> None:
-        super().__init__(timeout=60)
-        self.player = player
-        if self.player.queue.mode == QueueMode.normal:
-            self.loop_off.style = ButtonStyle.green
-        elif self.player.queue.mode == QueueMode.loop:
-            self.loop_current.style = ButtonStyle.green
-        else:
-            self.loop_all.style = ButtonStyle.green
+def track_len_to_string(track: lavalink.AudioTrack) -> str:
+    mins, secs = divmod(track.duration // 1000, 60)
+    return f"{mins:02d}:{secs:02d}"
 
-    @ui.button(emoji="\U0000274e", style=ButtonStyle.grey)
-    async def loop_off(self, interaction: Interaction, button: ui.Button) -> None:
-        await interaction.response.defer()
-        self.player.queue.mode = QueueMode.normal
-        await self.mass_button_style_change(button)
 
-    @ui.button(emoji="\U0001f502", style=ButtonStyle.grey)
-    async def loop_current(self, interaction: Interaction, button: ui.Button) -> None:
-        await interaction.response.defer()
-        self.player.queue.mode = QueueMode.loop_all
-        await self.mass_button_style_change(button)
+async def create_player_check(ctx: FurinaCtx) -> bool:
+    """A check to see if we need to create a player"""
+    if not ctx.guild:
+        raise commands.CommandInvokeError("""You can't use this command in DM""")
 
-    @ui.button(emoji="\U0001f501", style=ButtonStyle.grey)
-    async def loop_all(self, interaction: Interaction, button: ui.Button) -> None:
-        await interaction.response.defer()
-        self.player.queue.mode = QueueMode.loop
-        await self.mass_button_style_change(button)
+    player: lavalink.DefaultPlayer = ctx.bot.lavalink.player_manager.create(ctx.guild.id)
 
-    async def mass_button_style_change(self, button: ui.Button) -> None:
-        for child in self.children:
-            if child == button:
-                child.style = ButtonStyle.green
-            else:
-                child.style = ButtonStyle.grey
-        await self.message.edit(view=self)
+    should_connect = ctx.command.name in ("play",)
 
-    async def on_timeout(self) -> None:
-        for child in self.children:
-            child.disabled = True
-        await self.message.edit(view=self)
+    voice_client = ctx.voice_client
+
+    if not ctx.author.voice or not ctx.author.voice.channel:
+        # Check if we're in a voice channel. If we are, tell the user to join our voice channel.
+        if voice_client is not None:
+            raise commands.CommandInvokeError("""You need to join my voice channel first.""")
+
+        # Otherwise, tell them to join any voice channel to begin playing music.
+        raise commands.CommandInvokeError("""You are not in any voice channel.""")
+
+    voice_channel = ctx.author.voice.channel
+
+    if voice_client is None:
+        if not should_connect:
+            raise commands.CommandInvokeError("I'm not playing music.")
+
+        permissions = voice_channel.permissions_for(ctx.me)
+
+        if not permissions.connect or not permissions.speak:
+            raise commands.CommandInvokeError("I need the `CONNECT` and `SPEAK` permissions.")
+
+        if (
+            voice_channel.user_limit > 0
+            and len(voice_channel.members) >= voice_channel.user_limit
+            and not ctx.me.guild_permissions.move_members
+        ):
+            raise commands.CommandInvokeError("Your voice channel is full!")
+
+        player.store("channel", ctx.channel.id)
+        await ctx.author.voice.channel.connect(cls=VoiceProtocol)
+    elif voice_client.channel.id != voice_channel.id:
+        raise commands.CommandInvokeError("You need to be in my voicechannel.")
+
+    return True
 
 
 class Music(FurinaCog):
     """Music Related Commands"""
+
     def __init__(self, bot: FurinaBot) -> None:
         super().__init__(bot)
         self.webhook = discord.SyncWebhook.from_url(settings.MUSIC_WEBHOOK)
+
+        self.lavalink: lavalink.Client = bot.lavalink
+        self.lavalink.add_event_hooks(self)
 
     @property
     def embed(self) -> Embed:
         return self.bot.embed
 
-    async def cog_load(self) -> None:
-        if not self.bot.skip_lavalink:
-            await asyncio.sleep(30)
-            await self.refresh_node_connection()
-        await super().cog_load()
-
     async def cog_check(self, ctx: FurinaCtx) -> bool:
-        if ctx.guild.id != settings.GUILD_SPECIFIC:
-            return False
         embed = ctx.embed
         embed.color = Color.red()
         embed.title = "Error"
@@ -306,27 +190,13 @@ class Music(FurinaCog):
             await ctx.reply(embed=embed, ephemeral=True, delete_after=10)
             return False
         if not self._is_in_same_channel(ctx):
-            embed.description = (f"You and {ctx.me.mention} are not in the same voice channel.\n"
-                                 f"{ctx.me.mention} is in {ctx.guild.me.voice.channel.mention}")
+            embed.description = (
+                f"You and {ctx.me.mention} are not in the same voice channel.\n"
+                f"{ctx.me.mention} is in {ctx.guild.me.voice.channel.mention}"
+            )
             await ctx.reply(embed=embed, ephemeral=True, delete_after=10)
             return False
         return True
-
-    async def refresh_node_connection(self) -> None:
-        try:
-            Pool.get_node()
-        except wavelink.InvalidNodeException:
-            await Pool.close()
-            node = Node(uri=settings.LAVA_URI,
-                        password=settings.LAVA_PW,
-                        heartbeat=5.0,
-                        inactive_player_timeout=None,
-                        retries=3)
-            try:
-                await Pool.connect(client=self.bot, nodes=[node])
-                logging.info("Connected to %s", node.uri)
-            except wavelink.NodeException:
-                logging.exception("Failed to connect to %s", node.uri)
 
     @staticmethod
     def _is_connected(ctx: FurinaCtx) -> bool:
@@ -347,200 +217,116 @@ class Music(FurinaCog):
             return True
         return bot_connected.channel.id == ctx.author.voice.channel.id
 
-    @commands.Cog.listener()
-    async def on_wavelink_track_end(self, payload: TrackEndEventPayload) -> None:
-        """Xử lý khi bài hát kết thúc."""
-        player: Player = payload.player
-        if not player:
-            return
-        if player.autoplay == AutoPlayMode.enabled:
-            return
-        if hasattr(player, "queue") and not player.queue.is_empty:
-            await player.play(player.queue.get())
-        else:
-            embed = self.embed
-            embed.title = "Queue is empty"
-            self.webhook.send(embed=embed)
-
-    @commands.Cog.listener()
-    async def on_wavelink_track_start(self, payload: TrackStartEventPayload) -> None:
+    @lavalink.listener(TrackStartEvent)
+    async def on_track_start(self, event: TrackStartEvent) -> None:
         """Sends an embed notify the track started playing"""
-        track: Playable = payload.track
+        guild_id = event.player.guild_id
+        guild = self.bot.get_guild(guild_id)
+
+        if not guild:
+            await self.lavalink.player_manager.destroy(guild_id)
+            return
+
+        track: lavalink.AudioTrack = event.track
         embed = self.embed
-        embed.title = f"Playing: **{track}**"
+        embed.title = f"Playing: **{track.title}**"
         embed.url = track.uri
         embed.set_author(name=track.author, icon_url=settings.PLAYING_GIF)
-        embed.set_thumbnail(url=track.artwork)
+        embed.set_thumbnail(url=track.artwork_url)
         self.webhook.send(embed=embed)
 
-    @commands.Cog.listener()
-    async def on_wavelink_track_exception(self, payload: TrackExceptionEventPayload) -> None:
-        """Sends an embed notify an exception occured while playing"""
-        embed = self.embed
-        embed.title = "Error"
-        embed.description = (f"An error occured while playing {payload.track.title}\n"
-                             f"Detailed error:\n"
-                             f"```\n"
-                             f"{payload.exception}\n"
-                             f"```")
-        self.webhook.send(embed=embed)
-        logging.exception("An error occured while playing %s\n%s", payload.track, payload.exception)
+    @commands.command(aliases=["p1"])
+    @commands.check(create_player_check)
+    async def play1(self, ctx: FurinaCtx, *, query: str) -> None:
+        """Searches and plays a song from a given query."""
+        # Get the player for this guild from cache.
+        player: lavalink.DefaultPlayer = self.bot.lavalink.player_manager.get(ctx.guild.id)
+        # Remove leading and trailing <>. <> may be used to suppress embedding links in Discord.
+        query = query.strip("<>")
 
-    @staticmethod
-    def _get_player(ctx: FurinaCtx) -> Player:
-        """Get `wavelink.Player` from ctx"""
-        return cast("Player", ctx.guild.voice_client)
+        # Check if the user input might be a URL. If it isn't, we can Lavalink do a YouTube search for it instead.
+        # SoundCloud searching is possible by prefixing "scsearch:" instead.
+        if not URL_REGEX.match(query):
+            query = f"ytsearch:{query}"
 
-    @commands.hybrid_group(name='play', aliases=['p'], description="Play music")
-    @app_commands.guilds(settings.GUILD_SPECIFIC)
-    async def play_command(self, ctx: FurinaCtx, *, query: str) -> None:
-        """
-        Play music from YouTube. Prefix only
+        # Get the results for the query from Lavalink.
+        results = await player.node.get_tracks(query)
 
-        Parameters
-        -----------
-        query: str
-            - Name or link to the music
-        """
-        await PlayerUtils().play(ctx, query)
+        embed = discord.Embed(color=discord.Color.blurple())
 
-    @play_command.command(name='youtube', aliases=['yt'], description="Phát một bài hát từ YouTube")
-    async def play_yt_command(self, ctx: FurinaCtx, *, query: str) -> None:
-        """
-        Phát một bài hát từ YouTube
-
-        Parameters
-        -----------
-        query: str
-            Tên bài hát hoặc link dẫn đến bài hát
-        """
-        await PlayerUtils().play(ctx, query)
-
-    @play_command.command(name='youtubemusic',
-                          aliases=['ytm'],
-                          description="Phát một bài hát từ YouTube Music")
-    async def play_ytm_command(self, ctx: FurinaCtx, *, query: str) -> None:
-        """
-        Phát một bài hát từ YouTube Music
-
-        Parameters
-        -----------
-        query: str
-            Tên bài hát hoặc link dẫn đến bài hát
-        """
-        await PlayerUtils().play(ctx, query, TrackSource.YouTubeMusic)
-
-    @play_command.command(name='soundcloud',
-                          aliases=['sc'],
-                          description="Phát một bài hát từ SoundCloud")
-    async def play_sc_command(self, ctx: FurinaCtx, *, query: str) -> None:
-        """
-        Phát một bài hát từ SoundCloud
-
-        Parameters
-        -----------
-        query: str
-            Tên bài hát hoặc link dẫn đến bài hát
-        """
-        await PlayerUtils.play(ctx, query, TrackSource.SoundCloud)
-
-    @commands.hybrid_command(name='search', aliases=['s'], description="Tìm kiếm một bài hát.")
-    @app_commands.guilds(settings.GUILD_SPECIFIC)
-    async def search_command(self, ctx: FurinaCtx, *, query: str) -> None:
-        """
-        Tìm kiếm một bài hát.
-
-        Parameters
-        -----------
-        query
-            Tên bài hát cần tìm
-        """
-        await ctx.defer()
-        embed = self.embed
-        embed.description = f"**Đang tìm kiếm:** `{query}`"
-        msg = await ctx.reply(embed=embed)
-        tracks_yt = []
-        for yttrack in YoutubeSearch(query, 5).to_dict():
-            for key, value in yttrack.items():
-                if key == "id":
-                    results = await Playable.search(f"https://youtu.be/{value}")
-                    tracks_yt.append(results[0])
-
-        tracks_sc: wavelink.Search = await Playable.search(query, source=TrackSource.SoundCloud)
-
-        view = SelectTrackView(tracks_yt[:5], tracks_sc[:5])
-        tracks = tracks_yt[:5] + tracks_sc[:5]
-
-        embed = self.embed
-        if not tracks:
-            embed.title = "Error"
-            embed.description = f"No search results for query `{query}`"
-            await msg.edit(embed=embed)
+        # Valid load_types are:
+        #   TRACK    - direct URL to a track
+        #   PLAYLIST - direct URL to playlist
+        #   SEARCH   - query prefixed with either "ytsearch:" or "scsearch:".
+        #                  This could possibly be expanded with plugins.
+        #   EMPTY    - no results for the query (result.tracks will be empty)
+        #   ERROR    - the track encountered an exception during loading
+        if results.load_type == LoadType.EMPTY:
+            await ctx.send("I couldn'\t find any tracks for that query.")
             return
-        embed.title = f"Search results for query `{query}`"
-        await msg.edit(embed=embed, view=view)
+        if results.load_type == LoadType.PLAYLIST:
+            tracks = results.tracks
 
-    @commands.hybrid_command(name='pause', description="Tạm dừng việc phát nhạc")
+            # Add all of the tracks from the playlist to the queue.
+            for track in tracks:
+                # requester isn't necessary but it helps keep track of who queued what.
+                # You can store additional metadata by passing it as a kwarg (i.e. key=value)
+                # Requester can be set with `track.requester = ctx.author.id`.
+                # Any other extra attributes must be set via track.extra.
+                track.extra["requester"] = ctx.author.id
+                player.add(track=track)
+
+            embed.title = "Playlist Enqueued!"
+            embed.description = f"{results.playlist_info.name} - {len(tracks)} tracks"
+        else:
+            track = results.tracks[0]
+            embed.title = "Track Enqueued"
+            embed.description = f"[{track.title}]({track.uri})"
+
+            # requester isn't necessary but it helps keep track of who queued what.
+            # You can store additional metadata by passing it as a kwarg (i.e. key=value)
+            # Requester can be set with `track.requester = ctx.author.id`.
+            # Any other extra attributes must be set via track.extra.
+            track.extra["requester"] = ctx.author.id
+
+            player.add(track=track)
+
+        await ctx.send(embed=embed)
+
+        # We don't want to call .play() if the player is playing as that will effectively skip
+        # the current track.
+        if not player.is_playing:
+            await player.play()
+
+    @commands.hybrid_command(name="pause", description="Tạm dừng việc phát nhạc")
     @app_commands.guilds(settings.GUILD_SPECIFIC)
     async def pause_command(self, ctx: FurinaCtx) -> None:
         """Tạm dừng việc phát nhạc."""
-        player: Player = self._get_player(ctx)
+        player: VoiceProtocol = self._get_player(ctx)
         await player.pause(True)  # noqa: FBT003
         embed = self.embed
         embed.title = "Paused the player"
         embed.description = f"Use `{ctx.prefix}resume` or `/resume` to continue playing"
         await ctx.reply(embed=embed)
 
-    @commands.hybrid_command(name='resume', description="Tiếp tục việc phát nhạc")
+    @commands.hybrid_command(name="resume", description="Tiếp tục việc phát nhạc")
     @app_commands.guilds(settings.GUILD_SPECIFIC)
     async def resume_command(self, ctx: FurinaCtx) -> None:
         """Tiếp tục việc phát nhạc."""
-        player: Player = self._get_player(ctx)
+        player: VoiceProtocol = self._get_player(ctx)
         await player.pause(False)  # noqa: FBT003
         embed = self.embed
         embed.title = "Resumed the player"
         embed.description = f"Use `{ctx.prefix}pause` or `/pause` to pause"
         await ctx.reply(embed=embed)
 
-    @commands.hybrid_group(name='autoplay',
-                           aliases=['auto'],
-                           description="Bật hoặc tắt tự động phát.")
-    @app_commands.guilds(settings.GUILD_SPECIFIC)
-    async def autoplay_switch(self, ctx: FurinaCtx) -> None:
-        """Bật hoặc tắt tự động phát."""
-        player: Player = self._get_player(ctx)
-        if player.autoplay == AutoPlayMode.disabled:
-            switch_to_mode: str = "Enabled"
-            player.autoplay = AutoPlayMode.enabled
-        else:
-            switch_to_mode: str = "Disabled"
-            player.autoplay = AutoPlayMode.disabled
-        embed = self.embed.set_author(name=f"{switch_to_mode} auto play")
-        await ctx.reply(embed=embed)
-
-    @autoplay_switch.command(name='on', description="Bật tính năng tự động phát")
-    async def autoplay_on(self, ctx: FurinaCtx) -> None:
-        """Bật tính năng tự động phát."""
-        player: Player = self._get_player(ctx)
-        player.autoplay = AutoPlayMode.enabled
-        embed = self.embed.set_author(name="Enabled auto play")
-        await ctx.reply(embed=embed)
-
-    @autoplay_switch.command(name='off', description="Tắt tính năng tự động phát")
-    async def autoplay_off(self, ctx: FurinaCtx) -> None:
-        """Tắt tính năng tự động phát."""
-        player: Player = self._get_player(ctx)
-        player.autoplay = AutoPlayMode.disabled
-        embed = self.embed.set_author(name="Disabled auto play")
-        await ctx.reply(embed=embed)
-
-    @commands.hybrid_command(name='nowplaying',
-                             aliases=['np', 'now', 'current'],
-                             description="Đang phát bài gì thế?")
+    @commands.hybrid_command(
+        name="nowplaying", aliases=["np", "now", "current"], description="Đang phát bài gì thế?"
+    )
     @app_commands.guilds(settings.GUILD_SPECIFIC)
     async def nowplaying_command(self, ctx: FurinaCtx) -> None:
         """Xem bài hát đang phát."""
-        player: Player = self._get_player(ctx)
+        player: VoiceProtocol = self._get_player(ctx)
         current = player.current
         embed = ctx.embed
         embed.title = "Now Playing"
@@ -549,15 +335,17 @@ class Music(FurinaCog):
         embed.set_author(icon_url=settings.PLAYING_GIF, name=current.author)
         embed.set_image(url=current.artwork)
         played = int((player.position / current.length) * 20)
-        embed.description += ('▰' * played + '▱' * (20 - played))
-        embed.description += f"\n`{TrackUtils.format_len(player.position)} / {TrackUtils(current).formatted_len}`"
+        embed.description += "▰" * played + "▱" * (20 - played)
+        # embed.description += (
+        #     f"\n`{TrackUtils.format_len(player.position)} / {TrackUtils(current).formatted_len}`"
+        # )
         await ctx.reply(embed=embed)
 
-    @commands.hybrid_command(name='skip', description="Bỏ qua bài hát hiện tại.")
+    @commands.hybrid_command(name="skip", description="Bỏ qua bài hát hiện tại.")
     @app_commands.guilds(settings.GUILD_SPECIFIC)
     async def skip_command(self, ctx: FurinaCtx) -> None:
         """Bỏ qua bài hát hiện tại."""
-        player: Player = self._get_player(ctx)
+        player: VoiceProtocol = self._get_player(ctx)
         track = player.current
         if track:
             embed = Embed().set_author(name=f"Đã skip {track}", icon_url=settings.SKIP_EMOJI)
@@ -568,19 +356,20 @@ class Music(FurinaCog):
             embed.description = "Bot is not playing anything"
         await ctx.reply(embed=embed)
 
-    @commands.hybrid_command(name='stop', description="Dừng phát nhạc và xóa hàng chờ")
+    @commands.hybrid_command(name="stop", description="Dừng phát nhạc và xóa hàng chờ")
     @app_commands.guilds(settings.GUILD_SPECIFIC)
     async def stop_playing(self, ctx: FurinaCtx) -> None:
         """Tạm dừng phát nhạc và xóa hàng chờ."""
-        player: Player = self._get_player(ctx)
+        player: VoiceProtocol = self._get_player(ctx)
         player.queue.clear()
-        player.autoplay = AutoPlayMode.disabled
+        # player.autoplay = AutoPlayMode.disabled
         await player.stop(force=True)
-        embed = Embed().set_author(name="Đã dừng phát nhạc và xóa toàn bộ hàng chờ", 
-                                   icon_url=settings.SKIP_EMOJI)
+        embed = Embed().set_author(
+            name="Đã dừng phát nhạc và xóa toàn bộ hàng chờ", icon_url=settings.SKIP_EMOJI
+        )
         await ctx.reply(embed=embed)
 
-    @commands.hybrid_command(name='queue', aliases=['q'], description="Xem chi tiết hàng chờ.")
+    @commands.hybrid_command(name="queue", aliases=["q"], description="Xem chi tiết hàng chờ.")
     @app_commands.guilds(settings.GUILD_SPECIFIC)
     async def queue_command(self, ctx: FurinaCtx) -> None:
         """Show hàng chờ."""
@@ -594,40 +383,40 @@ class Music(FurinaCog):
         view = PaginatedView(timeout=60, embeds=embeds)
         view.message = await ctx.reply(embed=embeds[0], view=view)
 
-    def _queue_embeds(self, ctx: FurinaCtx) -> list[Embed] | Embed:
-        player: Player = self._get_player(ctx)
-        if player.queue.is_empty:
-            embed = self.embed
-            embed.title = "Queue is empty"
-            return embed
-        queue_embeds: list[Embed] = []
-        q: str = ""
-        for i, track in enumerate(player.queue, 1):
-            q += f"{i}. [**{track}**](<{track.uri}>) ({TrackUtils(track).formatted_len})\n"
-            if i % 10 == 0:
-                embed = self._create_queue_embed(player, q)
-                queue_embeds.append(embed)
-                q = ""
-        if q:
-            embed = self._create_queue_embed(player, q)
-            queue_embeds.append(embed)
-        return queue_embeds
+    # def _queue_embeds(self, ctx: FurinaCtx) -> list[Embed] | Embed:
+    #     player: VoiceProtocol = self._get_player(ctx)
+    #     if player.queue.is_empty:
+    #         embed = self.embed
+    #         embed.title = "Queue is empty"
+    #         return embed
+    #     queue_embeds: list[Embed] = []
+    #     q: str = ""
+    #     for i, track in enumerate(player.queue, 1):
+    #         q += f"{i}. [**{track}**](<{track.uri}>) ({TrackUtils(track).formatted_len})\n"
+    #         if i % 10 == 0:
+    #             embed = self._create_queue_embed(player, q)
+    #             queue_embeds.append(embed)
+    #             q = ""
+    #     if q:
+    #         embed = self._create_queue_embed(player, q)
+    #         queue_embeds.append(embed)
+    #     return queue_embeds
 
-    def _create_queue_embed(self, player: Player, q: str) -> Embed:
-        embed = self.embed
-        embed.color = Color.blue()
-        embed.title = f"Queued: {player.queue.count} tracks"
-        embed.description = q
+    # def _create_queue_embed(self, player: VoiceProtocol, q: str) -> Embed:
+    #     embed = self.embed
+    #     embed.color = Color.blue()
+    #     embed.title = f"Queued: {player.queue.count} tracks"
+    #     embed.description = q
 
-        if player.playing:
-            track = player.current
-            embed.add_field(
-                name="Playing",
-                value=f"[**{track}**](<{track.uri}>) ({TrackUtils(track).formatted_len})"
-            )
-        return embed
+    #     if player.playing:
+    #         track = player.current
+    #         embed.add_field(
+    #             name="Playing",
+    #             value=f"[**{track}**](<{track.uri}>) ({TrackUtils(track).formatted_len})",
+    #         )
+    #     return embed
 
-    @app_commands.command(name='remove', description="Xóa một bài hát khỏi hàng chờ")
+    @app_commands.command(name="remove", description="Xóa một bài hát khỏi hàng chờ")
     @app_commands.guilds(settings.GUILD_SPECIFIC)
     async def remove_slashcommand(self, interaction: Interaction, track_name: str) -> None:
         """
@@ -638,43 +427,43 @@ class Music(FurinaCog):
         track_name
             Tên bài hát cần xóa
         """
-        player: Player = self._get_player(interaction)
+        player: VoiceProtocol = self._get_player(interaction)
         player.queue.remove(track for track in player.queue if track.title == track_name)
         deleted: str = track_name
 
-        await interaction.response.send_message(embed=Embed(title=f"Đã xóa {deleted} khỏi hàng chờ."))
+        await interaction.response.send_message(
+            embed=Embed(title=f"Đã xóa {deleted} khỏi hàng chờ.")
+        )
 
     @remove_slashcommand.autocomplete("track_name")
-    async def remove_slashcommand_autocomplete(self, interaction: Interaction, current: str) -> list[app_commands.Choice]:
-        player: Player = self._get_player(interaction)
-        return [app_commands.Choice(name=track.title, value=track.title) for track in player.queue if current.lower() in track.title.lower()][:25]
+    async def remove_slashcommand_autocomplete(
+        self, interaction: Interaction, current: str
+    ) -> list[app_commands.Choice]:
+        player: VoiceProtocol = self._get_player(interaction)
+        return [
+            app_commands.Choice(name=track.title, value=track.title)
+            for track in player.queue
+            if current.lower() in track.title.lower()
+        ][:25]
 
-    @commands.command(name='remove', aliases=['rm', 'delete'], description="Xóa một bài hát khỏi hàng chờ")
-    async def remove_prefixcommand(self, ctx: FurinaCtx) -> None:
-        player: Player = self._get_player(ctx)
-        if player.queue.is_empty:
-            return
-        track_index = player.queue.count - 1
-        deleted: Playable = player.queue[track_index]
-        del player.queue[track_index]
-        await ctx.reply(embed=Embed(title=f"Đã xóa {deleted} khỏi hàng chờ."))
-        await self._show_queue(ctx)
+    # @commands.command(
+    #     name="remove", aliases=["rm", "delete"], description="Xóa một bài hát khỏi hàng chờ"
+    # )
+    # async def remove_prefixcommand(self, ctx: FurinaCtx) -> None:
+    #     player: VoiceProtocol = self._get_player(ctx)
+    #     if player.queue.is_empty:
+    #         return
+    #     track_index = player.queue.count - 1
+    #     deleted: Playable = player.queue[track_index]
+    #     del player.queue[track_index]
+    #     await ctx.reply(embed=Embed(title=f"Đã xóa {deleted} khỏi hàng chờ."))
+    #     await self._show_queue(ctx)
 
-    @commands.hybrid_command(name='loop', aliases=['repeat'], description="Chuyển đổi giữa các chế độ lặp")
-    @app_commands.guilds(settings.GUILD_SPECIFIC)
-    async def loop_command(self, ctx: FurinaCtx) -> None:
-        player: Player = self._get_player(ctx)
-        view = LoopView(player=player)
-        view.message = await ctx.reply(view=view)
-
-    @commands.hybrid_command(name='connect', aliases=['j', 'join'], description="Kết nối bot vào kênh thoại")
-    @app_commands.guilds(settings.GUILD_SPECIFIC)
-    async def connect_command(self, ctx: FurinaCtx) -> None:
-        """Gọi bot vào kênh thoại"""
-        await PlayerUtils().ensure_voice_connection(ctx)
-        await ctx.tick()
-
-    @commands.hybrid_command(name='disconnect', aliases=['dc', 'leave', 'l'], description="Ngắt kết nối bot khỏi kênh thoại")
+    @commands.hybrid_command(
+        name="disconnect",
+        aliases=["dc", "leave", "l"],
+        description="Ngắt kết nối bot khỏi kênh thoại",
+    )
     @app_commands.guilds(settings.GUILD_SPECIFIC)
     async def disconnect_command(self, ctx: FurinaCtx) -> None:
         if ctx.voice_client:
