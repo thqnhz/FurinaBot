@@ -114,11 +114,6 @@ class FurinaBot(commands.Bot):
         self.app_command_cache = defaultdict(list)
 
     @property
-    def container(self) -> Container:
-        """Container with default 'footer'"""
-        return Container()
-
-    @property
     def embed(self) -> discord.Embed:
         """Embed with default footer"""
         return discord.Embed().set_footer(text="Coded by ThanhZ")
@@ -173,9 +168,7 @@ class FurinaBot(commands.Bot):
             [(guild.id,) for guild in self.guilds],
         )
         self._startup: datetime = utils.utcnow()
-        container = self.container
-        container.add_item(ui.TextDisplay("### BOT IS READY!"))
-        view = LayoutView().add_item(container)
+        view = LayoutView(Container(ui.TextDisplay("### BOT IS READY!")))
         webhook = discord.Webhook.from_url(settings.DEBUG_WEBHOOK, client=self)
         message = await webhook.send(
             view=view,
@@ -184,7 +177,7 @@ class FurinaBot(commands.Bot):
             silent=True,
             wait=True,
         )
-        await asyncio.sleep(30)
+        await asyncio.sleep(10)
         await message.delete()
 
     async def setup_hook(self) -> None:
@@ -232,8 +225,3 @@ class FurinaCog(commands.Cog):
     def embed(self) -> discord.Embed:
         """Shortcut for `FurinaBot.embed`"""
         return self.bot.embed
-
-    @property
-    def container(self) -> Container:
-        """Shortcut for `FurinaBot.container`"""
-        return self.bot.container
