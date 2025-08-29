@@ -25,7 +25,6 @@ from core import FurinaCog, FurinaCtx
 from core.views import LayoutView
 
 if TYPE_CHECKING:
-
     from core import FurinaBot
 
 
@@ -35,11 +34,12 @@ class NotFoundError(Exception):
 
 class Gacha(FurinaCog):
     """Gacha Related Commands"""
+
     def __init__(self, bot: FurinaBot) -> None:
         super().__init__(bot)
         self.gi = enka.GenshinClient()
         self.hsr = enka.HSRClient()
-        
+
     @property
     def embed(self) -> discord.Embed:
         """Shortcut for `FurinaBot.embed`, with extra footer"""
@@ -47,7 +47,7 @@ class Gacha(FurinaCog):
 
     async def set_uid(self, sql: str, user_id: int, uid: str) -> None:
         """Insert a user's UID with provided game to the database
-        
+
         Parameters
         ----------
         sql : :class:`str`
@@ -61,7 +61,7 @@ class Gacha(FurinaCog):
 
     async def get_uid(self, sql: str, user_id: int) -> str:
         """Get a user's UID from the database
-        
+
         Parameters
         ----------
         sql : :class:`str`
@@ -81,7 +81,7 @@ class Gacha(FurinaCog):
         """
         return await self.pool.fetchval(sql, user_id)
 
-    @commands.hybrid_group(name='gi', fallback='get')
+    @commands.hybrid_group(name="gi", fallback="get")
     async def gi_group(self, ctx: FurinaCtx, uid: str | None = None) -> None:
         """Get Genshin Impact user info
 
@@ -113,16 +113,16 @@ class Gacha(FurinaCog):
                 f"**Achievements:** `{p_info.achievements}`\n"
                 f"**Abyss Floor:** `{abyss}`"
             ),
-            accessory=ui.Thumbnail(p_info.profile_picture_icon.circle)
+            accessory=ui.Thumbnail(p_info.profile_picture_icon.circle),
         )
         container.add_item(header)
         container.add_item(ui.Separator())
         await ctx.reply(view=LayoutView().add_item(container))
 
-    @gi_group.command(name='set')
+    @gi_group.command(name="set")
     async def set_uid_gi(self, ctx: FurinaCtx, *, uid: str) -> None:
         """Set your Genshin Impact UID
-        
+
         Set your Genshin Impact UID to be used in the `/gi get` command.
 
         Parameters
@@ -133,13 +133,11 @@ class Gacha(FurinaCog):
         async with self.gi as api:
             await api.fetch_showcase(uid, info_only=True)
         await self.set_uid(
-            "INSERT OR REPLACE INTO gi_uid (user_id, uid) VALUES (?, ?)",
-            ctx.author.id, 
-            uid
+            "INSERT OR REPLACE INTO gi_uid (user_id, uid) VALUES (?, ?)", ctx.author.id, uid
         )
         await ctx.reply("Your GI UID has been set to: " + uid)
 
-    @commands.hybrid_group(name='hsr', fallback='get')
+    @commands.hybrid_group(name="hsr", fallback="get")
     async def hsr_group(self, ctx: FurinaCtx, uid: str | None = None) -> None:
         """Get HSR Impact user info
 
@@ -162,20 +160,21 @@ class Gacha(FurinaCog):
         embed = self.embed
         embed.title = f"{p_info.nickname}"
         embed.set_author(name=uid, icon_url=p_info.icon)
-        embed.description = (f"> {p_info.signature}\n"
-                             f"**Trailblaze Level:** `{p_info.level}`\n"
-                             f"**Equilibrium Level:** `{p_info.equilibrium_level}`\n"
-                             f"**Stats:**\n"
-                             f">>> **Achievements**: `{p_stats.achievement_count}`\n"
-                             f"**Characters**: `{p_stats.character_count}`\n"
-                             f"**Lightcones**: `{p_stats.light_cone_count}`"
+        embed.description = (
+            f"> {p_info.signature}\n"
+            f"**Trailblaze Level:** `{p_info.level}`\n"
+            f"**Equilibrium Level:** `{p_info.equilibrium_level}`\n"
+            f"**Stats:**\n"
+            f">>> **Achievements**: `{p_stats.achievement_count}`\n"
+            f"**Characters**: `{p_stats.character_count}`\n"
+            f"**Lightcones**: `{p_stats.light_cone_count}`"
         )
         await ctx.reply(embed=embed)
 
-    @hsr_group.command(name='set', description='Set your UID')
+    @hsr_group.command(name="set", description="Set your UID")
     async def set_uid_hsr(self, ctx: FurinaCtx, *, uid: str) -> None:
         """Set your HSR Impact UID
-        
+
         Set your HSR UID to be used in the `/hsr get` command.
 
         Parameters
@@ -186,9 +185,7 @@ class Gacha(FurinaCog):
         async with self.hsr as api:
             await api.fetch_showcase(uid, info_only=True)
         await self.set_uid(
-            "INSERT OR REPLACE INTO hsr_uid (user_id, uid) VALUES (?, ?)", 
-            ctx.author.id, 
-            uid
+            "INSERT OR REPLACE INTO hsr_uid (user_id, uid) VALUES (?, ?)", ctx.author.id, uid
         )
         await ctx.reply("Your HSR UID has been set to: " + uid)
 

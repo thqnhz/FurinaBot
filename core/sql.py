@@ -137,6 +137,7 @@ TAG_ALIASES_SQL = """
 
 class SQL:
     """A wrapper to a wrapper of asqlite"""
+
     def __init__(self, pool: asqlite.Pool) -> None:
         self.pool = pool
         self.create_table_queries = [
@@ -148,7 +149,7 @@ class SQL:
             GI_UID_SQL,
             HSR_UID_SQL,
             SINGLEPLAYER_GAMES_SQL,
-            TWOPLAYER_GAMES_SQL
+            TWOPLAYER_GAMES_SQL,
         ]
 
     async def create_tables(self) -> None:
@@ -180,8 +181,7 @@ class SQL:
 
 class TagSQL(SQL):
     """A wrapper to a wrapper of asqlite for tags"""
+
     def __init__(self, pool: asqlite.Pool) -> None:
         self.pool = pool
         self.create_table_queries = [TAGS_SQL, TAG_ALIASES_SQL]
-
-    

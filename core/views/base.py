@@ -22,6 +22,7 @@ from .errors import UIElementOnCoolDownError
 
 class View(ui.View):
     """A View that auto disable children when timed out"""
+
     def __init__(self, *, timeout: float = 180) -> None:
         super().__init__(timeout=timeout)
         self.message: Message
@@ -60,6 +61,7 @@ class LayoutView(ui.LayoutView):
     A :class:`discord.ui.LayoutView` that auto disable its children when timed out
     and has per user rate limit
     """
+
     def __init__(self, *, timeout: float = 180) -> None:
         super().__init__(timeout=timeout)
         self.cd = CooldownMapping.from_cooldown(rate=1, per=1, type=self.key)
@@ -90,4 +92,3 @@ class LayoutView(ui.LayoutView):
             await self.message.edit(view=self)
         except AttributeError:
             pass
-

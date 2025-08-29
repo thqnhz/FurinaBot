@@ -23,11 +23,11 @@ from platform import python_version
 
 import asqlite
 import discord
+import lavalink
 from discord import app_commands, ui, utils
 from discord.ext import commands
 from discord.ext.commands import errors, when_mentioned_or
 
-import lavalink
 from cogs import EXTENSIONS
 from core import settings
 from core.sql import SQL
@@ -41,8 +41,9 @@ if typing.TYPE_CHECKING:
 
 class FurinaCtx(commands.Context):
     """Custom Context class with some shortcuts"""
+
     bot: FurinaBot
-    
+
     async def tick(self) -> None:
         """React checkmark to the command message"""
         try:
@@ -91,31 +92,18 @@ class FurinaBot(commands.Bot):
 
     DEFAULT_PREFIX: str = settings.DEFAULT_PREFIX
 
-    def __init__(
-        self,
-        *,
-        client_session: aiohttp.ClientSession,
-        skip_lavalink: bool
-    ) -> None:
+    def __init__(self, *, client_session: aiohttp.ClientSession, skip_lavalink: bool) -> None:
         super().__init__(
             command_prefix=self.get_pre,
             case_insensitive=True,
             strip_after_prefix=True,
             intents=discord.Intents.all(),
             help_command=None,
-            allowed_contexts=app_commands.AppCommandContext(
-                dm_channel=False,
-                guild=True
-            ),
-            allowed_mentions=discord.AllowedMentions(
-                everyone=False,
-                roles=False,
-                users=True
-            ),
+            allowed_contexts=app_commands.AppCommandContext(dm_channel=False, guild=True),
+            allowed_mentions=discord.AllowedMentions(everyone=False, roles=False, users=True),
             activity=discord.Activity(
-                type=discord.ActivityType.playing,
-                name=settings.ACTIVITY_NAME
-            )
+                type=discord.ActivityType.playing, name=settings.ACTIVITY_NAME
+            ),
         )
         self.owner_id = settings.OWNER_ID
         self.skip_lavalink = skip_lavalink
@@ -128,9 +116,7 @@ class FurinaBot(commands.Bot):
     @property
     def container(self) -> Container:
         """Container with default 'footer'"""
-        return Container(
-            ui.TextDisplay("-# Coded by ThanhZ", row=39)
-        )
+        return Container(ui.TextDisplay("-# Coded by ThanhZ", row=39))
 
     @property
     def embed(self) -> discord.Embed:
@@ -147,24 +133,20 @@ class FurinaBot(commands.Bot):
     def lavalink(self) -> lavalink.Client:
         if not self._lavalink:
             self._lavalink = lavalink.Client(self.user.id)
-            self._lavalink.add_node(
-                host=settings.LAVA_URI,
-                port=1710,
-                password=settings.LAVA_PW
-            )
+            self._lavalink.add_node(host=settings.LAVA_URI, port=1710, password=settings.LAVA_PW)
         return self._lavalink
 
     async def get_context(
         self,
         message: discord.Message,
         *,
-        cls: FurinaCtx = FurinaCtx  # type: ignore[reportArgumentType]
+        cls: FurinaCtx = FurinaCtx,  # type: ignore[reportArgumentType]
     ) -> FurinaCtx:
         return await super().get_context(message, cls=cls)  # type: ignore[reportArgumentType]
 
     def get_pre(self, _: FurinaBot, message: discord.Message) -> list[str]:
         """Custom `get_prefix` method
-        
+
         Parameters
         ----------
         _ : :class:`FurinaBot`
@@ -188,7 +170,7 @@ class FurinaBot(commands.Bot):
         logging.info("Logged in as %s", self.user.name)
         await self.pool.executemany(
             """INSERT OR REPLACE INTO guilds (id) VALUES (?)""",
-            [(guild.id,) for guild in self.guilds]
+            [(guild.id,) for guild in self.guilds],
         )
         self._startup: datetime = utils.utcnow()
         container = self.container
@@ -200,7 +182,7 @@ class FurinaBot(commands.Bot):
             avatar_url=self.user.display_avatar.url,
             username=self.user.display_name,
             silent=True,
-            wait=True
+            wait=True,
         )
         await asyncio.sleep(30)
         await message.delete()
@@ -211,9 +193,9 @@ class FurinaBot(commands.Bot):
         logging.info("Running Python %s", python_version())
         logging.info("Fetching bot emojis...")
         self.app_emojis: list[discord.Emoji] = await self.fetch_application_emojis()
-        db_path = Path() / 'db'
+        db_path = Path() / "db"
         db_path.mkdir(exist_ok=True)
-        self.pool = SQL(await asqlite.create_pool(Path() / 'db' / 'furina.db'))  # type: ignore[reportArgumentType]
+        self.pool = SQL(await asqlite.create_pool(Path() / "db" / "furina.db"))  # type: ignore[reportArgumentType]
         await self.pool.create_tables()
         await self.__load_extensions()
 
@@ -226,8 +208,7 @@ class FurinaBot(commands.Bot):
                 await self.load_extension(extension)
             except errors.NoEntryPointError:
                 logging.exception(
-                    "Extension %s has no setup function so it cannot be loaded",
-                    extension_name
+                    "Extension %s has no setup function so it cannot be loaded", extension_name
                 )
             except Exception:
                 logging.exception("An error occured when trying to load %s", extension_name)
@@ -238,6 +219,7 @@ class FurinaBot(commands.Bot):
 
 class FurinaCog(commands.Cog):
     """Base class for all cogs"""
+
     def __init__(self, bot: FurinaBot) -> None:
         self.bot = bot
         self.pool: SQL = bot.pool

@@ -20,5 +20,3 @@ from discord.ext.commands import CommandError
 class UIElementOnCoolDownError(CommandError):
     def __init__(self, retry_after: float) -> None:
         self.retry_after = retry_after
-
-

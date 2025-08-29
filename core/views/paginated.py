@@ -77,4 +77,3 @@ class PaginatedView(View):
         self.page = self.length - 1
         self.update_buttons()
         await interaction.edit_original_response(embed=self.embeds[self.page], view=self)
-

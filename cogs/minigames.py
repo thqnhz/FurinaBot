@@ -39,19 +39,13 @@ if TYPE_CHECKING:
 
 
 class RPSButton(ui.Button):
-    LABEL_TO_NUMBER: ClassVar[dict[str, int]] = {
-        "Rock": -1,
-        "Paper": 0,
-        "Scissor": 1
-    }
+    LABEL_TO_NUMBER: ClassVar[dict[str, int]] = {"Rock": -1, "Paper": 0, "Scissor": 1}
     LABELS: ClassVar[list[str]] = ["Rock", "Paper", "Scissor"]
     EMOJIS: ClassVar[list[str]] = ["\u270a", "\u270b", "\u270c"]
 
     def __init__(self, number: int) -> None:
         super().__init__(
-            style=ButtonStyle.secondary,
-            label=self.LABELS[number],
-            emoji=self.EMOJIS[number]
+            style=ButtonStyle.secondary, label=self.LABELS[number], emoji=self.EMOJIS[number]
         )
 
     async def add_player(self, *, view: RPSView, interaction: Interaction) -> int:
@@ -74,9 +68,8 @@ class RPSButton(ui.Button):
 
         if interaction.user in view.players:
             await interaction.response.send_message(
-                "You can't play with yourself!\n"
-                "-# || Or can you? Hello Michael, Vsauce here||",
-                ephemeral=True
+                "You can't play with yourself!\n-# || Or can you? Hello Michael, Vsauce here||",
+                ephemeral=True,
             )
             return
 
@@ -131,9 +124,9 @@ class RPSView(ui.View):
         await self.message.edit(embed=self.embed, view=self)
 
 
-class TicTacToeButton(ui.Button['TicTacToe']):
+class TicTacToeButton(ui.Button["TicTacToe"]):
     def __init__(self, x: int, y: int) -> None:
-        super().__init__(style=ButtonStyle.secondary, label='\u200b', row=y)
+        super().__init__(style=ButtonStyle.secondary, label="\u200b", row=y)
         self.x = x
         self.y = y
 
@@ -145,40 +138,31 @@ class TicTacToeButton(ui.Button['TicTacToe']):
             return
 
         if interaction.user not in view.players:
-            await interaction.response.send_message(
-                "You are not in this game",
-                ephemeral=True
-            )
+            await interaction.response.send_message("You are not in this game", ephemeral=True)
             return
 
         if view.current_player == view.X:
             if interaction.user == view.player_two:
-                await interaction.response.send_message(
-                    "Not your turn yet",
-                    ephemeral=True
-                )
+                await interaction.response.send_message("Not your turn yet", ephemeral=True)
                 return
             if view.player_one is None:
                 view.player_one = interaction.user
                 view.embed.add_field(name="Player 1", value=view.player_one.mention)
             self.style = ButtonStyle.danger
-            self.label = 'X'
+            self.label = "X"
             self.disabled = True
             view.board[self.y][self.x] = view.X
             view.current_player = view.O
             view.embed.set_author(name="O's turn")
         else:
             if interaction.user == view.player_one:
-                await interaction.response.send_message(
-                    "Not your turn yet",
-                    ephemeral=True
-                )
+                await interaction.response.send_message("Not your turn yet", ephemeral=True)
                 return
             if view.player_two is None:
                 view.player_two = interaction.user
                 view.embed.add_field(name="Player 2", value=view.player_two.mention)
             self.style = ButtonStyle.success
-            self.label = 'O'
+            self.label = "O"
             self.disabled = True
             view.board[self.y][self.x] = view.O
             view.current_player = view.X
@@ -285,14 +269,16 @@ class WordleABC(LayoutView):
     ALPHABET: ClassVar[str] = string.ascii_uppercase
     LETTER_INDEX: ClassVar[dict[str, int]] = {letter: i for i, letter in enumerate(ALPHABET)}
 
-    def __init__(self,
-                 *,
-                 bot: FurinaBot,
-                 word: str,
-                 owner: User,
-                 solo: bool,
-                 attempt: int,
-                 pool: asqlite.Pool) -> None:
+    def __init__(
+        self,
+        *,
+        bot: FurinaBot,
+        word: str,
+        owner: User,
+        solo: bool,
+        attempt: int,
+        pool: asqlite.Pool,
+    ) -> None:
         super().__init__(timeout=600)
         self.bot = bot
         self.word = word
@@ -309,7 +295,7 @@ class WordleABC(LayoutView):
         self._container: ui.Container = ui.Container(
             ui.Separator(row=1),
             ui.Separator(row=38),
-            ui.TextDisplay("-# Coded by ThanhZ | v0.4.0-beta", row=39)
+            ui.TextDisplay("-# Coded by ThanhZ | v0.4.0-beta", row=39),
         )
         self.add_item(self.container)
 
@@ -328,7 +314,7 @@ class WordleABC(LayoutView):
                 f"**Attempts left:** `{self.attempt}` {status}"
             ),
             accessory=ui.Thumbnail(self.owner.avatar.url),
-            row=0
+            row=0,
         )
 
     @property
@@ -338,15 +324,11 @@ class WordleABC(LayoutView):
 
     @property
     def availabilities(self) -> str:
-        KEYBOARD_LAYOUT = [
-            'QWERTYUIOP',
-            'ASDFGHJKL',
-            'ZXCVBNM'
-        ]
+        KEYBOARD_LAYOUT = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"]
 
         availabilities = ""
         for tab, row in enumerate(KEYBOARD_LAYOUT):
-            availabilities += ' ' * tab * 2  # half space blank unicode character
+            availabilities += " " * tab * 2  # half space blank unicode character
             for letter in row:
                 letter_index = self.ALPHABET.index(letter)
                 status = self._availability[letter_index]
@@ -359,7 +341,7 @@ class WordleABC(LayoutView):
         return ui.Section(
             ui.TextDisplay(self.availabilities),
             accessory=WordleGuessButton(disabled=self.is_over),
-            row=6
+            row=6,
         )
 
     def get_letter_emoji(self, letter: str, status: WordleLetterStatus) -> str:
@@ -401,9 +383,9 @@ class WordleABC(LayoutView):
             3. Black letters (letter not in word)
             Empty strings ('') represent no letter in that position for that color
         """
-        green_letters: list[str] = [''] * len(self.word)
-        yellow_letters: list[str] = [''] * len(self.word)
-        black_letters: list[str] = [''] * len(self.word)
+        green_letters: list[str] = [""] * len(self.word)
+        yellow_letters: list[str] = [""] * len(self.word)
+        black_letters: list[str] = [""] * len(self.word)
         counter = Counter(self.word)
 
         # Check green letters
@@ -455,14 +437,17 @@ class WordleABC(LayoutView):
 
 class WordleView(WordleABC):
     """Wordle Layout View"""
-    def __init__(self,
-                 *,
-                 bot: FurinaBot,
-                 word: str,
-                 owner: User,
-                 solo: bool,
-                 pool: asqlite.Pool,
-                 word_db: asqlite.Pool) -> None:
+
+    def __init__(
+        self,
+        *,
+        bot: FurinaBot,
+        word: str,
+        owner: User,
+        solo: bool,
+        pool: asqlite.Pool,
+        word_db: asqlite.Pool,
+    ) -> None:
         self.word_db = word_db
 
         self.guesses: dict[str, str] = {}
@@ -480,15 +465,13 @@ class WordleView(WordleABC):
     def guess_display(self) -> ui.TextDisplay:
         if self.history:
             result = [self.guesses[h] for h in self.history]
-            return ui.TextDisplay('\n'.join(result), row=2)
+            return ui.TextDisplay("\n".join(result), row=2)
         return ui.TextDisplay("*No guesses yet*", row=2)
 
     @property
     def over_section(self) -> ui.Section:
         return ui.Section(
-            ui.TextDisplay(f"### The word is: `{self.word}`"),
-            accessory=self._lookup_button,
-            row=3
+            ui.TextDisplay(f"### The word is: `{self.word}`"), accessory=self._lookup_button, row=3
         )
 
     @property
@@ -516,7 +499,7 @@ class WordleView(WordleABC):
             The guessed word
         """
         green_letters, yellow_letters, black_letters = self.check_guess(guess)
-        result = [''] * len(self.word)
+        result = [""] * len(self.word)
         for i in range(len(self.word)):
             letter = None
             status = None
@@ -607,22 +590,19 @@ class WordleGuessButton(ui.Button):
 
 
 class Letterle(WordleABC):
-    def __init__(self,
-                 *,
-                 bot: FurinaBot,
-                 letter: str,
-                 owner: User,
-                 pool: asqlite.Pool) -> None:
-        self.buttons: list[LetterleButton] = \
-            [LetterleButton(self.ALPHABET[i]) for i in range(len(self.ALPHABET))]
+    def __init__(self, *, bot: FurinaBot, letter: str, owner: User, pool: asqlite.Pool) -> None:
+        self.buttons: list[LetterleButton] = [
+            LetterleButton(self.ALPHABET[i]) for i in range(len(self.ALPHABET))
+        ]
         super().__init__(bot=bot, word=letter, owner=owner, solo=True, attempt=25, pool=pool)
 
     @property
     def container(self) -> ui.Container:
         container = ui.Container(
-            *[ui.ActionRow(
-                *self.buttons[i:i + 4], row=2 + i // 4
-            ) for i in range(0, len(self.ALPHABET), 4)]
+            *[
+                ui.ActionRow(*self.buttons[i : i + 4], row=2 + i // 4)
+                for i in range(0, len(self.ALPHABET), 4)
+            ]
         )
         container.add_item(self.header)  # 0
         container.add_item(ui.Separator(row=1))
@@ -640,10 +620,7 @@ class LetterleButton(ui.Button[Letterle]):
 
     async def callback(self, interaction: Interaction) -> None:
         if interaction.user != self.view.owner:
-            await interaction.response.send_message(
-                "You can not play this game",
-                ephemeral=True
-            )
+            await interaction.response.send_message("You can not play this game", ephemeral=True)
             return
         assert self.view is not None
         view: Letterle = self.view
@@ -666,10 +643,7 @@ class WordleModal(ui.Modal):
     def __init__(self, letters: int) -> None:
         super().__init__(timeout=180, title=f"WORDLE ({letters} LETTERS)")
         self.text_input = ui.TextInput(
-            label="Type in your guess",
-            placeholder="...",
-            min_length=letters,
-            max_length=letters
+            label="Type in your guess", placeholder="...", min_length=letters, max_length=letters
         )
         self.add_item(self.text_input)
         self.guess = ""
@@ -695,10 +669,7 @@ class LookUpButton(ui.Button):
 class WordleHelpGuessSelect(ui.Select):
     def __init__(self) -> None:
         super().__init__(
-            placeholder="Select a helped guess",
-            options=[],
-            min_values=1,
-            max_values=1
+            placeholder="Select a helped guess", options=[], min_values=1, max_values=1
         )
         self.guesses: list[str] = []
 
@@ -712,8 +683,7 @@ class WordleHelpGuessSelect(ui.Select):
         view: WordleView = self.view
         if interaction.user != view.owner:
             await interaction.response.send_message(
-                "You can not choose helped guess",
-                ephemeral=True
+                "You can not choose helped guess", ephemeral=True
             )
             return
         await interaction.response.defer()
@@ -736,7 +706,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
 
     async def cog_load(self) -> None:
         self.pool = self.bot.pool
-        self.wordle_db = await asqlite.create_pool(pathlib.Path() / 'db' / 'wordle.db')
+        self.wordle_db = await asqlite.create_pool(pathlib.Path() / "db" / "wordle.db")
         await self.__update_wordle_emojis()
         await self.__create_valid_guess_table()
         logging.info("Cog %s has been loaded", self.__cog_name__)
@@ -766,10 +736,10 @@ class Minigames(commands.GroupCog, group_name="minigame"):
             test = await conn.fetchone("SELECT COUNT(*) FROM valid_word")
             if test[0] != 0:
                 return
-            path = pathlib.Path() / 'assets' / 'valid_guess'
+            path = pathlib.Path() / "assets" / "valid_guess"
             files = path.iterdir()
             for f in files:
-                words = f.open('r').read().split()
+                words = f.open("r").read().split()
                 await conn.executemany(
                     "INSERT INTO valid_word (word) VALUES (?)", [(word,) for word in words]
                 )
@@ -801,7 +771,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
     async def __upload_missing_emojis(self) -> None:
         logging.info("Uploading missing wordle emojis...")
 
-        wordle_letters_path = pathlib.Path() / 'assets' / 'wordle'
+        wordle_letters_path = pathlib.Path() / "assets" / "wordle"
         filenames = wordle_letters_path.iterdir()
         for _, filename in enumerate(tqdm(filenames, desc="Uploading", unit=" emojis"), 1):
             file = (wordle_letters_path / filename).read_bytes()
@@ -817,27 +787,25 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         await self.__update_wordle_emojis()
         return
 
-    @commands.hybrid_command(name='tictactoe', aliases=['ttt', 'xo'], description="XO minigame")
+    @commands.hybrid_command(name="tictactoe", aliases=["ttt", "xo"], description="XO minigame")
     @app_commands.allowed_installs(guilds=True, users=True)
     async def tic_tac_toe(self, ctx: FurinaCtx) -> None:
         view = TicTacToe()
         view.message = await ctx.reply(embed=view.embed, view=view)
 
-    @commands.hybrid_command(name='rockpaperscissor',
-                             aliases=['keobuabao'],
-                             description="Rock Paper Scissor minigame")
+    @commands.hybrid_command(
+        name="rockpaperscissor", aliases=["keobuabao"], description="Rock Paper Scissor minigame"
+    )
     @app_commands.allowed_installs(guilds=True, users=True)
     async def rps_command(self, ctx: FurinaCtx) -> None:
         view = RPSView()
         view.message = await ctx.reply(embed=view.embed, view=view)
 
-    @commands.hybrid_command(name='wordle')
+    @commands.hybrid_command(name="wordle")
     @app_commands.allowed_installs(guilds=True, users=True)
-    async def wordle(self,
-                     ctx: FurinaCtx,
-                     letters: app_commands.Range[int, 3, 8] = 5,
-                     *,
-                     solo: bool = True) -> None:
+    async def wordle(
+        self, ctx: FurinaCtx, letters: app_commands.Range[int, 3, 8] = 5, *, solo: bool = True
+    ) -> None:
         """Wordle minigame
 
         A game where you have 6 guesses and a word to guess.
@@ -862,11 +830,11 @@ class Minigames(commands.GroupCog, group_name="minigame"):
             owner=ctx.author,
             solo=solo,
             pool=self.pool,
-            word_db=self.wordle_db
+            word_db=self.wordle_db,
         )
         view.message = await ctx.send(view=view)
 
-    @commands.hybrid_command(name='letterle')
+    @commands.hybrid_command(name="letterle")
     @app_commands.allowed_installs(guilds=True, users=True)
     async def letterle(self, ctx: FurinaCtx) -> None:
         """Letterle minigame
@@ -877,15 +845,12 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         await ctx.defer()
         rng = np.random.default_rng()
         letter = Letterle.ALPHABET[rng.integers(0, 26)]
-        view = Letterle(bot=self.bot,
-                        letter=letter,
-                        owner=ctx.author,
-                        pool=self.pool)
+        view = Letterle(bot=self.bot, letter=letter, owner=ctx.author, pool=self.pool)
         view.message = await ctx.send(view=view)
 
-    stats = app_commands.Group(name='stats', description="Minigames stats")
+    stats = app_commands.Group(name="stats", description="Minigames stats")
 
-    @stats.command(name='all', description="View all minigames stats")
+    @stats.command(name="all", description="View all minigames stats")
     @app_commands.allowed_installs(guilds=True, users=True)
     async def minigame_stats_all(self, interaction: Interaction) -> None:
         await interaction.response.defer()
@@ -918,14 +883,12 @@ class Minigames(commands.GroupCog, group_name="minigame"):
                     rank <= 3
                 ORDER BY
                     game_name, rank;
-                """)
+                """
+            )
         sorted_by_minigame: dict[str, list[dict[str, int]]] = {}
         for row in rows:
-            minigame = row['game_name']
-            user_stats = {
-                'user_id': row['user_id'],
-                'wins': row['wins']
-            }
+            minigame = row["game_name"]
+            user_stats = {"user_id": row["user_id"], "wins": row["wins"]}
             if minigame not in sorted_by_minigame:
                 sorted_by_minigame[minigame] = []
             sorted_by_minigame[minigame].append(user_stats)
@@ -943,7 +906,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         await interaction.followup.send(embed=view.embeds[0], view=view)
         view.message = await interaction.original_response()
 
-    @stats.command(name='user')
+    @stats.command(name="user")
     @app_commands.allowed_installs(guilds=True, users=True)
     async def minigame_stats_user(self, interaction: Interaction, user: User = None) -> None:
         """View a specific user's minigame stats
@@ -971,24 +934,30 @@ class Minigames(commands.GroupCog, group_name="minigame"):
                     game_name
                 ORDER BY
                     game_name;
-                """, user.id)
+                """,
+                user.id,
+            )
         embed = self.bot.embed
         embed.title = "Minigame Stats"
         embed.description = f"User: {user.mention}"
         for row in rows:
-            embed.add_field(name=row['game_name'].capitalize(),
-                            value=(f"Total games played: `{row['total_games']:04d}`\n"
-                                    "Wins: `{row['wins']:04d}`\nLosses: `{row['losses']:04d}`"),
-                            inline=False)
+            embed.add_field(
+                name=row["game_name"].capitalize(),
+                value=(
+                    f"Total games played: `{row['total_games']:04d}`\n"
+                    "Wins: `{row['wins']:04d}`\nLosses: `{row['losses']:04d}`"
+                ),
+                inline=False,
+            )
         await interaction.followup.send(embed=embed)
 
-    @stats.command(name='wordle', description="View wordle minigame stats")
+    @stats.command(name="wordle", description="View wordle minigame stats")
     @app_commands.allowed_installs(guilds=True, users=True)
     async def minigame_stats_wordle(self, interaction: Interaction) -> None:
         """View wordle minigame stats"""
         await self.get_minigame_stats(interaction, "wordle")
 
-    @stats.command(name='letterle', description="View letterle minigame stats")
+    @stats.command(name="letterle", description="View letterle minigame stats")
     @app_commands.allowed_installs(guilds=True, users=True)
     async def minigame_stats_letterle(self, interaction: Interaction) -> None:
         """View letterle minigame stats"""
@@ -1019,7 +988,9 @@ class Minigames(commands.GroupCog, group_name="minigame"):
                     win_percentage DESC,
                     total_games DESC
                 LIMIT 3
-                """, minigame)
+                """,
+                minigame,
+            )
             rows_bottom = await conn.fetchall(
                 """
                 SELECT
@@ -1042,7 +1013,9 @@ class Minigames(commands.GroupCog, group_name="minigame"):
                     win_percentage ASC,
                     total_games DESC
                 LIMIT 3
-                """, minigame)
+                """,
+                minigame,
+            )
         embed = self.bot.embed
         embed.title = f"{minigame.capitalize()} Minigame Stats"
         top_players = ""

@@ -33,7 +33,7 @@ async def main(*, skip_ll: bool) -> None:
     utils.setup_logging()
     async with (
         ClientSession() as client_session,
-        FurinaBot(client_session=client_session, skip_lavalink=skip_ll) as bot
+        FurinaBot(client_session=client_session, skip_lavalink=skip_ll) as bot,
     ):
         if not skip_ll:
             with Lavalink().start():

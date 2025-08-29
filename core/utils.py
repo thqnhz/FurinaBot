@@ -31,26 +31,42 @@ if TYPE_CHECKING:
     from aiohttp import ClientSession
 
 
-URL_REGEX = re.compile(r'https?://(?:www\.)?.+')
+URL_REGEX = re.compile(r"https?://(?:www\.)?.+")
 
 
 class LogFormatter(logging.Formatter):
     """Custom log formatter for the bot"""
-    GREY = '\x1b[38;21m'
-    BLUE = '\x1b[38;5;39m'
-    YELLOW = '\x1b[38;5;226m'
-    RED = '\x1b[38;5;196m'
-    BOLD_RED = '\x1b[31;1m'
-    RESET = '\x1b[0m'
+
+    GREY = "\x1b[38;21m"
+    BLUE = "\x1b[38;5;39m"
+    YELLOW = "\x1b[38;5;226m"
+    RED = "\x1b[38;5;196m"
+    BOLD_RED = "\x1b[31;1m"
+    RESET = "\x1b[0m"
 
     def __init__(self) -> None:
         super().__init__()
         self.FORMATS = {
-            logging.DEBUG:    self.GREY     + "%(asctime)s | %(levelname)8s" + self.RESET + " | %(name)20s : %(message)s",  # noqa: E221, E501
-            logging.WARNING:  self.YELLOW   + "%(asctime)s | %(levelname)8s" + self.RESET + " | %(name)20s : %(message)s",  # noqa: E221, E501
-            logging.ERROR:    self.RED      + "%(asctime)s | %(levelname)8s" + self.RESET + " | %(name)20s : %(message)s",  # noqa: E221, E501
-            logging.INFO:     self.BLUE     + "%(asctime)s | %(levelname)8s" + self.RESET + " | %(name)20s : %(message)s",  # noqa: E221, E501
-            logging.CRITICAL: self.BOLD_RED + "%(asctime)s | %(levelname)8s" + self.RESET + " | %(name)20s : %(message)s",  # noqa: E501
+            logging.DEBUG: self.GREY
+            + "%(asctime)s | %(levelname)8s"
+            + self.RESET
+            + " | %(name)20s : %(message)s",  # noqa: E221, E501
+            logging.WARNING: self.YELLOW
+            + "%(asctime)s | %(levelname)8s"
+            + self.RESET
+            + " | %(name)20s : %(message)s",  # noqa: E221, E501
+            logging.ERROR: self.RED
+            + "%(asctime)s | %(levelname)8s"
+            + self.RESET
+            + " | %(name)20s : %(message)s",  # noqa: E221, E501
+            logging.INFO: self.BLUE
+            + "%(asctime)s | %(levelname)8s"
+            + self.RESET
+            + " | %(name)20s : %(message)s",  # noqa: E221, E501
+            logging.CRITICAL: self.BOLD_RED
+            + "%(asctime)s | %(levelname)8s"
+            + self.RESET
+            + " | %(name)20s : %(message)s",  # noqa: E501
         }
 
     def format(self, record: logging.LogRecord) -> str:
@@ -77,17 +93,17 @@ def setup_logging() -> None:
     ------
     `%(asctime)s | %(levelname)8s | %(name)20s : %(message)s`
     """
-    LOG_DIR = pathlib.Path() / 'logs'
+    LOG_DIR = pathlib.Path() / "logs"
     LOG_DIR.mkdir(exist_ok=True)
 
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
 
     file_handler = logging.handlers.RotatingFileHandler(
-        filename=LOG_DIR / 'furina.log',
-        encoding='utf-8',
+        filename=LOG_DIR / "furina.log",
+        encoding="utf-8",
         maxBytes=32 * 1024 * 1024,  # 32MB
-        backupCount=3
+        backupCount=3,
     )
     file_handler.setFormatter(LogFormatter())
     root_logger.addHandler(file_handler)
@@ -125,77 +141,66 @@ async def call_dictionary(word: str, cs: ClientSession) -> PaginatedView:
             base_embed.description = "No definitions found. API call returned 404."
             return PaginatedView(timeout=300, embeds=[base_embed])
         data: list[dict] = await response.json()
-    
+
     pronunciations = __get_pronunciations(data)
 
     for i, d in enumerate(data):
         # Definitions
-        meanings: list[dict] = d.get('meanings', [])
+        meanings: list[dict] = d.get("meanings", [])
         for meaning in meanings:
             embed = base_embed.copy()
-            conjugation: str = meaning.get('partOfSpeech', 'N/A')
+            conjugation: str = meaning.get("partOfSpeech", "N/A")
             embed.title += f" ({conjugation})"  # type: ignore[reportOperatorIssue]
             embed.description = f"Pronunciations: {pronunciations[i] or 'N/A'}"
 
-            synonyms: list[str] = meaning.get('synonyms')  # type: ignore[reportAssignmentType]
-            embed.add_field(
-                name="Synonyms:",
-                value=', '.join(synonyms) if synonyms else 'N/A'
-            )
+            synonyms: list[str] = meaning.get("synonyms")  # type: ignore[reportAssignmentType]
+            embed.add_field(name="Synonyms:", value=", ".join(synonyms) if synonyms else "N/A")
 
-            antonyms: list[str] = meaning.get('antonyms')  # type: ignore[reportAssignmentType]
-            embed.add_field(
-                name="Antonyms:",
-                value=', '.join(antonyms) if antonyms else 'N/A'
-            )
+            antonyms: list[str] = meaning.get("antonyms")  # type: ignore[reportAssignmentType]
+            embed.add_field(name="Antonyms:", value=", ".join(antonyms) if antonyms else "N/A")
 
-            definitions: list[dict] = meaning.get('definitions')  # type: ignore[reportAssignmentType]
+            definitions: list[dict] = meaning.get("definitions")  # type: ignore[reportAssignmentType]
             definition_value = ""
             FIELD_LIMIT: int = 1024
             for definition in definitions:
-                definition_text: str = definition.get('definition')  # type: ignore[reportAssignmentType]
+                definition_text: str = definition.get("definition")  # type: ignore[reportAssignmentType]
                 to_add: str = f"\n- {definition_text}"
-                example: str = definition.get('example', '')
+                example: str = definition.get("example", "")
                 if example:
                     to_add += f"\n  - Ex: *{example}*"
                 if len(definition_value) + len(to_add) < FIELD_LIMIT:
                     definition_value += to_add
                 else:
                     break
-            embed.add_field(
-                name="Definition",
-                value=definition_value,
-                inline=False
-            )
+            embed.add_field(name="Definition", value=definition_value, inline=False)
             embeds.append(embed)
     return PaginatedView(timeout=300, embeds=embeds)
 
 
 def __get_pronunciations(data: list[dict]) -> list[str]:
     """Get the word's pronunciations
-    
+
     Parameters
     ----------
     data : :class:`dict`
         The returned data from the API call.
-    
+
     Returns
     -------
     :class:`list[str]`
         The word's pronunciations.
         If no pronunciations found for that definition, the string at that index will be empty.
     """
-    result: list[str] = [''] * len(data)
+    result: list[str] = [""] * len(data)
     for i, d in enumerate(data):
-        phonetics: str | None = d.get('phonetic')
+        phonetics: str | None = d.get("phonetic")
         if not phonetics:
-            phonetics_list: list[dict] = d.get('phonetics', [])
-            phonetics = ', '.join(
-                [phone.get('text') for phone in phonetics_list if phone.get('text')]  # type: ignore[reportIndexIssue]
+            phonetics_list: list[dict] = d.get("phonetics", [])
+            phonetics = ", ".join(
+                [phone.get("text") for phone in phonetics_list if phone.get("text")]  # type: ignore[reportIndexIssue]
             )
             if phonetics:
-                result[i] = f'`{phonetics}`'
+                result[i] = f"`{phonetics}`"
         else:
-            result[i] = f'`{phonetics}`'
+            result[i] = f"`{phonetics}`"
     return result
-

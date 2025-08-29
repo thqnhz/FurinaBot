@@ -42,12 +42,12 @@ class Lavalink:
             with Lavalink().start():
                 await bot.start(TOKEN)
     """
-    LAVALINK_CWD = pathlib.Path() / 'lavalink'
+
+    LAVALINK_CWD = pathlib.Path() / "lavalink"
 
     def _get_release_info(self) -> dict[Any, Any]:
         response = requests.get(
-            "https://api.github.com/repos/lavalink-devs/Lavalink/releases/latest",
-            timeout=30
+            "https://api.github.com/repos/lavalink-devs/Lavalink/releases/latest", timeout=30
         )
         return response.json()
 
@@ -62,9 +62,9 @@ class Lavalink:
     @property
     def download_url(self) -> str:
         jar_info = next(
-                (asset for asset in self.release_info["assets"] if asset["name"] == "Lavalink.jar"),
-                None
-            )
+            (asset for asset in self.release_info["assets"] if asset["name"] == "Lavalink.jar"),
+            None,
+        )
         return jar_info["browser_download_url"] if jar_info else ""
 
     def check_for_update(self) -> None:
@@ -95,21 +95,20 @@ class Lavalink:
             return
         self.check_for_update()
         logging.info("Starting Lavalink...")
-        java_path = shutil.which('java')
+        java_path = shutil.which("java")
         if not java_path:
             raise FileNotFoundError(
-                "Java executable not found in PATH." 
+                "Java executable not found in PATH."
                 "Please ensure Java is installed and added to PATH."
                 "Or set SKIP_LL to True in settings.py"
             )
         # No security issue since everything is handled by the code itself
         process = subprocess.Popen(  # noqa: S603
-            [java_path, '-jar', self.lavalink_jar.resolve()], cwd=self.LAVALINK_CWD
-            ) 
+            [java_path, "-jar", self.lavalink_jar.resolve()], cwd=self.LAVALINK_CWD
+        )
         try:
             yield
         finally:
             logging.info("Stopping Lavalink...")
             process.terminate()
             process.wait()
-

@@ -21,6 +21,7 @@ from discord import ui
 
 class Container(ui.Container):
     """A subclass from :class:`discord.ui.Container` that has some qol methods"""
+
     def __init__(self, *children: ui.Item) -> None:
         super().__init__(*children)
 
@@ -29,4 +30,3 @@ class Container(ui.Container):
         for item in items:
             self.add_item(item)
         return self
-

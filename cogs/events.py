@@ -55,9 +55,7 @@ class BotEvents(FurinaCog):
         """
         await self.bot.change_presence(
             activity=Activity(
-                type=ActivityType.playing, 
-                name=settings.ACTIVITY_NAME, 
-                state=f"Playing: {state}"
+                type=ActivityType.playing, name=settings.ACTIVITY_NAME, state=f"Playing: {state}"
             )
         )
 
@@ -76,7 +74,7 @@ class BotEvents(FurinaCog):
     @commands.Cog.listener()
     async def on_command_completion(self, ctx: FurinaCtx) -> None:
         """Save users to the database when they successfully use a command"""
-        if ctx.guild is None and 'jishaku' not in ctx.command.qualified_name:
+        if ctx.guild is None and "jishaku" not in ctx.command.qualified_name:
             return
         if len(self.bot.command_cache[ctx.guild.id]) == 10:
             self.bot.command_cache[ctx.guild.id].pop(0)
@@ -86,14 +84,13 @@ class BotEvents(FurinaCog):
             "INSERT INTO prefix_commands (guild_id, author_id, command) VALUES (?, ?, ?)",
             ctx.guild.id,
             ctx.author.id,
-            ctx.command.qualified_name
+            ctx.command.qualified_name,
         )
 
     @commands.Cog.listener()
     async def on_app_command_completion(
-        self,
-        interaction: Interaction,
-        command: app_commands.Command | app_commands.ContextMenu) -> None:
+        self, interaction: Interaction, command: app_commands.Command | app_commands.ContextMenu
+    ) -> None:
         """Save users to the database when they successfully use a command"""
         if interaction.guild is None:
             return
@@ -105,7 +102,7 @@ class BotEvents(FurinaCog):
             "INSERT INTO app_commands (guild_id, author_id, command) VALUES (?, ?, ?)",
             interaction.guild.id,
             interaction.user.id,
-            command.qualified_name
+            command.qualified_name,
         )
 
     @commands.Cog.listener()
@@ -144,7 +141,9 @@ class BotEvents(FurinaCog):
                 channel = self.bot.get_partial_messageable(settings.MUSIC_CHANNEL)
                 embed = self.bot.embed
                 embed.title = "I am not afraid of ghost i swear :fearful:"
-                embed.set_image(url="https://media1.tenor.com/m/Cbwh3gVO4KAAAAAC/genshin-impact-furina.gif")
+                embed.set_image(
+                    url="https://media1.tenor.com/m/Cbwh3gVO4KAAAAAC/genshin-impact-furina.gif"
+                )
                 await channel.send(embed=embed)
 
     @commands.Cog.listener()
@@ -163,4 +162,3 @@ class BotEvents(FurinaCog):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(BotEvents(bot))
-
