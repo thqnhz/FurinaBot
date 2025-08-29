@@ -16,36 +16,11 @@ from __future__ import annotations
 
 from typing import Any, Self
 
-from discord import ui
-
-
-class ContainerFooter(ui.TextDisplay):
-    """The footer of the container"""
-
-    def __init__(self) -> None:
-        super().__init__("-# Coded by ThanhZ")
+from discord import Color, ui
 
 
 class Container(ui.Container):
-    """A subclass from :class:`discord.ui.Container` that has some qol methods"""
+    """Subclass off :class:`discord.ui.Container` with `add_footer` method"""
 
-    def __init__(self, *children: ui.Item) -> None:
-        super().__init__(*children)
-        super().add_item(ContainerFooter())
-
-    def add_items(self, *items: ui.Item) -> Self:
-        """Add multiple items to the container"""
-        for item in self.walk_children():
-            if isinstance(item, ContainerFooter):
-                self.remove_item(item)
-        for item in items:
-            super().add_item(item)
-        super().add_item(ContainerFooter())
-        return self
-
-    def add_item(self, item: ui.Item[Any]) -> Self:
-        if len(self.children) != 0:
-            self.remove_item(self.children[-1])
-        super().add_item(item)
-        super().add_item(ContainerFooter())
-        return self
+    def add_footer(self) -> Self:
+        return super().add_item(ui.TextDisplay("-# Coded by ThanhZ"))

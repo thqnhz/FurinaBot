@@ -14,10 +14,15 @@ limitations under the License.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from discord import Interaction, Member, Message, User, ui
 from discord.ext.commands import CooldownMapping
 
 from .errors import UIElementOnCoolDownError
+
+if TYPE_CHECKING:
+    from .container import Container
 
 
 class View(ui.View):
@@ -62,8 +67,9 @@ class LayoutView(ui.LayoutView):
     and has per user rate limit
     """
 
-    def __init__(self, *, timeout: float = 180) -> None:
+    def __init__(self, container: Container, *, timeout: float = 180) -> None:
         super().__init__(timeout=timeout)
+        self.add_item(container)
         self.cd = CooldownMapping.from_cooldown(rate=1, per=1, type=self.key)
         self.message: Message
 
