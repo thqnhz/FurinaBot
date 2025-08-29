@@ -63,8 +63,8 @@ class HelpSelect(Select):
             cog=self.bot.get_cog(self.values[0]),
             bot_prefix=self.bot.prefixes.get(interaction.guild.id) or settings.DEFAULT_PREFIX,
         )
-        container.add_items(ui.Separator(), HelpActionRow(bot=self.bot))
-        view = LayoutView().add_item(container)
+        container.add_item(ui.Separator()).add_item(HelpActionRow(bot=self.bot))
+        view = LayoutView(container)
         view.message = self.view.message
         self.view.message = None
         await interaction.response.edit_message(view=view)
