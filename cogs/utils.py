@@ -31,7 +31,6 @@ import psutil
 from discord import Interaction, Member, app_commands, ui
 from discord.ext import commands
 from discord.ui import Select
-from wavelink import NodeStatus, Pool
 
 from core import FurinaBot, FurinaCog, FurinaCtx, settings, utils as utils
 from core.views import Container, LayoutView
@@ -41,10 +40,8 @@ if TYPE_CHECKING:
 
 
 class HelpActionRow(ui.ActionRow):
-    """Help Action Row, with row=38 predefined"""
-
     def __init__(self, *, bot: FurinaBot) -> None:
-        super().__init__(HelpSelect(bot), row=38)
+        super().__init__(HelpSelect(bot))
 
 
 class HelpSelect(Select):
@@ -66,7 +63,7 @@ class HelpSelect(Select):
             cog=self.bot.get_cog(self.values[0]),
             bot_prefix=self.bot.prefixes.get(interaction.guild.id) or settings.DEFAULT_PREFIX,
         )
-        container.add_item(ui.Separator(row=37)).add_item(HelpActionRow(bot=self.bot))
+        container.add_items(ui.Separator(), HelpActionRow(bot=self.bot))
         view = LayoutView().add_item(container)
         view.message = self.view.message
         self.view.message = None
@@ -78,13 +75,6 @@ class MemberStatus(Enum):
     offline = ":black_circle: `Offline`"
     idle = ":yellow_circle: `Idling`"
     dnd = ":red_circle: `Do Not Disturb`"
-
-
-NODE_STATUSES: dict[NodeStatus, str] = {
-    NodeStatus.CONNECTED: ":white_check_mark:",
-    NodeStatus.CONNECTING: ":arrows_clockwise:",
-    NodeStatus.DISCONNECTED: ":negative_squared_cross_mark:",
-}
 
 
 class Utils(FurinaCog):
@@ -101,7 +91,7 @@ class Utils(FurinaCog):
 
     @staticmethod
     def list_cog_commands(*, cog: FurinaCog, bot_prefix: str) -> Container:
-        container = Container(ui.TextDisplay(f"## {cog.__cog_name__} Commands", row=0))
+        container = Container(ui.TextDisplay(f"## {cog.__cog_name__} Commands"))
         prefix: str = ""
         for command in cog.walk_commands():
             if command.hidden:
@@ -110,7 +100,7 @@ class Utils(FurinaCog):
             prefix += f"- **{bot_prefix}{command.qualified_name}:** `{doc.short_description}`\n"
 
         if prefix:
-            container.add_item(ui.TextDisplay("### Prefix commands\n" + prefix, row=1))
+            container.add_item(ui.TextDisplay("### Prefix commands\n" + prefix))
 
         slash: str = ""
         for command in cog.walk_app_commands():
@@ -120,12 +110,12 @@ class Utils(FurinaCog):
             slash += f"- **{command.qualified_name}:** `{doc.short_description}`\n"
 
         if slash:
-            container.add_item(ui.Separator(row=2))
-            container.add_item(ui.TextDisplay("### Slash commands\n" + slash, row=3))
+            container.add_item(ui.Separator())
+            container.add_item(ui.TextDisplay("### Slash commands\n" + slash))
 
         if not prefix and not slash:
-            container.add_item(ui.TextDisplay("This cog has no commands to show", row=4))
-        container.add_item(ui.TextDisplay("-# Coded by ThanhZ", row=39))
+            container.add_item(ui.TextDisplay("This cog has no commands to show"))
+        container.add_item(ui.TextDisplay("-# Coded by ThanhZ"))
         return container
 
     @FurinaCog.listener("on_message")
@@ -144,17 +134,14 @@ class Utils(FurinaCog):
                 "**I am also supporting slash commands**\n"
                 "**Type `/` to see what i can do!**"
             )
-            header_section = ui.Section(
-                header, accessory=ui.Thumbnail(bot.user.display_avatar.url), row=0
-            )
+            header_section = ui.Section(header, accessory=ui.Thumbnail(bot.user.display_avatar.url))
             source_section = ui.Section(
                 ui.TextDisplay("### I am also open source"),
                 accessory=ui.Button(
                     label="Click me to view source code",
                     style=discord.ButtonStyle.link,
-                    url=r"https://gitlab.com/thanhz/FurinaBot/-/tree/master",
+                    url=r"https://github.com/thqnhz/furinabot/tree/master",
                 ),
-                row=2,
             )
             bot_latency: str = f"{round(bot.latency * 1000, 2)}ms"
             time = perf_counter()
@@ -164,17 +151,16 @@ class Utils(FurinaCog):
                 "### More info\n"
                 f"- **Uptime:** `{bot.uptime}`\n"
                 f"- **Bot Latency:** `{bot_latency}`\n"
-                f"- **Database Latency:** `{db_latency}`",
-                row=4,
+                f"- **Database Latency:** `{db_latency}`"
             )
             container = self.container.add_items(
-                header_section,  # 0
-                ui.Separator(row=1),  # 1
-                source_section,  # 2
-                ui.Separator(row=3),  # 3
-                more_info,  # 4
-                ui.Separator(row=5),  # 5
-                HelpActionRow(bot=bot),  # 38
+                header_section,
+                ui.Separator(),
+                source_section,
+                ui.Separator(),
+                more_info,
+                ui.Separator(),
+                HelpActionRow(bot=bot),
             )
             view = LayoutView().add_item(container)
             view.message = await message.channel.send(view=view, reference=message)
@@ -193,10 +179,7 @@ class Utils(FurinaCog):
         bot_latency: float = self.bot.latency
         voice_latency: float | int = ctx.guild.voice_client.ping if ctx.guild.voice_client else -1
         db_latency: float = await self.db_ping()
-        node_statuses = ""
-        for i, node in enumerate(Pool.nodes, 1):
-            node_statuses += f"**Node {i}:** {NODE_STATUSES[Pool.nodes[node].status]}"
-        container = ui.Container(
+        container = Container(
             ui.TextDisplay("## Pong!"),
             ui.Separator(),
             ui.TextDisplay(
@@ -204,11 +187,7 @@ class Utils(FurinaCog):
                 f"**Voice Latency:** `{voice_latency}ms`\n"
                 f"**Database Latency:** `{db_latency * 1000:.2f}ms`"
             ),
-            ui.TextDisplay("-# Coded by ThanhZ"),
         )
-        if node_statuses:
-            container.add_item(ui.Separator())
-            container.add_item(ui.TextDisplay(node_statuses))
         await ctx.reply(view=LayoutView().add_item(container))
 
     async def db_ping(self) -> float:
@@ -245,7 +224,7 @@ class Utils(FurinaCog):
         prefix = prefix.strip("'\" ")
         container = self.container
         if len(prefix) > 3 or not prefix:
-            container.add_item(ui.TextDisplay(f"{settings.CROSS} **Invalid prefix**", row=0))
+            container.add_item(ui.TextDisplay(f"{settings.CROSS} **Invalid prefix**"))
             await ctx.reply(view=LayoutView().add_item(container))
             return
 
@@ -266,9 +245,7 @@ class Utils(FurinaCog):
             )
         await self.__update_custom_prefixes()
         prefix = self.bot.prefixes.get(ctx.guild.id) or settings.DEFAULT_PREFIX
-        container.add_item(
-            ui.TextDisplay(f"{settings.CHECKMARK} **Prefix set to** `{prefix}`", row=0)
-        )
+        container.add_item(ui.TextDisplay(f"{settings.CHECKMARK} **Prefix set to** `{prefix}`"))
         await ctx.reply(view=LayoutView().add_item(container))
 
     @commands.command(name="source", aliases=["src"])
@@ -332,12 +309,10 @@ class Utils(FurinaCog):
                 f"- Use `{prefix}help <command>`"
             )
             header = ui.Section(
-                header_text, accessory=ui.Thumbnail(self.bot.user.display_avatar.url), row=0
+                header_text, accessory=ui.Thumbnail(self.bot.user.display_avatar.url)
             )
             container = self.container.add_items(
-                header,  # 0
-                ui.Separator(row=1),
-                HelpActionRow(bot=self.bot),  # 38
+                header, ui.Separator(), HelpActionRow(bot=self.bot)
             )
             view = LayoutView().add_item(container)
             view.message = await ctx.reply(view=view)
@@ -353,7 +328,7 @@ class Utils(FurinaCog):
             container = self.list_cog_commands(
                 cog=cog, bot_prefix=ctx.prefix or self.bot.DEFAULT_PREFIX
             )
-            container.add_items(ui.Separator(row=37), HelpActionRow(bot=self.bot))
+            container.add_items(ui.Separator(), HelpActionRow(bot=self.bot))
             view = LayoutView().add_item(container)
             view.message = await ctx.reply(view=view)
             return
@@ -376,14 +351,14 @@ class Utils(FurinaCog):
                 syntax += f"    - {param.description}\n"
 
             container = self.container.add_items(
-                ui.TextDisplay("## " + usage, row=0),
-                ui.TextDisplay(doc.short_description, row=1),
-                ui.Separator(row=2),
-                ui.TextDisplay(doc.long_description, row=3),
+                ui.TextDisplay("## " + usage),
+                ui.TextDisplay(doc.short_description),
+                ui.Separator(),
+                ui.TextDisplay(doc.long_description),
             )
             if syntax:
                 container.add_items(
-                    ui.Separator(row=4), ui.TextDisplay(f"**Syntax:** ```py\n{syntax}```", row=5)
+                    ui.Separator(), ui.TextDisplay(f"**Syntax:** ```py\n{syntax}```")
                 )
 
             aliases = (
@@ -393,8 +368,7 @@ class Utils(FurinaCog):
             )
 
             if aliases:
-                container.add_item(ui.Separator(row=6))
-                container.add_item(ui.TextDisplay(aliases, row=7))
+                container.add_items(ui.Separator(), ui.TextDisplay(aliases))
 
             await ctx.reply(view=LayoutView().add_item(container))
         else:
@@ -466,7 +440,7 @@ class Utils(FurinaCog):
         )
         account_created = int(member.created_at.timestamp())
         server_joined = int(member.joined_at.timestamp())
-        container = ui.Container(
+        container = Container(
             header,
             ui.Separator(),
             ui.TextDisplay(
@@ -480,7 +454,6 @@ class Utils(FurinaCog):
                     )
                 }```"
             ),
-            ui.TextDisplay("-# Coded by ThanhZ", row=9),
         )
         if member.activities:
             container.add_item(ui.Separator())
@@ -558,12 +531,12 @@ class Utils(FurinaCog):
         - Most recent 10 slash commands.
         """
         container = self.container.add_item(
-            ui.TextDisplay(f"## {self.bot.user.display_name} Stats", row=0)
+            ui.TextDisplay(f"## {self.bot.user.display_name} Stats"),
+            ui.Separator(),
+            ui.TextDisplay(f"### Uptime: {self.bot.uptime}"),
+            ui.TextDisplay(f"### Servers: {len(self.bot.guilds)}"),
+            ui.Separator(),
         )
-        container.add_item(ui.Separator(row=1))
-        container.add_item(ui.TextDisplay(f"### Uptime: {self.bot.uptime}", row=2))
-        container.add_item(ui.TextDisplay(f"### Servers: {len(self.bot.guilds)}", row=3))
-        container.add_item(ui.Separator(row=4))
         guild_id = ctx.guild.id
         prefix_cmds = ""
         if guild_id in self.bot.command_cache:
@@ -581,16 +554,12 @@ class Utils(FurinaCog):
             app_cmds = "No app commands history from this server"
         total_prefix = await self.pool.fetchval("""SELECT COUNT(*) FROM prefix_commands""")
         total_slash = await self.pool.fetchval("""SELECT COUNT(*) FROM app_commands""")
-        container.add_item(ui.TextDisplay("### Most recent prefix commands", row=5))
-        container.add_item(ui.TextDisplay(prefix_cmds, row=6))
-        container.add_item(
-            ui.TextDisplay(f"### Total prefix commands completed: {total_prefix}", row=7)
-        )
-        container.add_item(ui.TextDisplay("### Most recent slash commands", row=8))
-        container.add_item(ui.TextDisplay(app_cmds, row=9))
-        container.add_item(
-            ui.TextDisplay(f"### Total slash commands completed: {total_slash}", row=10)
-        )
+        container.add_item(ui.TextDisplay("### Most recent prefix commands"))
+        container.add_item(ui.TextDisplay(prefix_cmds))
+        container.add_item(ui.TextDisplay(f"### Total prefix commands completed: {total_prefix}"))
+        container.add_item(ui.TextDisplay("### Most recent slash commands"))
+        container.add_item(ui.TextDisplay(app_cmds))
+        container.add_item(ui.TextDisplay(f"### Total slash commands completed: {total_slash}"))
         await ctx.reply(view=LayoutView().add_item(container))
 
 

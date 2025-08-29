@@ -116,7 +116,7 @@ class FurinaBot(commands.Bot):
     @property
     def container(self) -> Container:
         """Container with default 'footer'"""
-        return Container(ui.TextDisplay("-# Coded by ThanhZ", row=39))
+        return Container()
 
     @property
     def embed(self) -> discord.Embed:
@@ -174,7 +174,7 @@ class FurinaBot(commands.Bot):
         )
         self._startup: datetime = utils.utcnow()
         container = self.container
-        container.add_item(ui.TextDisplay("### BOT IS READY!", row=0))
+        container.add_item(ui.TextDisplay("### BOT IS READY!"))
         view = LayoutView().add_item(container)
         webhook = discord.Webhook.from_url(settings.DEBUG_WEBHOOK, client=self)
         message = await webhook.send(
