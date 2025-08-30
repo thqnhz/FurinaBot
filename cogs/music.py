@@ -355,7 +355,7 @@ class Music(FurinaCog):
 
     def _queue_embeds(self, ctx: FurinaCtx) -> list[Embed] | Embed:
         player = self._get_player(ctx)
-        if player.queue.count == 0:
+        if len(player.queue) == 0:
             embed = self.embed
             embed.title = "Queue is empty"
             return embed
@@ -376,7 +376,7 @@ class Music(FurinaCog):
     def _create_queue_embed(self, player: lavalink.DefaultPlayer, q: str) -> Embed:
         embed = self.embed
         embed.color = Color.blue()
-        embed.title = f"Queued: {player.queue.count} tracks"
+        embed.title = f"Queued: {len(player.queue)} tracks"
         embed.description = q
 
         if player.is_playing:
@@ -421,9 +421,9 @@ class Music(FurinaCog):
     )
     async def remove_prefixcommand(self, ctx: FurinaCtx) -> None:
         player = self._get_player(ctx)
-        if player.queue.count == 0:
+        if len(player.queue) == 0:
             return
-        track_index: int = player.queue.count - 1
+        track_index = len(player.queue) - 1
         deleted = player.queue[track_index]
         del player.queue[track_index]
         await ctx.reply(embed=Embed(title=f"Removed {deleted} from the queue"))
