@@ -287,7 +287,7 @@ class Music(FurinaCog):
     async def pause_command(self, ctx: FurinaCtx) -> None:
         """Pauses the player"""
         player = self._get_player(ctx)
-        player.paused = True
+        player.set_pause(True)
         embed = self.embed
         embed.title = "Paused the player"
         embed.description = f"Use `{ctx.prefix}resume` or `/resume` to continue playing"
@@ -298,7 +298,7 @@ class Music(FurinaCog):
     async def resume_command(self, ctx: FurinaCtx) -> None:
         """Unpauses the player"""
         player = self._get_player(ctx)
-        player.paused = False
+        player.set_pause(False)
         embed = self.embed
         embed.title = "Resumed the player"
         embed.description = f"Use `{ctx.prefix}pause` or `/pause` to pause"
