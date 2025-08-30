@@ -14,18 +14,14 @@ limitations under the License.
 
 from __future__ import annotations
 
-import asyncio
-import logging
-import re
-import textwrap
 import typing
 from typing import TYPE_CHECKING
 
 import discord
-from discord import ButtonStyle, Color, Embed, Interaction, Message, app_commands, ui
+from discord import Color, Embed, Interaction, app_commands, ui
 from discord.ext import commands
 from lavalink.errors import ClientError
-from lavalink.events import TrackEndEvent, TrackExceptionEvent, TrackStartEvent, TrackStuckEvent
+from lavalink.events import TrackStartEvent
 from lavalink.server import LoadType
 
 import lavalink
