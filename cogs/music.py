@@ -22,16 +22,16 @@ import typing
 from typing import TYPE_CHECKING
 
 import discord
-import lavalink
 from discord import ButtonStyle, Color, Embed, Interaction, Message, app_commands, ui
 from discord.ext import commands
 from lavalink.errors import ClientError
 from lavalink.events import TrackEndEvent, TrackExceptionEvent, TrackStartEvent, TrackStuckEvent
 from lavalink.server import LoadType
 
+import lavalink
 from core import FurinaCog, FurinaCtx, settings
 from core.utils import URL_REGEX
-from core.views import PaginatedView
+from core.views import Container, LayoutView, PaginatedView
 
 if TYPE_CHECKING:
     from core import FurinaBot
@@ -113,8 +113,8 @@ class VoiceProtocol(discord.VoiceProtocol):
             pass
 
 
-def track_len_to_string(track: lavalink.AudioTrack) -> str:
-    mins, secs = divmod(track.duration // 1000, 60)
+def track_len_to_string(length: int) -> str:
+    mins, secs = divmod(length // 1000, 60)
     return f"{mins:02d}:{secs:02d}"
 
 
@@ -168,7 +168,7 @@ class Music(FurinaCog):
 
     def __init__(self, bot: FurinaBot) -> None:
         super().__init__(bot)
-        self.webhook = discord.SyncWebhook.from_url(settings.MUSIC_WEBHOOK)
+        self.webhook = discord.Webhook.from_url(settings.MUSIC_WEBHOOK, client=bot)
 
         self.lavalink: lavalink.Client = bot.lavalink
         self.lavalink.add_event_hooks(self)
@@ -178,7 +178,7 @@ class Music(FurinaCog):
         return self.bot.embed
 
     def _get_player(self, guild_id: int) -> lavalink.DefaultPlayer:
-        return self.bot.lavalink.player_manager.get(guild_id)
+        return self.lavalink.player_manager.get(guild_id)
 
     @lavalink.listener(TrackStartEvent)
     async def on_track_start(self, event: TrackStartEvent) -> None:
@@ -190,39 +190,29 @@ class Music(FurinaCog):
             await self.lavalink.player_manager.destroy(guild_id)
             return
 
-        track: lavalink.AudioTrack = event.track
-        embed = self.embed
-        embed.title = f"Playing: **{track.title}**"
-        embed.url = track.uri
-        embed.set_author(name=track.author, icon_url=settings.PLAYING_GIF)
-        embed.set_thumbnail(url=track.artwork_url)
-        self.webhook.send(embed=embed)
+        track = event.track
+        view = LayoutView(
+            Container(
+                ui.Section(
+                    f"### [**{track.title}**](<{track.uri}>)\n"
+                    f"> **By:** {track.author}\n"
+                    f"> **Duration:** `{track_len_to_string(track.duration)}`\n"
+                    f"> **Requester:** <@{track.extra['requester']}>",
+                    accessory=ui.Thumbnail(track.artwork_url),
+                )
+            )
+        )
+        await self.webhook.send(view=view, silent=True)
 
-    @commands.command(name="play", aliases=["p"])
-    @commands.check(create_player_check)
-    async def play_command(self, ctx: FurinaCtx, *, query: str) -> None:
-        """Searches and plays a track from a given query
-
-        Use `play <track name>` or `play <track url>` to search and play the track.
-        Use `play <playlist url>` to search and play the playlist.
-
-        Parameters
-        ----------
-        query : str
-            The query
-        """
-        # Get the player for this guild from cache.
+    async def play_music(
+        self, ctx: FurinaCtx, *, search_prefix: str | None = None, query: str
+    ) -> None:
         player = self._get_player(ctx.guild.id)
-        # Remove leading and trailing <>. <> may be used to suppress embedding links in Discord.
         query = query.strip("<>")
 
-        # Check if the user input might be a URL.
-        # If it isn't, we can Lavalink do a YouTube search for it instead.
-        # SoundCloud searching is possible by prefixing "scsearch:" instead.
         if not URL_REGEX.match(query):
-            query = f"ytsearch:{query}"
+            query = f"{search_prefix}:{query}"
 
-        # Get the results for the query from Lavalink.
         results = await player.node.get_tracks(query)
 
         embed = discord.Embed(color=discord.Color.blurple())
@@ -235,17 +225,12 @@ class Music(FurinaCog):
         #   EMPTY    - no results for the query (result.tracks will be empty)
         #   ERROR    - the track encountered an exception during loading
         if results.load_type == LoadType.EMPTY:
-            await ctx.send("I couldn'\t find any tracks for that query.")
+            await ctx.send("I couldn't find any tracks for that query.")
             return
         if results.load_type == LoadType.PLAYLIST:
             tracks = results.tracks
 
-            # Add all of the tracks from the playlist to the queue.
             for track in tracks:
-                # requester isn't necessary but it helps keep track of who queued what.
-                # You can store additional metadata by passing it as a kwarg (i.e. key=value)
-                # Requester can be set with `track.requester = ctx.author.id`.
-                # Any other extra attributes must be set via track.extra.
                 track.extra["requester"] = ctx.author.id
                 player.add(track=track)
 
@@ -255,21 +240,42 @@ class Music(FurinaCog):
             track = results.tracks[0]
             embed.title = "Track Enqueued"
             embed.description = f"[{track.title}]({track.uri})"
-
-            # requester isn't necessary but it helps keep track of who queued what.
-            # You can store additional metadata by passing it as a kwarg (i.e. key=value)
-            # Requester can be set with `track.requester = ctx.author.id`.
-            # Any other extra attributes must be set via track.extra.
             track.extra["requester"] = ctx.author.id
-
             player.add(track=track)
 
         await ctx.send(embed=embed)
 
-        # We don't want to call .play() if the player is playing as that will effectively skip
-        # the current track.
         if not player.is_playing:
             await player.play()
+
+    @commands.hybrid_group(name="play", aliases=["p"], fallback="youtube")
+    @commands.check(create_player_check)
+    async def play_group(self, ctx: FurinaCtx, *, query: str) -> None:
+        """Searches and plays a track from a given query
+
+        Use `play <track name>` or `play <track url>` to search and play the track.
+        Use `play <playlist url>` to search and play the playlist.
+
+        Parameters
+        ----------
+        query : str
+            The query
+        """
+        await self.play_music(ctx, search_prefix="ytsearch", query=query)
+
+    @play_group.command(name="soundcloud", aliases=["sc"])
+    async def play_soundcloud(self, ctx: FurinaCtx, *, query: str) -> None:
+        """Searches and plays a track from a given query
+
+        Use `play soundcloud <track name>`
+        or `play soundcloud <track url>` to search and play the track.
+
+        Parameters
+        ----------
+        query : str
+            The query
+        """
+        await self.play_music(ctx, search_prefix="scsearch", query=query)
 
     @commands.hybrid_command(name="pause")
     @app_commands.guilds(settings.GUILD_SPECIFIC)
@@ -319,7 +325,7 @@ class Music(FurinaCog):
         player = self._get_player(ctx)
         track = player.current
         if track:
-            embed = Embed().set_author(name=f"Đã skip {track.title}", icon_url=settings.SKIP_EMOJI)
+            embed = Embed().set_author(name=f"Skipped {track.title}", icon_url=settings.SKIP_EMOJI)
             await player.skip()
         else:
             embed = self.embed
