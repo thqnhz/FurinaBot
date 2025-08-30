@@ -283,7 +283,6 @@ class Music(FurinaCog):
         await self.play_music(ctx, search_prefix="scsearch", query=query)
 
     @commands.hybrid_command(name="pause")
-    @app_commands.guilds(settings.GUILD_SPECIFIC)
     async def pause_command(self, ctx: FurinaCtx) -> None:
         """Pauses the player"""
         player = self._get_player(ctx)
@@ -293,8 +292,7 @@ class Music(FurinaCog):
         embed.description = f"Use `{ctx.prefix}resume` or `/resume` to continue playing"
         await ctx.reply(embed=embed)
 
-    @commands.hybrid_command(name="resume")
-    @app_commands.guilds(settings.GUILD_SPECIFIC)
+    @commands.hybrid_command(name="resume", aliases=["unpause"])
     async def resume_command(self, ctx: FurinaCtx) -> None:
         """Unpauses the player"""
         player = self._get_player(ctx)
@@ -305,14 +303,13 @@ class Music(FurinaCog):
         await ctx.reply(embed=embed)
 
     @commands.hybrid_command(name="nowplaying", aliases=["np", "now", "current"])
-    @app_commands.guilds(settings.GUILD_SPECIFIC)
     async def nowplaying_command(self, ctx: FurinaCtx) -> None:
         """Gets the on going track"""
         player = self._get_player(ctx)
         current = player.current
         embed = ctx.embed
         embed.title = "Now Playing"
-        embed.description = f"### [{current}]({current.uri})\n"
+        embed.description = f"### [{current.title}]({current.uri})\n"
         embed.color = Color.blue()
         embed.set_author(icon_url=settings.PLAYING_GIF, name=current.author)
         embed.set_image(url=current.artwork_url)
@@ -324,7 +321,6 @@ class Music(FurinaCog):
         await ctx.reply(embed=embed)
 
     @commands.hybrid_command(name="skip")
-    @app_commands.guilds(settings.GUILD_SPECIFIC)
     async def skip_command(self, ctx: FurinaCtx) -> None:
         """Skips the current track"""
         player = self._get_player(ctx)
@@ -339,7 +335,6 @@ class Music(FurinaCog):
         await ctx.reply(embed=embed)
 
     @commands.hybrid_command(name="stop")
-    @app_commands.guilds(settings.GUILD_SPECIFIC)
     async def stop_playing(self, ctx: FurinaCtx) -> None:
         """Stops playing and clears the queue"""
         player = self._get_player(ctx)
@@ -351,7 +346,6 @@ class Music(FurinaCog):
         await ctx.reply(embed=embed)
 
     @commands.hybrid_command(name="queue", aliases=["q"])
-    @app_commands.guilds(settings.GUILD_SPECIFIC)
     async def queue_command(self, ctx: FurinaCtx) -> None:
         """Shows the queue"""
         await self._show_queue(ctx)
@@ -399,7 +393,6 @@ class Music(FurinaCog):
         return embed
 
     @app_commands.command(name="remove")
-    @app_commands.guilds(settings.GUILD_SPECIFIC)
     async def remove_slashcommand(self, interaction: Interaction, track_name: str) -> None:
         """Removes a track from the queue
 
@@ -441,7 +434,6 @@ class Music(FurinaCog):
         await self._show_queue(ctx)
 
     @commands.hybrid_command(name="disconnect", aliases=["dc", "leave", "l"])
-    @app_commands.guilds(settings.GUILD_SPECIFIC)
     async def disconnect_command(self, ctx: FurinaCtx) -> None:
         """Disconnects the player"""
         if ctx.voice_client:
