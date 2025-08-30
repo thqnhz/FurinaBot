@@ -167,7 +167,6 @@ class Music(FurinaCog):
 
     def __init__(self, bot: FurinaBot) -> None:
         super().__init__(bot)
-        self.webhook = discord.Webhook.from_url(settings.MUSIC_WEBHOOK, client=bot)
 
         self.lavalink: lavalink.Client = bot.lavalink
         self.lavalink.add_event_hooks(self)
