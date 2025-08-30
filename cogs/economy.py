@@ -33,11 +33,6 @@ class Economy(FurinaCog):
     def __init__(self, bot: FurinaBot) -> None:
         super().__init__(bot)
 
-    # async def cog_load(self):
-    #     await self.__update_economy_emojis()
-    #     await self.__create_economy_tables()
-    #     return await super().cog_load()
-
     async def __update_economy_emojis(self) -> None:
         emojis = await self.bot.fetch_application_emojis()
         for emoji in emojis:
