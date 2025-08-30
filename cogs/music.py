@@ -210,7 +210,7 @@ class Music(FurinaCog):
     async def play_music(
         self, ctx: FurinaCtx, *, search_prefix: str | None = None, query: str
     ) -> None:
-        player = self._get_player(ctx.guild.id)
+        player = self._get_player(ctx)
         query = query.strip("<>")
 
         if not URL_REGEX.match(query):
