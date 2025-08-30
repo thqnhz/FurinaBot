@@ -373,7 +373,7 @@ class Music(FurinaCog):
         q: str = ""
         for i, track in enumerate(player.queue, 1):
             q += f"{i}. [**{track.title}**](<{track.uri}>)"
-            "({track_len_to_string(track.duration)})\n"
+            f"({track_len_to_string(track.duration)})\n"
             if i % 10 == 0:
                 embed = self._create_queue_embed(player, q)
                 queue_embeds.append(embed)
