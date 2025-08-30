@@ -23,11 +23,11 @@ from platform import python_version
 
 import asqlite
 import discord
-import lavalink
 from discord import app_commands, ui, utils
 from discord.ext import commands
 from discord.ext.commands import errors, when_mentioned_or
 
+import lavalink
 from cogs import EXTENSIONS
 from core import settings
 from core.sql import SQL
@@ -107,6 +107,7 @@ class FurinaBot(commands.Bot):
         )
         self.owner_id = settings.OWNER_ID
         self.skip_lavalink = skip_lavalink
+        self._lavalink = None
         self.cs = client_session
         # custom prefixes, in `{guild_id: prefix}` format
         self.prefixes: dict[int, str] = {}
@@ -128,7 +129,9 @@ class FurinaBot(commands.Bot):
     def lavalink(self) -> lavalink.Client:
         if not self._lavalink:
             self._lavalink = lavalink.Client(self.user.id)
-            self._lavalink.add_node(host=settings.LAVA_URI, port=1710, password=settings.LAVA_PW)
+            self._lavalink.add_node(
+                host=settings.LAVA_URI, region="us", port=1710, password=settings.LAVA_PW
+            )
         return self._lavalink
 
     async def get_context(
