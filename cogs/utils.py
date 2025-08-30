@@ -265,7 +265,7 @@ class Utils(FurinaCog):
         """
         cmd: commands.Command | None = self.bot.get_command(command.lower())
         file: discord.File | None = None
-        git: str = r"https://github.com/thanhz/FurinaBot/tree/master"
+        git: str = r"https://github.com/thqnhz/FurinaBot/tree/master"
         if not command:
             res = git
         elif not cmd:
