@@ -188,12 +188,13 @@ class Music(FurinaCog):
         if not guild:
             await self.lavalink.player_manager.destroy(guild_id)
             return
+        channel = guild.get_channel(event.player.fetch("channel"))
 
         track = event.track
         view = LayoutView(
             Container(
                 ui.Section(
-                    f"### [**{track.title}**](<{track.uri}>)\n"
+                    f"### {settings.PLAYING_EMOJI} [**{track.title}**](<{track.uri}>)\n"
                     f"> **By:** {track.author}\n"
                     f"> **Duration:** `{track_len_to_string(track.duration)}`\n"
                     f"> **Requester:** <@{track.extra['requester']}>",
@@ -201,7 +202,7 @@ class Music(FurinaCog):
                 )
             )
         )
-        await self.webhook.send(view=view, silent=True)
+        await channel.send(view=view, silent=True)
 
     async def play_music(
         self, ctx: FurinaCtx, *, search_prefix: str | None = None, query: str
