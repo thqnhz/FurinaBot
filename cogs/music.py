@@ -312,18 +312,23 @@ class Music(FurinaCog):
         """Gets the on going track"""
         player = self._get_player(ctx)
         current = player.current
-        embed = ctx.embed
-        embed.title = "Now Playing"
-        embed.description = f"### [{current.title}]({current.uri})\n"
-        embed.color = Color.blue()
-        embed.set_author(icon_url=settings.PLAYING_GIF, name=current.author)
-        embed.set_image(url=current.artwork_url)
         played = int((player.position / current.duration) * 20)
-        embed.description += "▰" * played + "▱" * (20 - played)
-        embed.description += (
-            f"\n{track_len_to_string(player.position)} / {track_len_to_string(current.duration)}`"
+        container = Container(
+            ui.TextDisplay(
+                f"## {settings.PLAYING_EMOJI} Now playing\n"
+                f"### [{current.title}]({current.uri})\n"
+                f"> **By:** {current.author}\n"
+                f"> **Requester:** <@{current.extra['requester']}>\n"
+            ),
+            ui.MediaGallery(discord.MediaGalleryItem(current.artwork_url)),
+            ui.Separator(),
+            ui.TextDisplay(
+                ("▰" * played + "▱" * (20 - played) + "\n")
+                + f"`{track_len_to_string(player.position)} / "
+                f"{track_len_to_string(current.duration)}`"
+            ),
         )
-        await ctx.reply(embed=embed)
+        await ctx.reply(view=LayoutView(container), allowed_mentions=None)
 
     @commands.hybrid_command(name="skip")
     async def skip_command(self, ctx: FurinaCtx) -> None:
