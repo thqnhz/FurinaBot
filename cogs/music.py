@@ -37,6 +37,9 @@ if TYPE_CHECKING:
     from core import FurinaBot
 
 
+class TrackNotFound(Exception): ...
+
+
 class VoiceProtocol(discord.VoiceProtocol):
     def __init__(self, client: FurinaBot, channel: discord.abc.Connectable) -> None:
         super().__init__(client, channel)
@@ -215,8 +218,6 @@ class Music(FurinaCog):
 
         results = await player.node.get_tracks(query)
 
-        embed = discord.Embed(color=discord.Color.blurple())
-
         # Valid load_types are:
         #   TRACK    - direct URL to a track
         #   PLAYLIST - direct URL to playlist
@@ -225,8 +226,8 @@ class Music(FurinaCog):
         #   EMPTY    - no results for the query (result.tracks will be empty)
         #   ERROR    - the track encountered an exception during loading
         if results.load_type == LoadType.EMPTY:
-            await ctx.send("I couldn't find any tracks for that query.")
-            return
+            raise TrackNotFound("I couldn't find any tracks for that query.")
+        container = Container()
         if results.load_type == LoadType.PLAYLIST:
             tracks = results.tracks
 
@@ -234,16 +235,20 @@ class Music(FurinaCog):
                 track.extra["requester"] = ctx.author.id
                 player.add(track=track)
 
-            embed.title = "Playlist Enqueued!"
-            embed.description = f"{results.playlist_info.name} - {len(tracks)} tracks"
+            container.add_item(
+                ui.TextDisplay(
+                    f"### Playlist Enqueued!\n{results.playlist_info.name} - {len(tracks)} tracks"
+                )
+            )
         else:
             track = results.tracks[0]
-            embed.title = "Track Enqueued"
-            embed.description = f"[{track.title}]({track.uri})"
+            container.add_item(
+                ui.TextDisplay(f"### Track Enqueued\n[{track.title}](<{track.uri}>)")
+            )
             track.extra["requester"] = ctx.author.id
             player.add(track=track)
 
-        await ctx.send(embed=embed)
+        await ctx.reply(view=LayoutView(container))
 
         if not player.is_playing:
             await player.play()
