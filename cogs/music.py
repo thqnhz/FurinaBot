@@ -180,8 +180,8 @@ class Music(FurinaCog):
     def embed(self) -> Embed:
         return self.bot.embed
 
-    def _get_player(self, guild_id: int) -> lavalink.DefaultPlayer:
-        return self.lavalink.player_manager.get(guild_id)
+    def _get_player(self, ctx: FurinaCtx) -> lavalink.DefaultPlayer:
+        return self.lavalink.player_manager.get(ctx.guild.id)
 
     @lavalink.listener(TrackStartEvent)
     async def on_track_start(self, event: TrackStartEvent) -> None:
