@@ -5,7 +5,7 @@
 /.vscode
 /db
 /logs
-/lavalink/
+/lavalink_dir/
 /build/
 /Furina.egg-info/
 /.ruff_cache

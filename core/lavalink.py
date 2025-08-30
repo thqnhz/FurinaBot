@@ -43,7 +43,7 @@ class Lavalink:
                 await bot.start(TOKEN)
     """
 
-    LAVALINK_CWD = pathlib.Path() / "lavalink"
+    LAVALINK_CWD = pathlib.Path() / "lavalink_dir"
 
     def _get_release_info(self) -> dict[Any, Any]:
         response = requests.get(

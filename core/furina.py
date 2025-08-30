@@ -23,11 +23,11 @@ from platform import python_version
 
 import asqlite
 import discord
+import lavalink
 from discord import app_commands, ui, utils
 from discord.ext import commands
 from discord.ext.commands import errors, when_mentioned_or
 
-import lavalink
 from cogs import EXTENSIONS
 from core import settings
 from core.sql import SQL

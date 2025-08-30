@@ -18,13 +18,13 @@ import typing
 from typing import TYPE_CHECKING
 
 import discord
+import lavalink
 from discord import Color, Embed, Interaction, app_commands, ui
 from discord.ext import commands
 from lavalink.errors import ClientError
 from lavalink.events import TrackStartEvent
 from lavalink.server import LoadType
 
-import lavalink
 from core import FurinaCog, FurinaCtx, settings
 from core.utils import URL_REGEX
 from core.views import Container, LayoutView, PaginatedView
