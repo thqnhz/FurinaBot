@@ -440,17 +440,16 @@ class Utils(FurinaCog):
         )
         account_created = int(member.created_at.timestamp())
         server_joined = int(member.joined_at.timestamp())
+        role_list = ", ".join(
+            role.name for role in reversed(member.roles) if role.name != "@everyone"
+        )
         container = Container(
             header,
             ui.Separator(),
             ui.TextDisplay(
                 f"**Account Created:** <t:{account_created}> or <t:{account_created}:R>\n"
                 f"**Server Joined:** <t:{server_joined}> or <t:{server_joined}:R>"
-                f"**Roles ({len(member.roles) - 1}):** ```{
-                    ', '.join(
-                        role.name for role in reversed(member.roles) if role.name != '@everyone'
-                    )
-                }```"
+                f"**Roles ({len(member.roles) - 1}):** ```\n{role_list}\n```"
             ),
         )
         if member.activities:
