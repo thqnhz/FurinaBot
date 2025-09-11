@@ -14,9 +14,8 @@ limitations under the License.
 
 from __future__ import annotations
 
-from typing import Any, Self
-
-from discord import Color, ui
+from discord import ui
+from typing_extensions import Self
 
 
 class Container(ui.Container):
