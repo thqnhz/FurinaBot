@@ -1,72 +1,47 @@
+"""
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
 from __future__ import annotations
 
 import asyncio
-import os
-import logging
+import sys
 
-import asqlite
 from aiohttp import ClientSession
 
-
-from bot import Furina
-from settings import TOKEN
-       
-
-class LogFormatter(logging.Formatter):
-    grey = '\x1b[38;21m'
-    blue = '\x1b[38;5;39m'
-    yellow = '\x1b[38;5;226m'
-    red = '\x1b[38;5;196m'
-    bold_red = '\x1b[31;1m'
-    reset = '\x1b[0m'
-
-    def __init__(self):
-        super().__init__()
-        self.FORMATS = {
-            logging.DEBUG:    self.grey     + "%(asctime)s | %(levelname)8s" + self.reset + " | %(message)s",
-            logging.INFO:     self.blue     + "%(asctime)s | %(levelname)8s" + self.reset + " | %(message)s",
-            logging.WARNING:  self.yellow   + "%(asctime)s | %(levelname)8s" + self.reset + " | %(message)s",
-            logging.ERROR:    self.red      + "%(asctime)s | %(levelname)8s" + self.reset + " | %(message)s",
-            logging.CRITICAL: self.bold_red + "%(asctime)s | %(levelname)8s" + self.reset + " | %(message)s"
-        }
-
-    def format(self, record):
-        log_fmt = self.FORMATS.get(record.levelno)
-        formatter = logging.Formatter(log_fmt)
-        return formatter.format(record)
+from core import FurinaBot, Lavalink, settings, utils
 
 
-def handle_setup_logging() -> None:
-    """Setup logging for the bot"""
-    from discord import utils
-    timestamp = utils.utcnow().strftime("%Y%m%d_%H%M%S")
-    log_filename = f"logs/furina_{timestamp}.log"
+async def main(*, skip_ll: bool) -> None:
+    """Setting up loggings and starting the bot.
 
-    file_handler = logging.FileHandler(log_filename)
-    console_handler = logging.StreamHandler()
-    file_handler.setFormatter(LogFormatter())
-    console_handler.setFormatter(LogFormatter())
+    Parameters
+    ----------
+    skip_ll : :class:`bool`
+        Whether to skip Lavalink or not.
+    """
+    utils.setup_logging()
+    async with (
+        ClientSession() as client_session,
+        FurinaBot(client_session=client_session, skip_lavalink=skip_ll) as bot,
+    ):
+        if not skip_ll:
+            with Lavalink().start():
+                await bot.start()
+        else:
+            await bot.start()
 
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
-    root_logger.addHandler(file_handler)
-    root_logger.addHandler(console_handler)
 
-    # utils.setup_logging()
-    
-def delete_old_logs() -> None:
-    """Delete old logs"""
-    logs = sorted([file for file in os.listdir("logs") if file.startswith("furina_") and file.endswith(".log")])
-    if len(logs) > 2:
-        for log in logs[:-2]:
-            os.remove(f"logs/{log}")
-
-async def main() -> None:
-    os.makedirs("logs", exist_ok=True)
-    delete_old_logs()
-    handle_setup_logging()
-    async with ClientSession() as client_session, asqlite.create_pool("config.db") as pool:
-        async with Furina(pool=pool, client_session=client_session) as bot:
-            await bot.start(TOKEN)
-
-asyncio.run(main())
+if __name__ == "__main__":
+    skip_ll = bool("--skip-ll" in sys.argv or settings.SKIP_LL)
+    asyncio.run(main(skip_ll=skip_ll))
