@@ -12,6 +12,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from pkgutil import iter_modules
+from __future__ import annotations
 
-EXTENSIONS = [module.name for module in iter_modules(__path__, f"{__package__}.")] + ["jishaku"]
+from discord.ext.commands import CommandError
+
+
+class UIElementOnCoolDownError(CommandError):
+    def __init__(self, retry_after: float) -> None:
+        self.retry_after = retry_after

@@ -12,6 +12,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from pkgutil import iter_modules
+from __future__ import annotations
 
-EXTENSIONS = [module.name for module in iter_modules(__path__, f"{__package__}.")] + ["jishaku"]
+from .base import LayoutView as LayoutView
+from .container import Container as Container
+from .paginated import PaginatedView as PaginatedView

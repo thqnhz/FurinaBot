@@ -12,6 +12,5 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from pkgutil import iter_modules
-
-EXTENSIONS = [module.name for module in iter_modules(__path__, f"{__package__}.")] + ["jishaku"]
+from .furina import FurinaBot as FurinaBot, FurinaCog as FurinaCog, FurinaCtx as FurinaCtx
+from .lavalink import Lavalink as Lavalink

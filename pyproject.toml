@@ -18,13 +18,13 @@ dependencies = [
     "python-dotenv",
     "tqdm",
     "lavalink",
-    "requests>=2.32.4",
+    "requests",
 ]
 
 requires-python = "<4.0.0,>=3.10.0"
 
 [tool.setuptools]
-packages = ['cogs', 'assets']
+packages = ['core', 'cogs', 'assets']
 
 
 [tool.ruff]
