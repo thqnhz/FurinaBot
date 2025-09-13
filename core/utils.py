@@ -20,12 +20,12 @@ import pathlib
 import re
 from typing import TYPE_CHECKING, Any
 
-from discord import Embed
+from discord import Embed, ui
 
 # since multiple utils will be confusing so just import everything from discord.utils
 from discord.utils import *  # type: ignore[wildcardImportFromLibrary]
 
-from core.views import PaginatedView
+from core.views import Container, PaginatedLayoutView
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
