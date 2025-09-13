@@ -16,26 +16,15 @@ from __future__ import annotations
 
 import logging
 import traceback
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-from discord import (
-    Activity,
-    ActivityType,
-    DMChannel,
-    Guild,
-    Interaction,
-    Member,
-    Message,
-    app_commands,
-    ui,
-)
+from discord import DMChannel, Guild, Interaction, Message, app_commands, ui
 from discord.ext import commands
 
 from core import FurinaCog, FurinaCtx, settings
+from core.views import Container, LayoutView
 
 if TYPE_CHECKING:
-    from wavelink import Playable, Player, TrackEndEventPayload, TrackStartEventPayload
-
     from core import FurinaBot
 
 
