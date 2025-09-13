@@ -91,15 +91,17 @@ class BotEvents(FurinaCog):
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx: FurinaCtx, error: commands.errors.CommandError) -> None:
-        err: str = settings.CROSS
+        err = ""
         if isinstance(error, commands.CommandNotFound):
-            return
+            pass
         if isinstance(error, commands.MissingRequiredArgument):
-            err += f" **Missing required argument:** `{error.param.name}`"
+            err += f"{settings.CROSS} **Missing required argument:** `{error.param.name}`"
         else:
-            err += f" **{error}**"
-        view = ui.LayoutView().add_item(ui.Container(ui.TextDisplay(err)))
-        await ctx.reply(view=view, ephemeral=True, delete_after=60)
+            err += f"{settings.CROSS} **{error}**"
+        if err:
+            await ctx.reply(
+                view=LayoutView(Container(ui.TextDisplay(err))), ephemeral=True, delete_after=60
+            )
 
         traceback.print_exception(error)
 
