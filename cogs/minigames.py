@@ -32,7 +32,7 @@ from discord.ext import commands
 from tqdm import tqdm
 
 from core import utils
-from core.views import Container, LayoutView, PaginatedView
+from core.views import Container, LayoutView, PaginatedLayoutView, PaginatedView
 
 if TYPE_CHECKING:
     from core import FurinaBot, FurinaCtx
@@ -651,13 +651,13 @@ class LookUpButton(ui.Button):
     def __init__(self, word: str) -> None:
         super().__init__(style=ButtonStyle.secondary, label="Look Up", emoji="\U0001f310")
         self.word = word
-        self.dict: PaginatedView | None = None
+        self.dict: PaginatedLayoutView | None = None
 
     async def callback(self, interaction: Interaction) -> None:
         await interaction.response.defer(thinking=True, ephemeral=True)
         if not self.dict:
             self.dict = await utils.call_dictionary(self.word, interaction.client.cs)
-        await interaction.followup.send(embed=self.dict.embeds[0], view=self.dict)
+        await interaction.followup.send(view=self.dict)
 
 
 class WordleHelpGuessSelect(ui.Select):
