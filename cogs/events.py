@@ -45,20 +45,6 @@ class BotEvents(FurinaCog):
         self.pool = bot.pool
         self.bot = bot
 
-    async def update_activity(self, state: str = "N̸o̸t̸h̸i̸n̸g̸") -> None:
-        """Update the bot's activity to the playing track.
-
-        Parameters
-        ----------
-        state: :class:`str`
-            Track name
-        """
-        await self.bot.change_presence(
-            activity=Activity(
-                type=ActivityType.playing, name=settings.ACTIVITY_NAME, state=f"Playing: {state}"
-            )
-        )
-
     @commands.Cog.listener()
     async def on_guild_join(self, guild: Guild) -> None:
         """Add the guild to the database when the bot joins a new server"""
@@ -74,7 +60,7 @@ class BotEvents(FurinaCog):
     @commands.Cog.listener()
     async def on_command_completion(self, ctx: FurinaCtx) -> None:
         """Save users to the database when they successfully use a command"""
-        if ctx.guild is None and "jishaku" not in ctx.command.qualified_name:
+        if ctx.guild is None or "jishaku" in ctx.command.qualified_name:
             return
         if len(self.bot.command_cache[ctx.guild.id]) == 10:
             self.bot.command_cache[ctx.guild.id].pop(0)
@@ -127,37 +113,6 @@ class BotEvents(FurinaCog):
         await ctx.reply(view=view, ephemeral=True, delete_after=60)
 
         traceback.print_exception(error)
-
-    @commands.Cog.listener()
-    async def on_voice_state_update(self, member: Member, before: Any, after: Any) -> None:
-        # Change activity when bot leave voice channel
-        if member == self.bot.user and not after.channel:
-            await self.update_activity()
-
-        # Leave if the bot is the last one in the channel
-        if before.channel and not after.channel:  # noqa: SIM102
-            if len(before.channel.members) == 1 and before.channel.members[0] == self.bot.user:
-                await member.guild.voice_client.disconnect(force=True)
-                channel = self.bot.get_partial_messageable(settings.MUSIC_CHANNEL)
-                embed = self.bot.embed
-                embed.title = "I am not afraid of ghost i swear :fearful:"
-                embed.set_image(
-                    url="https://media1.tenor.com/m/Cbwh3gVO4KAAAAAC/genshin-impact-furina.gif"
-                )
-                await channel.send(embed=embed)
-
-    @commands.Cog.listener()
-    async def on_wavelink_track_end(self, payload: TrackEndEventPayload) -> None:
-        """Update activity if the queue is empty"""
-        player: Player = payload.player
-        if player.queue.is_empty:
-            await self.update_activity()
-
-    @commands.Cog.listener()
-    async def on_wavelink_track_start(self, payload: TrackStartEventPayload) -> None:
-        """Update activity when a track starts playing"""
-        track: Playable = payload.track
-        await self.update_activity(track.title)
 
 
 async def setup(bot: FurinaBot) -> None:
