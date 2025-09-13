@@ -114,7 +114,7 @@ def setup_logging() -> None:
 
 
 # Dictionary related
-async def call_dictionary(word: str, cs: ClientSession) -> PaginatedView:
+async def call_dictionary(word: str, cs: ClientSession) -> PaginatedLayoutView:
     """|coro|
 
     Make a http request to dictionaryapi.dev to get definition of a word.
@@ -130,16 +130,20 @@ async def call_dictionary(word: str, cs: ClientSession) -> PaginatedView:
 
     Returns
     -------
-    :class:`~core.views.PaginatedView`
+    :class:`~core.views.PaginatedLayoutView`
         The paginated view with embeds of the word's definitions.
     """
-    embeds: list[Embed] = []
-    base_embed = Embed(title=word.capitalize()).set_footer(text="Coded by ThanhZ")
+    containers: list[Container] = []
     dictionary_link = f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}"
     async with cs.get(dictionary_link) as response:
         if response.status == 404:
-            base_embed.description = "No definitions found. API call returned 404."
-            return PaginatedView(timeout=300, embeds=[base_embed])
+            return PaginatedLayoutView(
+                containers=Container(
+                    ui.TextDisplay(
+                        f"## {word.capitalize}\nNo definitions found. API call returned 404."
+                    )
+                )
+            )
         data: list[dict] = await response.json()
 
     pronunciations = __get_pronunciations(data)
@@ -148,17 +152,11 @@ async def call_dictionary(word: str, cs: ClientSession) -> PaginatedView:
         # Definitions
         meanings: list[dict] = d.get("meanings", [])
         for meaning in meanings:
-            embed = base_embed.copy()
             conjugation: str = meaning.get("partOfSpeech", "N/A")
-            embed.title += f" ({conjugation})"  # type: ignore[reportOperatorIssue]
-            embed.description = f"Pronunciations: {pronunciations[i] or 'N/A'}"
-
-            synonyms: list[str] = meaning.get("synonyms")  # type: ignore[reportAssignmentType]
-            embed.add_field(name="Synonyms:", value=", ".join(synonyms) if synonyms else "N/A")
-
-            antonyms: list[str] = meaning.get("antonyms")  # type: ignore[reportAssignmentType]
-            embed.add_field(name="Antonyms:", value=", ".join(antonyms) if antonyms else "N/A")
-
+            synonyms: list[str] = meaning.get("synonyms")
+            synonyms_txt = ", ".join(synonyms) if synonyms else "N/A"
+            antonyms: list[str] = meaning.get("antonyms")
+            antonyms_txt = ", ".join(antonyms) if antonyms else "N/A"
             definitions: list[dict] = meaning.get("definitions")  # type: ignore[reportAssignmentType]
             definition_value = ""
             FIELD_LIMIT: int = 1024
@@ -172,9 +170,18 @@ async def call_dictionary(word: str, cs: ClientSession) -> PaginatedView:
                     definition_value += to_add
                 else:
                     break
-            embed.add_field(name="Definition", value=definition_value, inline=False)
-            embeds.append(embed)
-    return PaginatedView(timeout=300, embeds=embeds)
+
+            container = Container(
+                ui.TextDisplay(
+                    f"## {word.capitalize()} ({conjugation})\n"
+                    f"### Pronunciations:\n{pronunciations[i] or 'N/A'}\n"
+                    f"### Synonyms:\n{synonyms_txt}\n"
+                    f"### Antonyms:\n{antonyms_txt}\n"
+                    f"### Definition:\n{definition_value}"
+                )
+            )
+            containers.append(container)
+    return PaginatedLayoutView(timeout=300, containers=containers)
 
 
 def __get_pronunciations(data: list[dict]) -> list[str]:

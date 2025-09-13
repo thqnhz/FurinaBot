@@ -475,7 +475,7 @@ class Utils(FurinaCog):
             The word to look up
         """
         view = await utils.call_dictionary(word.split(maxsplit=1)[0], self.cs)
-        view.message = await ctx.reply(embed=view.embeds[0], view=view)
+        view.message = await ctx.reply(view=view)
 
     @commands.command(name="wordoftheday", aliases=["wotd"])
     async def wotd_command(self, ctx: FurinaCtx, *, date: str | None = None) -> None:
