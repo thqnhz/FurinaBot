@@ -419,7 +419,10 @@ class Music(FurinaCog):
 
     @commands.hybrid_command(name="nowplaying", aliases=["np", "now", "current"])
     async def nowplaying_command(self, ctx: FurinaCtx) -> None:
-        """Gets the on going track"""
+        """Gets the on going track
+        
+        Get the title, url, thumbnail and the current position of the track.
+        """
         player = self._get_player(ctx)
         current = player.current
         played = int((player.position / current.duration) * 20)
