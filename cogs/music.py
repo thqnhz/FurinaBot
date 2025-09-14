@@ -541,10 +541,13 @@ class Music(FurinaCog):
             if current.lower() in track.title.lower()
         ][:25]
 
-    @commands.command(
-        name="remove", aliases=["rm", "delete"], description="Xóa một bài hát khỏi hàng chờ"
-    )
+    @commands.command(name="remove", aliases=["rm", "delete"])
     async def remove_prefixcommand(self, ctx: FurinaCtx) -> None:
+        """Removes the last added track from the queue
+
+        Only remove the last one from the queue.
+        If you want to remove a specific one, use `/remove` instead.
+        """
         player = self._get_player(ctx)
         if len(player.queue) == 0:
             return
