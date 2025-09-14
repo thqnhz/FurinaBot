@@ -420,7 +420,7 @@ class Music(FurinaCog):
     @commands.hybrid_command(name="nowplaying", aliases=["np", "now", "current"])
     async def nowplaying_command(self, ctx: FurinaCtx) -> None:
         """Gets the on going track
-        
+
         Get the title, url, thumbnail and the current position of the track.
         """
         player = self._get_player(ctx)
@@ -489,8 +489,7 @@ class Music(FurinaCog):
         queue_embeds: list[Embed] = []
         q: str = ""
         for i, track in enumerate(player.queue, 1):
-            q += f"{i}. [**{track.title}**](<{track.uri}>)"
-            f"({ms_to_mm_ss(track.duration)})\n"
+            q += f"{i}. [**{track.title}**](<{track.uri}>) ({ms_to_mm_ss(track.duration)})\n"
             if i % 10 == 0:
                 embed = self._create_queue_embed(player, q)
                 queue_embeds.append(embed)
