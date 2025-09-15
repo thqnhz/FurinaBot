@@ -15,6 +15,7 @@ limitations under the License.
 from __future__ import annotations
 
 import csv
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -22,7 +23,8 @@ import numpy as np
 from discord import Interaction, Message, app_commands, ui
 from discord.ext import commands
 
-from core import FurinaCog, FurinaCtx
+from core import FurinaCog, FurinaCtx, settings
+from core.views import Container, LayoutView
 
 if TYPE_CHECKING:
     from core import FurinaBot
@@ -94,27 +96,37 @@ class Fun(FurinaCog):
             "Misfortune",
             "Great Misfortune",
         ]
+        fortune_index = self.hashing(ctx.author.id, key=settings.FORTUNE_KEY, max_val=5)
+        yap = self.fortune_yapping[fortune_index][
+            self.hashing(ctx.author.id, key=settings.FORTUNE_YAPPING_KEY, max_val=4)
+        ]
         if number == 1 or number not in range(1, 10_000):
-            fortune = self.rng.choice(range(len(fortunes)), size=100)[-1]
             header = f"{ctx.author.mention} thought very hard before drawing a fortune slip"
         else:
-            fortune: int = self.rng.randint(0, len(fortunes) - 1)
             header = f"{ctx.author.mention} thought {number} times before drawing a fortune slip"
-        yap: str = self.rng.choice(self.fortune_yapping[fortune])
         fortune_section = ui.Section(
-            ui.TextDisplay("### " + header),
-            ui.TextDisplay(f"## {fortunes[fortune]}"),
-            ui.TextDisplay(">>> " + yap),
+            ui.TextDisplay(f"### {header}\n## {fortunes[fortune_index]}\n>>> {yap}\n"),
             accessory=ui.Thumbnail(
                 "https://upload-static.hoyoverse.com/hoyolab-wiki/2023/08/01/94376896/13b4067ebbc97e7a3577b9358c9c6eb9_8561788766756121179.png?x-oss-process=image%2Fformat%2Cwebp"
             ),
         )
-        container = ui.Container(
-            fortune_section,
-            ui.TextDisplay("-# This is just for fun, take it as a grain of salt | Coded by ThanhZ"),
+        await ctx.send(
+            view=LayoutView(
+                Container(
+                    fortune_section,
+                    ui.TextDisplay(
+                        "-# This is just for fun, take it as a grain of salt | Coded by ThanhZ"
+                    ),
+                )
+            ),
+            silent=True,
         )
-        view = ui.LayoutView().add_item(container)
-        await ctx.send(view=view, silent=True)
+
+    @staticmethod
+    def hashing(id_: int, *, key: int, max_val: int) -> int:
+        """Hashes the id and the key to an index, day dependent"""
+        day_factor = int(time.time()) // 86400
+        return (((id_ * 2654435761) ^ key) ^ day_factor) % max_val
 
     @commands.command(name="dice", aliases=["roll"])
     async def dice_command(self, ctx: FurinaCtx, number: int = 1) -> None:
