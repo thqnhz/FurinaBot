@@ -100,7 +100,7 @@ class FurinaBot(commands.Bot):
             intents=discord.Intents.all(),
             help_command=None,
             allowed_contexts=app_commands.AppCommandContext(dm_channel=False, guild=True),
-            allowed_mentions=discord.AllowedMentions(everyone=False, roles=False, users=True),
+            allowed_mentions=discord.AllowedMentions.none(),
             activity=discord.Activity(
                 type=discord.ActivityType.playing, name=settings.ACTIVITY_NAME
             ),
