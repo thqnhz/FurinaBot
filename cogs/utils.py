@@ -506,14 +506,17 @@ class Utils(FurinaCog):
                 await ctx.reply("Something went wrong")
                 return
             content: dict = await response.json()
-        container = ui.Container(
-            ui.TextDisplay(f"## {content['word']} ({content['definitions'][0]['partOfSpeech']})"),
-            ui.TextDisplay("**Definition:**\n>>> " + content["definitions"][0]["text"]),
+        container = Container(
+            ui.TextDisplay(
+                f"## {content['word']} ({content['definitions'][0]['partOfSpeech']})\n"
+                f"### Definition:\n>>> {content['definitions'][0]['text']}"
+            ),
             ui.Separator(),
-            ui.TextDisplay("**Fun fact:**\n" + content["note"]),
-            ui.TextDisplay(f"-# Coded by ThanhZ | Date: `{ddmmyyyy}`"),
+            ui.TextDisplay(
+                f"### Fun fact:\n {content['note']}\n-# Coded by ThanhZ | Date: `{ddmmyyyy}`"
+            ),
         )
-        await ctx.reply(view=LayoutView().add_item(container))
+        await ctx.reply(view=LayoutView(container))
 
     @commands.command(name="stats", aliases=["stat"])
     async def stats_command(self, ctx: FurinaCtx) -> None:
@@ -527,7 +530,7 @@ class Utils(FurinaCog):
         - Number of slash commands have been completed.
         - Most recent 10 slash commands.
         """
-        container = self.container.add_item(
+        container = Container(
             ui.TextDisplay(f"## {self.bot.user.display_name} Stats"),
             ui.Separator(),
             ui.TextDisplay(f"### Uptime: {self.bot.uptime}### Servers: {len(self.bot.guilds)}"),
