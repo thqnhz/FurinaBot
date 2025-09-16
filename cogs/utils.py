@@ -513,7 +513,7 @@ class Utils(FurinaCog):
             ),
             ui.Separator(),
             ui.TextDisplay(
-                f"### Fun fact:\n {content['note']}\n-# Coded by ThanhZ | Date: `{ddmmyyyy}`"
+                f"### Fun fact:\n{content['note']}\n-# Coded by ThanhZ | Date: `{ddmmyyyy}`"
             ),
         )
         await ctx.reply(view=LayoutView(container))
