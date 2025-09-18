@@ -41,7 +41,9 @@ class Gacha(FurinaCog):
         self.hsr = enka.HSRClient()
 
     async def cog_load(self) -> None:
+        await self.gi.start()
         await self.gi.update_assets()
+        await self.hsr.start()
         await self.hsr.update_assets()
         await super().cog_load()
 
