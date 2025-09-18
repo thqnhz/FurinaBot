@@ -40,6 +40,11 @@ class Gacha(FurinaCog):
         self.gi = enka.GenshinClient()
         self.hsr = enka.HSRClient()
 
+    async def cog_load(self) -> None:
+        await self.gi.update_assets()
+        await self.hsr.update_assets()
+        await super().cog_load()
+
     @property
     def embed(self) -> discord.Embed:
         """Shortcut for `FurinaBot.embed`, with extra footer"""
