@@ -533,7 +533,7 @@ class Utils(FurinaCog):
         container = Container(
             ui.TextDisplay(f"## {self.bot.user.display_name} Stats"),
             ui.Separator(),
-            ui.TextDisplay(f"### Uptime: {self.bot.uptime}### Servers: {len(self.bot.guilds)}"),
+            ui.TextDisplay(f"### Uptime: {self.bot.uptime}\n### Servers: {len(self.bot.guilds)}"),
             ui.Separator(),
         )
         guild_id = ctx.guild.id
