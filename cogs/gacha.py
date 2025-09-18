@@ -22,7 +22,7 @@ from discord import ui
 from discord.ext import commands
 
 from core import FurinaCog, FurinaCtx
-from core.views import LayoutView
+from core.views import Container, LayoutView
 
 if TYPE_CHECKING:
     from core import FurinaBot
@@ -107,22 +107,22 @@ class Gacha(FurinaCog):
             p_info = response.player
         abyss = f"{p_info.abyss_floor}-{p_info.abyss_level} ({p_info.abyss_stars})"
 
-        container = self.container
-        container.add_item(ui.MediaGallery(discord.MediaGalleryItem(p_info.namecard.full)))
-        container.add_item(ui.Separator())
-        header = ui.Section(
-            ui.TextDisplay(f"## {p_info.nickname} ({uid})"),
-            ui.TextDisplay(
-                f"> {p_info.signature}\n"
-                f"**Adventure Rank:** `{p_info.level}` ▪ **World Level:** `{p_info.world_level}`\n"
-                f"**Achievements:** `{p_info.achievements}`\n"
-                f"**Abyss Floor:** `{abyss}`"
+        container = Container(
+            ui.MediaGallery(discord.MediaGalleryItem(p_info.namecard.full)),
+            ui.Separator(),
+            ui.Section(
+                ui.TextDisplay(f"## {p_info.nickname} ({uid})"),
+                ui.TextDisplay(
+                    f"> {p_info.signature}\n"
+                    f"**Adventure Rank:** `{p_info.level}` "
+                    "▪ **World Level:** `{p_info.world_level}`\n"
+                    f"**Achievements:** `{p_info.achievements}`\n"
+                    f"**Abyss Floor:** `{abyss}`"
+                ),
+                accessory=ui.Thumbnail(p_info.profile_picture_icon.circle),
             ),
-            accessory=ui.Thumbnail(p_info.profile_picture_icon.circle),
-        )
-        container.add_item(header)
-        container.add_item(ui.Separator())
-        await ctx.reply(view=LayoutView().add_item(container))
+        ).add_footer()
+        await ctx.reply(view=LayoutView(container))
 
     @gi_group.command(name="set")
     async def set_uid_gi(self, ctx: FurinaCtx, *, uid: str) -> None:
