@@ -94,7 +94,7 @@ class BotEvents(FurinaCog):
         err = ""
         if isinstance(error, commands.CommandNotFound):
             pass
-        if isinstance(error, commands.MissingRequiredArgument):
+        elif isinstance(error, commands.MissingRequiredArgument):
             err += f"{settings.CROSS} **Missing required argument:** `{error.param.name}`"
         else:
             err += f"{settings.CROSS} **{error}**"
