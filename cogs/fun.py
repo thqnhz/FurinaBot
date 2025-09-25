@@ -14,11 +14,15 @@ limitations under the License.
 
 from __future__ import annotations
 
+import asyncio
 import csv
+import io
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import discord
+import matplotlib.pyplot as plt
 import numpy as np
 from discord import Interaction, Message, app_commands, ui
 from discord.ext import commands
@@ -246,6 +250,66 @@ class Fun(FurinaCog):
             ui.TextDisplay("-# This is just for fun, take it as a grain of salt | Coded by ThanhZ"),
         )
         await ctx.send(view=ui.LayoutView().add_item(container), silent=True)
+
+    @commands.command(name="gamblersruin")
+    async def gamblers_ruin_command(
+        self, ctx: FurinaCtx, money: int = 100, *, bet: int = 1
+    ) -> None:
+        """Simulates the gambler's ruin game
+
+        This uses Markov Chain to simulate a chance game.
+        The gambler has `x` money. Each time they win, they get `bet` money.
+        The simulation ends when the gambler run out of money
+        or have twice the amount he get.
+
+        Parameters
+        ----------
+        money : int = 100, optional
+            Starting money
+        bet : int = 1, optional
+            Amount of money win/lose each loop
+        """
+        if (bet > money) or (money // bet > 200):
+            await ctx.reply("Are you serious?")
+            return
+        message = await ctx.reply("Processing")
+
+        attempt, win, bytes_ = await self._gamblers_ruin_sim(money, bet)
+        result = "won the casino!" if win else "You lost it all. RIP BOZO!"
+        file = discord.File(bytes_, filename="result.png")
+        await message.edit(content=f"After {attempt} attempts, You {result}", attachments=[file])
+
+    async def _gamblers_ruin_sim(self, _money: int, _bet: int) -> tuple[int, bool, bytes]:
+        def simulation(money: int, bet: int) -> tuple[list[int], bool]:
+            fortune = money
+            history: list[int] = []
+            while 0 < money < fortune * 2:
+                money += self.rng.choice([bet, -bet])
+                history.append(money)
+            return history, history[-1] > 0
+
+        history, win = await asyncio.to_thread(simulation, _money, _bet)
+
+        def draw(history: list[int]) -> bytes:
+            attempts = range(len(history))
+            fig, ax = plt.subplots(figsize=(8, 4))
+            ax.plot(attempts, history, linewidth=0.5)
+            ax.set_xlabel("Attempts")
+            ax.set_ylabel("Money")
+            ax.set_title("Gambler's Ruin Simulation")
+            ax.grid(True)  # noqa: FBT003
+            ax.set_xlim(left=0)
+            ax.set_ylim(bottom=0)
+
+            buf = io.BytesIO()
+            fig.savefig(buf, format="png")
+            plt.close(fig)
+            buf.seek(0)
+            return buf
+
+        graph = await asyncio.to_thread(draw, history)
+
+        return len(history), win, graph
 
 
 async def setup(bot: FurinaBot) -> None:
