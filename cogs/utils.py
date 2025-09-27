@@ -17,7 +17,6 @@ from __future__ import annotations
 import datetime
 import inspect
 import io
-import pathlib
 import platform
 import re
 from enum import Enum
@@ -28,7 +27,8 @@ import dateparser
 import discord
 import docstring_parser
 import psutil
-from discord import Interaction, Member, app_commands, ui
+import trio
+from discord import Member, app_commands, ui
 from discord.ext import commands
 from discord.ui import Select
 
@@ -253,7 +253,7 @@ class Utils(FurinaCog):
         )
 
     @commands.command(name="source", aliases=["src"])
-    async def source_command(self, ctx: FurinaCtx, *, command: str | None = "") -> None:
+    async def source_command(self, ctx: FurinaCtx, *, command: str | None = None) -> None:
         """Get the bot source code
 
         Get the source code of the bot or a specific command.
@@ -277,7 +277,8 @@ class Utils(FurinaCog):
             lines, start_line = inspect.getsourcelines(cmd.callback)
             end_line = start_line + len(lines) - 1
             src_file = inspect.getfile(cmd.callback)
-            path = pathlib.Path(src_file).resolve().relative_to(pathlib.Path.cwd())
+            path = await trio.Path(src_file).resolve()
+            path = path.relative_to(trio.Path.cwd())
             if len(source) >= 1000:
                 res = "Source code is too long so I will send a file instead\n"
                 file = discord.File(
