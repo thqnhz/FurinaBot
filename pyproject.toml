@@ -20,7 +20,7 @@ dependencies = [
     "lavalink",
     "requests",
     "typing-extensions>=4.14.1",
-    "trio>=0.31.0",
+    "anyio>=4.11.0",
 ]
 
 requires-python = "<4.0.0,>=3.10.0"
