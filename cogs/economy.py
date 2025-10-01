@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import aiofiles
-import asqlite
 from discord.ext import commands
 
 from core import FurinaCog, FurinaCtx

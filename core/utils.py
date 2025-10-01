@@ -18,9 +18,9 @@ import logging
 import logging.handlers
 import pathlib
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-from discord import Embed, ui
+from discord import ui
 
 # since multiple utils will be confusing so just import everything from discord.utils
 from discord.utils import *  # type: ignore[wildcardImportFromLibrary]
