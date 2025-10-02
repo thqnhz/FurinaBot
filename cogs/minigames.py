@@ -748,7 +748,7 @@ class WordleModal(ui.Modal):
         correct_letters: list[str],
     ) -> None:
         super().__init__(timeout=180, title=f"WORDLE ({letters} LETTERS)")
-        self.text_input = ui.TextInput(
+        self.input = ui.TextInput(
             label="Type in your guess",
             placeholder="...",
             min_length=letters,
