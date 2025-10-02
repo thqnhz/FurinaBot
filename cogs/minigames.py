@@ -756,7 +756,9 @@ class WordleModal(ui.Modal):
         )
         self.letter_statuses = ui.Label(
             text="Letter Statuses",
-            description="Open the dropdown menu to see the current game letter statuses",
+            description=(
+                "Open the dropdown menu to see the current game letter statuses"
+            ),
             component=ui.Select(
                 options=[
                     discord.SelectOption(
