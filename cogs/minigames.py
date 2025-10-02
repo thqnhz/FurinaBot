@@ -1030,36 +1030,35 @@ class Minigames(commands.GroupCog, group_name="minigame"):
     async def minigame_stats_all(self, interaction: Interaction) -> None:
         await interaction.response.defer()
         embeds: list[Embed] = []
-        async with self.pool.acquire() as conn:
-            rows = await conn.fetchall(
-                """
-                WITH ranked_players AS (
-                    SELECT
-                        game_name,
-                        user_id,
-                        COUNT(*) FILTER (WHERE win = TRUE) AS wins,
-                        ROW_NUMBER() OVER (
-                            PARTITION BY game_name
-                            ORDER BY COUNT(*)
-                            FILTER (WHERE win = TRUE) DESC
-                        ) AS rank
-                    FROM
-                        singleplayer_games
-                    GROUP BY
-                        game_name, user_id
-                )
+        rows = await self.pool.fetchall(
+            """
+            WITH ranked_players AS (
                 SELECT
                     game_name,
                     user_id,
-                    wins
+                    COUNT(*) FILTER (WHERE win = TRUE) AS wins,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY game_name
+                        ORDER BY COUNT(*)
+                        FILTER (WHERE win = TRUE) DESC
+                    ) AS rank
                 FROM
-                    ranked_players
-                WHERE
-                    rank <= 3
-                ORDER BY
-                    game_name, rank;
-                """
+                    singleplayer_games
+                GROUP BY
+                    game_name, user_id
             )
+            SELECT
+                game_name,
+                user_id,
+                wins
+            FROM
+                ranked_players
+            WHERE
+                rank <= 3
+            ORDER BY
+                game_name, rank;
+            """
+        )
         sorted_by_minigame: dict[str, list[dict[str, int]]] = {}
         for row in rows:
             minigame = row["game_name"]
@@ -1098,25 +1097,24 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         """
         await interaction.response.defer()
         user = user or interaction.user
-        async with self.pool.acquire() as conn:
-            rows = await conn.fetchall(
-                """
-                SELECT
-                    game_name,
-                    COUNT(*) FILTER (WHERE win = TRUE) AS wins,
-                    COUNT(*) FILTER (WHERE win = FALSE) AS losses,
-                    COUNT(*) AS total_games
-                FROM
-                    singleplayer_games
-                WHERE
-                    user_id = $1
-                GROUP BY
-                    game_name
-                ORDER BY
-                    game_name;
-                """,
-                user.id,
-            )
+        rows = await self.pool.fetchall(
+            """
+            SELECT
+                game_name,
+                COUNT(*) FILTER (WHERE win = TRUE) AS wins,
+                COUNT(*) FILTER (WHERE win = FALSE) AS losses,
+                COUNT(*) AS total_games
+            FROM
+                singleplayer_games
+            WHERE
+                user_id = $1
+            GROUP BY
+                game_name
+            ORDER BY
+                game_name;
+            """,
+            user.id,
+        )
         embed = self.bot.embed
         embed.title = "Minigame Stats"
         embed.description = f"User: {user.mention}"
@@ -1147,60 +1145,59 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         self, interaction: Interaction, minigame: str
     ) -> None:
         await interaction.response.defer()
-        async with self.pool.acquire() as conn:
-            rows_top = await conn.fetchall(
-                """
-                SELECT
-                user_id,
-                COUNT(*) FILTER (WHERE win = TRUE) AS wins,
-                COUNT(*) FILTER (WHERE win = FALSE) AS losses,
-                COUNT(*) AS total_games,
-                ROUND(
-                    (
-                        COUNT(*)
-                        FILTER (
-                            WHERE win = TRUE
-                        ) * 100.0 / NULLIF(
-                            COUNT(*), 0)
-                    ),
-                    2
-                ) AS win_percentage
-                FROM singleplayer_games
-                WHERE game_name = $1
-                GROUP BY user_id
-                HAVING COUNT(*) >= 5
-                ORDER BY win_percentage DESC, total_games DESC
-                LIMIT 3
-                """,
-                minigame,
-            )
-            rows_bottom = await conn.fetchall(
-                """
-                SELECT
-                user_id,
-                COUNT(*) FILTER (WHERE win = TRUE) AS wins,
-                COUNT(*) FILTER (WHERE win = FALSE) AS losses,
-                COUNT(*) AS total_games,
-                ROUND(
-                    (
-                        COUNT(*)
-                        FILTER (
-                            WHERE win = TRUE
-                        ) * 100.0 / NULLIF(
-                            COUNT(*), 0
-                        )
-                    ),
-                    2
-                ) AS win_percentage
-                FROM singleplayer_games
-                WHERE game_name = $1
-                GROUP BY user_id
-                HAVING COUNT(*) >= 5
-                ORDER BY win_percentage ASC, total_games DESC
-                LIMIT 3
-                """,
-                minigame,
-            )
+        rows_top = await self.pool.fetchall(
+            """
+            SELECT
+            user_id,
+            COUNT(*) FILTER (WHERE win = TRUE) AS wins,
+            COUNT(*) FILTER (WHERE win = FALSE) AS losses,
+            COUNT(*) AS total_games,
+            ROUND(
+                (
+                    COUNT(*)
+                    FILTER (
+                        WHERE win = TRUE
+                    ) * 100.0 / NULLIF(
+                        COUNT(*), 0)
+                ),
+                2
+            ) AS win_percentage
+            FROM singleplayer_games
+            WHERE game_name = $1
+            GROUP BY user_id
+            HAVING COUNT(*) >= 5
+            ORDER BY win_percentage DESC, total_games DESC
+            LIMIT 3
+            """,
+            minigame,
+        )
+        rows_bottom = await self.pool.fetchall(
+            """
+            SELECT
+            user_id,
+            COUNT(*) FILTER (WHERE win = TRUE) AS wins,
+            COUNT(*) FILTER (WHERE win = FALSE) AS losses,
+            COUNT(*) AS total_games,
+            ROUND(
+                (
+                    COUNT(*)
+                    FILTER (
+                        WHERE win = TRUE
+                    ) * 100.0 / NULLIF(
+                        COUNT(*), 0
+                    )
+                ),
+                2
+            ) AS win_percentage
+            FROM singleplayer_games
+            WHERE game_name = $1
+            GROUP BY user_id
+            HAVING COUNT(*) >= 5
+            ORDER BY win_percentage ASC, total_games DESC
+            LIMIT 3
+            """,
+            minigame,
+        )
         embed = self.bot.embed
         embed.title = f"{minigame.capitalize()} Minigame Stats"
         top_players = ""
