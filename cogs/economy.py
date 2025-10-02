@@ -41,7 +41,9 @@ class Economy(FurinaCog):
             primo_path = Path("./assets/economy/primogem.png")
             async with aiofiles.open(primo_path, mode="rb") as primo:
                 image = await primo.read()
-            emoji = await self.bot.create_application_emoji(name="primogem", image=image)
+            emoji = await self.bot.create_application_emoji(
+                name="primogem", image=image
+            )
             self.primo = f"<{emoji.name}:{emoji.id}>"
 
     async def __create_economy_tables(self) -> None:

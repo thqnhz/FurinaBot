@@ -64,9 +64,18 @@ class BotEvents(FurinaCog):
         if len(self.bot.command_cache[ctx.guild.id]) == 10:
             self.bot.command_cache[ctx.guild.id].pop(0)
         self.bot.command_cache[ctx.guild.id].append(ctx.command.qualified_name)
-        await self.pool.execute("INSERT OR REPLACE INTO users (id) VALUES (?)", ctx.author.id)
         await self.pool.execute(
-            "INSERT INTO prefix_commands (guild_id, author_id, command) VALUES (?, ?, ?)",
+            """
+            INSERT OR REPLACE INTO users (id)
+            VALUES (?)
+            """,
+            ctx.author.id,
+        )
+        await self.pool.execute(
+            """
+            INSERT INTO prefix_commands (guild_id, author_id, command)
+            VALUES (?, ?, ?)
+            """,
             ctx.guild.id,
             ctx.author.id,
             ctx.command.qualified_name,
@@ -74,7 +83,9 @@ class BotEvents(FurinaCog):
 
     @commands.Cog.listener()
     async def on_app_command_completion(
-        self, interaction: Interaction, command: app_commands.Command | app_commands.ContextMenu
+        self,
+        interaction: Interaction,
+        command: app_commands.Command | app_commands.ContextMenu,
     ) -> None:
         """Stores commands history to database
 
@@ -100,10 +111,15 @@ class BotEvents(FurinaCog):
         if len(self.bot.app_command_cache[interaction.guild.id]) == 10:
             self.bot.app_command_cache[interaction.guild.id].pop(0)
 
-        self.bot.app_command_cache[interaction.guild.id].append(command.qualified_name)
+        self.bot.app_command_cache[interaction.guild.id].append(
+            command.qualified_name
+        )
 
         await self.pool.execute(
-            "INSERT INTO app_commands (guild_id, author_id, command) VALUES (?, ?, ?)",
+            """
+            INSERT INTO app_commands (guild_id, author_id, command)
+            VALUES (?, ?, ?)
+            """,
             interaction.guild.id,
             interaction.user.id,
             command.qualified_name,
@@ -119,17 +135,23 @@ class BotEvents(FurinaCog):
             await message.forward(self.bot.get_user(self.bot.owner_id))
 
     @commands.Cog.listener()
-    async def on_command_error(self, ctx: FurinaCtx, error: commands.errors.CommandError) -> None:
+    async def on_command_error(
+        self, ctx: FurinaCtx, error: commands.errors.CommandError
+    ) -> None:
         err = ""
         if isinstance(error, commands.CommandNotFound):
             pass
         elif isinstance(error, commands.MissingRequiredArgument):
-            err += f"{settings.CROSS} **Missing required argument:** `{error.param.name}`"
+            err += f"""
+            {settings.CROSS} **Missing required argument:** `{error.param.name}`
+            """
         else:
             err += f"{settings.CROSS} **{error}**"
         if err:
             await ctx.reply(
-                view=LayoutView(Container(ui.TextDisplay(err))), ephemeral=True, delete_after=60
+                view=LayoutView(Container(ui.TextDisplay(err))),
+                ephemeral=True,
+                delete_after=60,
             )
 
         traceback.print_exception(error)

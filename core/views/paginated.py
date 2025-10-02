@@ -53,14 +53,18 @@ class PaginatedView(View):
         await interaction.response.defer()
         self.page = 0
         self.update_buttons()
-        await interaction.edit_original_response(embed=self.embeds[self.page], view=self)
+        await interaction.edit_original_response(
+            embed=self.embeds[self.page], view=self
+        )
 
     @ui.button(label="<", disabled=True)
     async def left_button(self, interaction: Interaction, _: Button) -> None:
         await interaction.response.defer()
         self.page -= 1
         self.update_buttons()
-        await interaction.edit_original_response(embed=self.embeds[self.page], view=self)
+        await interaction.edit_original_response(
+            embed=self.embeds[self.page], view=self
+        )
 
     @ui.button(style=ButtonStyle.blurple, disabled=True)
     async def page_button(self, _: Interaction, __: Button) -> None:
@@ -71,14 +75,18 @@ class PaginatedView(View):
         await interaction.response.defer()
         self.page += 1 if self.page <= self.length - 1 else self.page
         self.update_buttons()
-        await interaction.edit_original_response(embed=self.embeds[self.page], view=self)
+        await interaction.edit_original_response(
+            embed=self.embeds[self.page], view=self
+        )
 
     @ui.button(label=">>")
     async def last_button(self, interaction: Interaction, _: Button) -> None:
         await interaction.response.defer()
         self.page = self.length - 1
         self.update_buttons()
-        await interaction.edit_original_response(embed=self.embeds[self.page], view=self)
+        await interaction.edit_original_response(
+            embed=self.embeds[self.page], view=self
+        )
 
 
 class PaginateActionRow(ui.ActionRow):
@@ -110,7 +118,9 @@ class PaginateActionRow(ui.ActionRow):
     @ui.button(label="<")
     async def left_button(self, interaction: Interaction, _: Button) -> None:
         await interaction.response.defer()
-        await interaction.edit_original_response(view=self.switch_container(self.page - 1))
+        await interaction.edit_original_response(
+            view=self.switch_container(self.page - 1)
+        )
 
     @ui.button(style=ButtonStyle.blurple, disabled=True)
     async def page_button(self, _: Interaction, __: Button) -> None:
@@ -119,19 +129,29 @@ class PaginateActionRow(ui.ActionRow):
     @ui.button(label=">")
     async def right_button(self, interaction: Interaction, _: Button) -> None:
         await interaction.response.defer()
-        await interaction.edit_original_response(view=self.switch_container(self.page + 1))
+        await interaction.edit_original_response(
+            view=self.switch_container(self.page + 1)
+        )
 
     @ui.button(label=">>")
     async def last_button(self, interaction: Interaction, _: Button) -> None:
         await interaction.response.defer()
-        await interaction.edit_original_response(view=self.switch_container(self.length - 1))
+        await interaction.edit_original_response(
+            view=self.switch_container(self.length - 1)
+        )
 
 
 class PaginatedLayoutView(LayoutView):
-    def __init__(self, *, timeout: float = 180, containers: list[Container] | Container) -> None:
-        self.containers = containers if isinstance(containers, list) else [containers]
+    def __init__(
+        self, *, timeout: float = 180, containers: list[Container] | Container
+    ) -> None:
+        self.containers = (
+            containers if isinstance(containers, list) else [containers]
+        )
         self.length: int = len(self.containers)
         if self.length > 1:
             for i, container in enumerate(self.containers):
-                container.add_item(ui.Separator()).add_item(PaginateActionRow(i, self.length))
+                container.add_item(ui.Separator()).add_item(
+                    PaginateActionRow(i, self.length)
+                )
         super().__init__(containers[0], timeout=timeout)

@@ -92,14 +92,18 @@ class FurinaBot(commands.Bot):
 
     DEFAULT_PREFIX: str = settings.DEFAULT_PREFIX
 
-    def __init__(self, *, client_session: aiohttp.ClientSession, skip_lavalink: bool) -> None:
+    def __init__(
+        self, *, client_session: aiohttp.ClientSession, skip_lavalink: bool
+    ) -> None:
         super().__init__(
             command_prefix=self.get_pre,
             case_insensitive=True,
             strip_after_prefix=True,
             intents=discord.Intents.all(),
             help_command=None,
-            allowed_contexts=app_commands.AppCommandContext(dm_channel=False, guild=True),
+            allowed_contexts=app_commands.AppCommandContext(
+                dm_channel=False, guild=True
+            ),
             allowed_mentions=discord.AllowedMentions.none(),
             activity=discord.Activity(
                 type=discord.ActivityType.playing, name=settings.ACTIVITY_NAME
@@ -121,16 +125,22 @@ class FurinaBot(commands.Bot):
 
     @property
     def uptime(self) -> str:
-        """The bot uptime, formatted as `Xd Xh Xm`"""
+        """The bot uptime, formatted as `Xd Yh Zm`"""
         uptime_td = utils.utcnow() - self._startup
-        return f"`{uptime_td.days}d {uptime_td.seconds // 3600}h {(uptime_td.seconds // 60) % 60}m`"
+        return (
+            f"`{uptime_td.days}d {uptime_td.seconds // 3600}h"
+            f" {(uptime_td.seconds // 60) % 60}m`"
+        )
 
     @property
     def lavalink(self) -> lavalink.Client:
         if not self._lavalink:
             self._lavalink = lavalink.Client(self.user.id)
             self._lavalink.add_node(
-                host=settings.LAVA_URL, region="us", port=1710, password=settings.LAVA_PW
+                host=settings.LAVA_URL,
+                region="us",
+                port=1710,
+                password=settings.LAVA_PW,
             )
         return self._lavalink
 
@@ -149,7 +159,8 @@ class FurinaBot(commands.Bot):
         ----------
         _ : :class:`FurinaBot`
             The bot instance,
-            but since this is a method in the bot class, we already have `self` as bot
+            but since this is a method in the bot class,
+            we already have `self` as bot
         message : :class:`discord.Message`
             The message to get the prefix
 
@@ -188,7 +199,7 @@ class FurinaBot(commands.Bot):
         logging.info("Lavalink.py v%s", lavalink.__version__)
         logging.info("Running Python %s", python_version())
         logging.info("Fetching bot emojis...")
-        self.app_emojis: list[discord.Emoji] = await self.fetch_application_emojis()
+        self.app_emojis = await self.fetch_application_emojis()
         db_path = Path() / "db"
         db_path.mkdir(exist_ok=True)
         self.pool = SQL(await asqlite.create_pool(Path() / "db" / "furina.db"))  # type: ignore[reportArgumentType]
@@ -204,10 +215,13 @@ class FurinaBot(commands.Bot):
                 await self.load_extension(extension)
             except errors.NoEntryPointError:
                 logging.exception(
-                    "Extension %s has no setup function so it cannot be loaded", extension_name
+                    "Extension %s has no setup function so it cannot be loaded",
+                    extension_name,
                 )
             except Exception:
-                logging.exception("An error occured when trying to load %s", extension_name)
+                logging.exception(
+                    "An error occured when trying to load %s", extension_name
+                )
 
     async def start(self) -> None:
         await super().start(settings.TOKEN)

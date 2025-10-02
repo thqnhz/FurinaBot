@@ -22,7 +22,8 @@ from typing import TYPE_CHECKING
 
 from discord import ui
 
-# since multiple utils will be confusing so just import everything from discord.utils
+# since multiple utils will be confusing
+# so i will just import everything from discord.utils
 from discord.utils import *  # type: ignore[wildcardImportFromLibrary]
 
 from core.views import Container, PaginatedLayoutView
@@ -118,7 +119,8 @@ async def call_dictionary(word: str, cs: ClientSession) -> PaginatedLayoutView:
     """|coro|
 
     Make a http request to dictionaryapi.dev to get definition of a word.
-    If the word has no definition or has a single definition, returns a single embed.
+    If the word has no definition or has a single definition,
+    returns a single embed.
     *(already processed inside :class:`~core.views.PaginatedView`)*
 
     Parameters
@@ -140,7 +142,8 @@ async def call_dictionary(word: str, cs: ClientSession) -> PaginatedLayoutView:
             return PaginatedLayoutView(
                 containers=Container(
                     ui.TextDisplay(
-                        f"## {word.capitalize}\nNo definitions found. API call returned 404."
+                        f"## {word.capitalize}\nNo definitions found."
+                        " API call returned 404."
                     )
                 )
             )
@@ -196,7 +199,8 @@ def __get_pronunciations(data: list[dict]) -> list[str]:
     -------
     :class:`list[str]`
         The word's pronunciations.
-        If no pronunciations found for that definition, the string at that index will be empty.
+        If no pronunciations found for that definition,
+        the string at that index will be empty.
     """
     result: list[str] = [""] * len(data)
     for i, d in enumerate(data):
@@ -204,7 +208,11 @@ def __get_pronunciations(data: list[dict]) -> list[str]:
         if not phonetics:
             phonetics_list: list[dict] = d.get("phonetics", [])
             phonetics = ", ".join(
-                [phone.get("text") for phone in phonetics_list if phone.get("text")]  # type: ignore[reportIndexIssue]
+                [
+                    phone.get("text")
+                    for phone in phonetics_list
+                    if phone.get("text")
+                ]  # type: ignore[reportIndexIssue]
             )
             if phonetics:
                 result[i] = f"`{phonetics}`"

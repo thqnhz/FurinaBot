@@ -32,9 +32,7 @@ LOADING_GIF = "https://cdn.discordapp.com/emojis/1187957747724079144.gif?size=64
 PLAYING_GIF = "https://cdn.discordapp.com/emojis/1174925797082017923.gif?size=64&name=playing&quality=lossless"
 
 # Emojis
-SKIP_EMOJI = (
-    "https://cdn.discordapp.com/emojis/1174966018280529931.png?size=64&name=skip&quality=lossless"
-)
+SKIP_EMOJI = "https://cdn.discordapp.com/emojis/1174966018280529931.png?size=64&name=skip&quality=lossless"
 
 # Emotes
 CHECKMARK = "<a:check:1238796460569657375>"

@@ -46,9 +46,13 @@ class Fun(FurinaCog):
     def fortune_yapping(self) -> list[list[str]]:
         if self._fortune_yapping:
             return self._fortune_yapping
-        with Path.open(Path() / "assets" / "yapping" / "fortune.csv", newline="") as f:
+        with Path.open(
+            Path() / "assets" / "yapping" / "fortune.csv", newline=""
+        ) as f:
             reader = csv.reader(f)
-            self._fortune_yapping = [[str(line) for line in row] for row in reader]
+            self._fortune_yapping = [
+                [str(line) for line in row] for row in reader
+            ]
         return self._fortune_yapping
 
     @property
@@ -57,20 +61,30 @@ class Fun(FurinaCog):
         return np.random.default_rng()
 
     async def cog_unload(self) -> None:
-        self.bot.tree.remove_command(self.ctx_menu_liemeter.name, type=self.ctx_menu_liemeter.type)
+        self.bot.tree.remove_command(
+            self.ctx_menu_liemeter.name, type=self.ctx_menu_liemeter.type
+        )
         await super().cog_unload()
 
-    async def lie_detector(self, interaction: Interaction, message: Message) -> None:
+    async def lie_detector(
+        self, interaction: Interaction, message: Message
+    ) -> None:
         if message.author.id == self.bot.user.id:
             await interaction.response.send_message("I always tell the truth")
             return
         if self.rng.random() < 0.5:
-            await interaction.response.send_message("This message is verified to be the truth")
+            await interaction.response.send_message(
+                "This message is verified to be the truth"
+            )
         else:
-            await interaction.response.send_message("https://tenor.com/kXIbVjdMB8x.gif")
+            await interaction.response.send_message(
+                "https://tenor.com/kXIbVjdMB8x.gif"
+            )
 
     @commands.command(name="fortune", aliases=["lucky", "slip", "fortuneslip"])
-    async def fortune_slip_command(self, ctx: FurinaCtx, number: int = 1) -> None:
+    async def fortune_slip_command(
+        self, ctx: FurinaCtx, number: int = 1
+    ) -> None:
         """Draw a fortune slip
 
         Give you random fortune from 6 levels, from high to low:
@@ -86,7 +100,8 @@ class Fun(FurinaCog):
         Parameters
         ----------
         number : int, optional
-            How many times you want to think before drawing a slip, default is `1`
+            How many times you want to think before drawing a slip,
+            default is `1`
         """
         fortunes: list[str] = [
             "Great Fortune",
@@ -96,16 +111,26 @@ class Fun(FurinaCog):
             "Misfortune",
             "Great Misfortune",
         ]
-        fortune_index = self.hashing(ctx.author.id, key=settings.FORTUNE_KEY, max_val=5)
+        fortune_index = self.hashing(
+            ctx.author.id, key=settings.FORTUNE_KEY, max_val=5
+        )
         yap = self.fortune_yapping[fortune_index][
-            self.hashing(ctx.author.id, key=settings.FORTUNE_YAPPING_KEY, max_val=4)
+            self.hashing(
+                ctx.author.id, key=settings.FORTUNE_YAPPING_KEY, max_val=4
+            )
         ]
+
         if number == 1 or number not in range(1, 10_000):
-            header = f"{ctx.author.mention} thought very hard before drawing a fortune slip"
+            times = "very hard"
         else:
-            header = f"{ctx.author.mention} thought {number} times before drawing a fortune slip"
+            times = f"{number} times"
+        header = f"""
+            {ctx.author.mention} thought {times} before drawing a fortune slip
+        """
         fortune_section = ui.Section(
-            ui.TextDisplay(f"### {header}\n## {fortunes[fortune_index]}\n>>> {yap}\n"),
+            ui.TextDisplay(
+                f"### {header}\n## {fortunes[fortune_index]}\n>>> {yap}\n"
+            ),
             accessory=ui.Thumbnail(
                 "https://upload-static.hoyoverse.com/hoyolab-wiki/2023/08/01/94376896/13b4067ebbc97e7a3577b9358c9c6eb9_8561788766756121179.png?x-oss-process=image%2Fformat%2Cwebp"
             ),
@@ -115,7 +140,8 @@ class Fun(FurinaCog):
                 Container(
                     fortune_section,
                     ui.TextDisplay(
-                        "-# This is just for fun, take it as a grain of salt | Coded by ThanhZ"
+                        "-# This is just for fun, take it as a grain of salt"
+                        " | Coded by ThanhZ"
                     ),
                 )
             ),
@@ -154,7 +180,9 @@ class Fun(FurinaCog):
         section = ui.Section(
             ui.TextDisplay("### " + header),
             ui.TextDisplay(f"## {rand_num}"),
-            accessory=ui.Thumbnail(r"https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif"),
+            accessory=ui.Thumbnail(
+                r"https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif"
+            ),
         )
         if seq:
             section.add_item(ui.TextDisplay(f"**History:**\n`{seq}`"))
@@ -181,7 +209,9 @@ class Fun(FurinaCog):
             header = f"{ctx.author.mention} flipped a coin"
             seq = None
         else:
-            seq: list[str] = self.rng.choice(["Head", "Tail"], size=number).tolist()
+            seq: list[str] = self.rng.choice(
+                ["Head", "Tail"], size=number
+            ).tolist()
             rand_flip = seq[-1]
             seq: list[str] = [seq_[0] for seq_ in seq]
             seq: str = " ".join(seq[:100]) + ("..." if len(seq) > 100 else "")
@@ -189,7 +219,9 @@ class Fun(FurinaCog):
         section = ui.Section(
             ui.TextDisplay("### " + header),
             ui.TextDisplay(f"## {rand_flip}"),
-            accessory=ui.Thumbnail(r"https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif"),
+            accessory=ui.Thumbnail(
+                r"https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif"
+            ),
         )
         if seq:
             section.add_item(ui.TextDisplay(f"**History:**\n`{seq}`"))
@@ -243,7 +275,10 @@ class Fun(FurinaCog):
             section,
             ui.Separator(),
             ui.TextDisplay(f"**Question:**\n>>> {question}"),
-            ui.TextDisplay("-# This is just for fun, take it as a grain of salt | Coded by ThanhZ"),
+            ui.TextDisplay(
+                "-# This is just for fun, take it as a grain of salt"
+                " | Coded by ThanhZ"
+            ),
         )
         await ctx.send(view=ui.LayoutView().add_item(container), silent=True)
 

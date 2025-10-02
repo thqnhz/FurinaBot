@@ -16,4 +16,7 @@ from __future__ import annotations
 
 from .base import LayoutView as LayoutView
 from .container import Container as Container
-from .paginated import PaginatedLayoutView as PaginatedLayoutView, PaginatedView as PaginatedView
+from .paginated import (
+    PaginatedLayoutView as PaginatedLayoutView,
+    PaginatedView as PaginatedView,
+)

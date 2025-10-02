@@ -50,7 +50,9 @@ class Gacha(FurinaCog):
     @property
     def embed(self) -> discord.Embed:
         """Shortcut for `FurinaBot.embed`, with extra footer"""
-        return self.bot.embed.set_footer(text="Coded by ThanhZ | Powered by Enka Network")
+        return self.bot.embed.set_footer(
+            text="Coded by ThanhZ | Powered by Enka Network"
+        )
 
     async def set_uid(self, sql: str, user_id: int, uid: str) -> None:
         """Insert a user's UID with provided game to the database
@@ -102,12 +104,16 @@ class Gacha(FurinaCog):
             Genshin UID
         """
         if uid is None:
-            uid = await self.get_uid("SELECT uid FROM gi_uid WHERE user_id = ?", ctx.author.id)
+            uid = await self.get_uid(
+                "SELECT uid FROM gi_uid WHERE user_id = ?", ctx.author.id
+            )
 
         async with self.gi as api:
             response = await api.fetch_showcase(uid)
             p_info = response.player
-        abyss = f"{p_info.abyss_floor}-{p_info.abyss_level} ({p_info.abyss_stars})"
+        abyss = (
+            f"{p_info.abyss_floor}-{p_info.abyss_level} ({p_info.abyss_stars})"
+        )
 
         container = Container(
             ui.MediaGallery(discord.MediaGalleryItem(p_info.namecard.full)),
@@ -140,7 +146,9 @@ class Gacha(FurinaCog):
         async with self.gi as api:
             await api.fetch_showcase(uid, info_only=True)
         await self.set_uid(
-            "INSERT OR REPLACE INTO gi_uid (user_id, uid) VALUES (?, ?)", ctx.author.id, uid
+            "INSERT OR REPLACE INTO gi_uid (user_id, uid) VALUES (?, ?)",
+            ctx.author.id,
+            uid,
         )
         await ctx.reply("Your GI UID has been set to: " + uid)
 
@@ -158,7 +166,9 @@ class Gacha(FurinaCog):
             HSR UID
         """
         if not uid:
-            uid = await self.get_uid("SELECT uid FROM hsr_uid WHERE user_id = ?", ctx.author.id)
+            uid = await self.get_uid(
+                "SELECT uid FROM hsr_uid WHERE user_id = ?", ctx.author.id
+            )
 
         async with self.hsr as api:
             response = await api.fetch_showcase(uid)
@@ -192,7 +202,9 @@ class Gacha(FurinaCog):
         async with self.hsr as api:
             await api.fetch_showcase(uid, info_only=True)
         await self.set_uid(
-            "INSERT OR REPLACE INTO hsr_uid (user_id, uid) VALUES (?, ?)", ctx.author.id, uid
+            "INSERT OR REPLACE INTO hsr_uid (user_id, uid) VALUES (?, ?)",
+            ctx.author.id,
+            uid,
         )
         await ctx.reply("Your HSR UID has been set to: " + uid)
 

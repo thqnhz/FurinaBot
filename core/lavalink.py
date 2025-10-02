@@ -33,7 +33,8 @@ class Lavalink:
     Minimal lavalink wrapper with context manager support.
     Auto check for and download newest lavalink jar.
     Will require you to have Java JDK v17+ installed (as of Lavalink v4).
-    Since everything happens before bot is starting, every function is synchronous.
+    Since everything happens before bot is starting,
+    every function is synchronous.
 
     Usage
     -----
@@ -47,7 +48,8 @@ class Lavalink:
 
     def _get_release_info(self) -> dict[Any, Any]:
         response = requests.get(
-            "https://api.github.com/repos/lavalink-devs/Lavalink/releases/latest", timeout=30
+            "https://api.github.com/repos/lavalink-devs/Lavalink/releases/latest",
+            timeout=30,
         )
         return response.json()
 
@@ -62,7 +64,11 @@ class Lavalink:
     @property
     def download_url(self) -> str:
         jar_info = next(
-            (asset for asset in self.release_info["assets"] if asset["name"] == "Lavalink.jar"),
+            (
+                asset
+                for asset in self.release_info["assets"]
+                if asset["name"] == "Lavalink.jar"
+            ),
             None,
         )
         return jar_info["browser_download_url"] if jar_info else ""
@@ -70,7 +76,10 @@ class Lavalink:
     def check_for_update(self) -> None:
         lavalink = self.LAVALINK_CWD / f"Lavalink-{self.version}.jar"
         if lavalink.exists():
-            logging.info("Lavalink.jar is up-to-date (v%s). Skipping download...", self.version)
+            logging.info(
+                "Lavalink.jar is up-to-date (v%s). Skipping download...",
+                self.version,
+            )
             return
         try:
             for file in self.LAVALINK_CWD.iterdir():
@@ -79,11 +88,17 @@ class Lavalink:
                     break
         except IndexError:
             pass
-        logging.info("Deleted outdated Lavalink.jar file. Downloading new version...")
+        logging.info(
+            "Deleted outdated Lavalink.jar file. Downloading new version..."
+        )
         if self.download_url:
             response = requests.get(self.download_url, timeout=30)
-            (self.LAVALINK_CWD / f"Lavalink-{self.version}.jar").write_bytes(response.content)
-            logging.info("Successfully downloaded Lavalink.jar (v%s)", self.version)
+            (self.LAVALINK_CWD / f"Lavalink-{self.version}.jar").write_bytes(
+                response.content
+            )
+            logging.info(
+                "Successfully downloaded Lavalink.jar (v%s)", self.version
+            )
         else:
             logging.error("Failed to download Lavalink.jar")
 
@@ -104,7 +119,8 @@ class Lavalink:
             )
         # No security issue since everything is handled by the code itself
         process = subprocess.Popen(  # noqa: S603
-            [java_path, "-jar", self.lavalink_jar.resolve()], cwd=self.LAVALINK_CWD
+            [java_path, "-jar", self.lavalink_jar.resolve()],
+            cwd=self.LAVALINK_CWD,
         )
         try:
             yield
