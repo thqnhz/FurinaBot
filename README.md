@@ -47,7 +47,7 @@ And more...
 
 ## Self host
 
-If you don't want to use my instance of the bot, you can host your own instace. Here are the step by step instructions:
+If you don't want to use my instance of the bot, you can host your own instance. Here is the step by step instruction:
 
 > Requires Python 3.10+ (preferably newest stable)
 
