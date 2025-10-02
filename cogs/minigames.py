@@ -514,7 +514,26 @@ class WordleView(WordleABC):
 
     @property
     def modal(self) -> WordleModal:
-        return WordleModal(letters=len(self.word))
+        correct_letters: list[str] = []
+        wrong_pos_letters: list[str] = []
+        incorrect_letters: list[str] = []
+        unused_letters: list[str] = []
+        for index, status in enumerate(self._availability):
+            if status == WordleLetterStatus.INCORRECT:
+                incorrect_letters.append(self.ALPHABET[index])
+            elif status == WordleLetterStatus.UNUSED:
+                unused_letters.append(self.ALPHABET[index])
+            elif status == WordleLetterStatus.WRONG_POS:
+                wrong_pos_letters.append(self.ALPHABET[index])
+            else:
+                correct_letters.append(self.ALPHABET[index])
+        return WordleModal(
+            letters=len(self.word),
+            unused_letters=unused_letters,
+            incorrect_letters=incorrect_letters,
+            wrong_pos_letters=wrong_pos_letters,
+            correct_letters=correct_letters,
+        )
 
     @property
     def guess_display(self) -> ui.TextDisplay:
@@ -719,7 +738,15 @@ class LetterleButton(ui.Button[Letterle]):
 
 
 class WordleModal(ui.Modal):
-    def __init__(self, letters: int) -> None:
+    def __init__(
+        self,
+        *,
+        letters: int,
+        unused_letters: list[str],
+        incorrect_letters: list[str],
+        wrong_pos_letters: list[str],
+        correct_letters: list[str],
+    ) -> None:
         super().__init__(timeout=180, title=f"WORDLE ({letters} LETTERS)")
         self.text_input = ui.TextInput(
             label="Type in your guess",
@@ -727,12 +754,42 @@ class WordleModal(ui.Modal):
             min_length=letters,
             max_length=letters,
         )
-        self.add_item(self.text_input)
-        self.guess = ""
+        self.letter_statuses = ui.Label(
+            text="Letter Statuses",
+            description="Open the dropdown menu to see the current game letter statuses",
+            component=ui.Select(
+                options=[
+                    discord.SelectOption(
+                        label="Correct Letters",
+                        value="correct",
+                        description=" ".join(correct_letters),
+                    ),
+                    discord.SelectOption(
+                        label="Wrong Position Letters",
+                        value="wrong_pos",
+                        description=" ".join(wrong_pos_letters),
+                    ),
+                    discord.SelectOption(
+                        label="Incorrect Letters",
+                        value="incorrect",
+                        description=" ".join(incorrect_letters),
+                    ),
+                    discord.SelectOption(
+                        label="Unused Letters",
+                        value="unused",
+                        description=" ".join(unused_letters),
+                    ),
+                ],
+                required=False
+            ),
+        )
+        self.add_item(self.input)
+        self.add_item(self.letter_statuses)
+        self.guess: str = ""
 
     async def on_submit(self, interaction: Interaction) -> None:
         await interaction.response.defer()
-        self.guess = self.text_input.value.upper()
+        self.guess = self.input.value.upper()
 
 
 class LookUpButton(ui.Button):
