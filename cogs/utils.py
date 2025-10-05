@@ -513,14 +513,15 @@ class Utils(FurinaCog):
             ),
         )
         if member.activities:
-            container.add_item(ui.Separator())
             activities = "**Activities:**\n"
             for i, activity in enumerate(member.activities, 1):
                 activities += f"{i}. **{activity.type.name.capitalize()}"
                 activities += (
                     f"{':** ' + activity.name if activity.name else '**'}\n"
                 )
-            container.add_item(ui.TextDisplay(activities))
+            container.add_item(ui.Separator()).add_item(
+                ui.TextDisplay(activities)
+            )
         await ctx.reply(view=LayoutView(container))
 
     @commands.hybrid_command(name="dictionary", aliases=["dict"])
@@ -605,7 +606,7 @@ class Utils(FurinaCog):
             ui.Separator(),
             ui.TextDisplay(
                 f"### Uptime: {self.bot.uptime}\n"
-                "### Servers: {len(self.bot.guilds)}"
+                f"### Servers: {len(self.bot.guilds)}"
             ),
             ui.Separator(),
         )

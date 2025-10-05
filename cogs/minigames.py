@@ -782,7 +782,7 @@ class WordleModal(ui.Modal):
                         description=" ".join(unused_letters),
                     ),
                 ],
-                required=False
+                required=False,
             ),
         )
         self.add_item(self.input)
