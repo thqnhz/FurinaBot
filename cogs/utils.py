@@ -508,7 +508,7 @@ class Utils(FurinaCog):
                 f"**Account Created:** <t:{account_created}>"
                 f" or <t:{account_created}:R>\n"
                 f"**Server Joined:** <t:{server_joined}>"
-                f" or <t:{server_joined}:R>"
+                f" or <t:{server_joined}:R>\n"
                 f"**Roles ({len(member.roles) - 1}):** ```\n{role_list}\n```"
             ),
         )
