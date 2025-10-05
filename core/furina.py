@@ -106,7 +106,6 @@ class FurinaBot(commands.Bot):
                 messages=True,
                 message_content=True,
             ),
-            help_command=None,
             allowed_contexts=app_commands.AppCommandContext(
                 dm_channel=False, guild=True
             ),

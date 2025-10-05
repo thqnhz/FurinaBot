@@ -83,8 +83,14 @@ class Utils(FurinaCog):
     """Utility Commands"""
 
     async def cog_load(self) -> None:
+        self.bot._help_command_backup = self.bot.help_command
+        self.bot.help_command = None
         await self.__update_custom_prefixes()
         return await super().cog_load()
+
+    async def cog_unload(self) -> None:
+        self.bot.help_command = self.bot._help_command_backup
+        return await super().cog_unload()
 
     async def __update_custom_prefixes(self) -> None:
         """Fetch and update custom prefixes"""
