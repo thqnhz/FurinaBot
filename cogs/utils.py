@@ -19,7 +19,6 @@ import inspect
 import io
 import platform
 import re
-from enum import Enum
 from time import perf_counter
 from typing import TYPE_CHECKING
 
@@ -32,7 +31,7 @@ from discord import Member, app_commands, ui
 from discord.ext import commands
 from discord.ui import Select
 
-from core import FurinaBot, FurinaCog, FurinaCtx, settings, utils as utils
+from core import FurinaCog, FurinaCtx, settings, utils
 from core.views import Container, LayoutView
 
 if TYPE_CHECKING:
@@ -70,13 +69,6 @@ class HelpSelect(Select):
         view.message = self.view.message
         self.view.message = None
         await interaction.response.edit_message(view=view)
-
-
-class MemberStatus(Enum):
-    online = ":green_circle: `Online`"
-    offline = ":black_circle: `Offline`"
-    idle = ":yellow_circle: `Idling`"
-    dnd = ":red_circle: `Do Not Disturb`"
 
 
 class Utils(FurinaCog):
