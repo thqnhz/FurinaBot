@@ -166,6 +166,10 @@ class TagCreateModal(ui.Modal, title="Create A Tag"):
 class Tags(FurinaCog):
     """Tags Related Commands"""
 
+    @property
+    def emoji(self) -> discord.PartialEmoji:
+        return discord.PartialEmoji.from_str("\U0001f3f7\U0000fe0f")
+
     async def cog_load(self) -> None:
         self.pool: TagSQL = TagSQL(
             await asqlite.create_pool(Path() / "db" / "tags.db")

@@ -35,6 +35,10 @@ class NotFoundError(Exception):
 class Gacha(FurinaCog):
     """Gacha Related Commands"""
 
+    @property
+    def emoji(self) -> discord.PartialEmoji:
+        return discord.PartialEmoji.from_str("\U0001f3b0")
+
     def __init__(self, bot: FurinaBot) -> None:
         super().__init__(bot)
         self.gi = enka.GenshinClient()
@@ -123,7 +127,7 @@ class Gacha(FurinaCog):
                 ui.TextDisplay(
                     f"> {p_info.signature}\n"
                     f"**Adventure Rank:** `{p_info.level}` "
-                    "▪ **World Level:** `{p_info.world_level}`\n"
+                    f"▪ **World Level:** `{p_info.world_level}`\n"
                     f"**Achievements:** `{p_info.achievements}`\n"
                     f"**Abyss Floor:** `{abyss}`"
                 ),

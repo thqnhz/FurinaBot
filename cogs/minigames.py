@@ -846,6 +846,10 @@ class Minigames(commands.GroupCog, group_name="minigame"):
 
     WORDLE_EMOJIS: ClassVar[dict[str, dict[WordleLetterStatus, str]]]
 
+    @property
+    def emoji(self) -> discord.PartialEmoji:
+        return discord.PartialEmoji.from_str("\U0001f3ae")
+
     def __init__(self, bot: FurinaBot) -> None:
         self.bot = bot
         self.emoji_loading_attempts: int = 0

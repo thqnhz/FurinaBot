@@ -19,6 +19,7 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import discord
 import numpy as np
 from discord import Interaction, Message, app_commands, ui
 from discord.ext import commands
@@ -32,6 +33,10 @@ if TYPE_CHECKING:
 
 class Fun(FurinaCog):
     """Funni Commands haha XD"""
+
+    @property
+    def emoji(self) -> discord.PartialEmoji:
+        return discord.PartialEmoji.from_str("\U0001f3b2")
 
     def __init__(self, bot: FurinaBot) -> None:
         super().__init__(bot)

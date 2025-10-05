@@ -207,6 +207,10 @@ async def create_player_check(ctx: FurinaCtx) -> bool:
 class Music(FurinaCog):
     """Music Related Commands"""
 
+    @property
+    def emoji(self) -> discord.PartialEmoji:
+        return discord.PartialEmoji.from_str("\U0001f3a7")
+
     def __init__(self, bot: FurinaBot) -> None:
         super().__init__(bot)
 

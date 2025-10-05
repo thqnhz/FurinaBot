@@ -17,7 +17,6 @@ from __future__ import annotations
 import datetime
 import inspect
 import io
-import platform
 import re
 from time import perf_counter
 from typing import TYPE_CHECKING
@@ -26,7 +25,6 @@ import anyio
 import dateparser
 import discord
 import docstring_parser
-import psutil
 from discord import Member, app_commands, ui
 from discord.ext import commands
 from discord.ui import Select
@@ -50,10 +48,14 @@ class HelpSelect(Select):
         super().__init__(
             placeholder="Select a category for command list",
             options=[
-                discord.SelectOption(label=cog_name, description=cog.__doc__)
+                discord.SelectOption(
+                    label=cog_name,
+                    description=cog.__doc__,
+                    emoji=cog.emoji if hasattr(cog, "emoji") else None
+                    )
                 for cog_name, cog in bot.cogs.items()
                 if cog.__cog_commands__
-                and cog_name not in ["Hidden", "Jishaku"]
+                and cog_name not in ["Owner", "Jishaku"]
             ],
         )
         self.bot = bot
@@ -73,6 +75,10 @@ class HelpSelect(Select):
 
 class Utils(FurinaCog):
     """Utility Commands"""
+
+    @property
+    def emoji(self) -> discord.PartialEmoji:
+        return discord.PartialEmoji.from_str("\U0001f6e0\U0000fe0f")
 
     async def cog_load(self) -> None:
         self.bot._help_command_backup = self.bot.help_command
