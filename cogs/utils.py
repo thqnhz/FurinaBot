@@ -360,7 +360,7 @@ class Utils(FurinaCog):
             if cog_.lower() == query.lower():
                 cog = self.bot.get_cog(cog_)
                 break
-        if cog and cog.__cog_name__ not in ["Hidden", "Jishaku"]:
+        if cog and cog.__cog_name__ not in ["Owner", "Jishaku"]:
             container = self.list_cog_commands(
                 cog=cog, bot_prefix=ctx.prefix or self.bot.DEFAULT_PREFIX
             )
@@ -418,54 +418,6 @@ class Utils(FurinaCog):
             raise commands.BadArgument(
                 """I don't recognize that command/category"""
             )
-
-    @commands.command(name="vps", hidden=True)
-    @commands.is_owner()
-    async def vps_command(self, ctx: FurinaCtx) -> None:
-        """Get VPS Info"""
-        # OS Version
-        os_version = platform.platform()
-
-        # CPU Usage
-        cpu_percent = psutil.cpu_percent()
-
-        # RAM Usage
-        memory_info = psutil.virtual_memory()
-        ram_total = round(memory_info.total / (1024**3), 2)
-        ram_used = round(memory_info.used / (1024**3), 2)
-        ram_available = round(memory_info.available / (1024**3), 2)
-        ram_cached = round(ram_total - ram_used - ram_available, 2)
-
-        # Disk Usage
-        disk_info = psutil.disk_usage("./")
-        disk_total = round(disk_info.total / (1024**3), 2)
-        disk_used = round(disk_info.used / (1024**3), 2)
-        disk_available = round(disk_info.free / (1024**3), 2)
-
-        embed = self.embed
-        embed.title = "VPS Info"
-        embed.add_field(name="Operating System", value=os_version)
-        embed.add_field(name="CPU Usage", value=f"{cpu_percent}%", inline=False)
-        embed.add_field(
-            name="RAM Usage",
-            value=(
-                f"- Total: {ram_total}GB\n"
-                f"- Used: {ram_used}GB\n"
-                f"- Cache: {ram_cached}GB\n"
-                f"- Free: {ram_available}GB"
-            ),
-            inline=False,
-        )
-        embed.add_field(
-            name="Disk Usage",
-            value=(
-                f"- Total: {disk_total}GB\n"
-                f"- Used: {disk_used}GB\n"
-                f"- Free: {disk_available}GB"
-            ),
-            inline=False,
-        )
-        await ctx.reply(embed=embed)
 
     @commands.hybrid_command(name="userinfo", aliases=["uinfo", "whois"])
     async def user_info_command(
