@@ -490,16 +490,13 @@ class Utils(FurinaCog):
                 + (" (Bot)\n" if member.bot else "\n")
                 + f"**Username:** `{member}`\n"
                 f"**ID:** `{member.id}`\n"
-                f"**Status:** {MemberStatus[str(member.status)].value}"
             ),
             accessory=ui.Thumbnail(member.display_avatar.url),
         )
         account_created = int(member.created_at.timestamp())
         server_joined = int(member.joined_at.timestamp())
         role_list = ", ".join(
-            role.name
-            for role in reversed(member.roles)
-            if role.name != "@everyone"
+            role.mention for role in member.roles if role.name != "@everyone"
         )
         container = Container(
             header,
@@ -509,19 +506,9 @@ class Utils(FurinaCog):
                 f" or <t:{account_created}:R>\n"
                 f"**Server Joined:** <t:{server_joined}>"
                 f" or <t:{server_joined}:R>\n"
-                f"**Roles ({len(member.roles) - 1}):** ```\n{role_list}\n```"
+                f"**Roles ({len(member.roles) - 1}):**\n{role_list}"
             ),
         )
-        if member.activities:
-            activities = "**Activities:**\n"
-            for i, activity in enumerate(member.activities, 1):
-                activities += f"{i}. **{activity.type.name.capitalize()}"
-                activities += (
-                    f"{':** ' + activity.name if activity.name else '**'}\n"
-                )
-            container.add_item(ui.Separator()).add_item(
-                ui.TextDisplay(activities)
-            )
         await ctx.reply(view=LayoutView(container))
 
     @commands.hybrid_command(name="dictionary", aliases=["dict"])

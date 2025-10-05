@@ -103,7 +103,6 @@ class FurinaBot(commands.Bot):
                 guilds=True,
                 members=True,
                 voice_states=True,
-                presences=True,  # TODO: probably will remove it soon
                 messages=True,
                 message_content=True,
             ),
