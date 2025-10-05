@@ -99,7 +99,14 @@ class FurinaBot(commands.Bot):
             command_prefix=self.get_pre,
             case_insensitive=True,
             strip_after_prefix=True,
-            intents=discord.Intents.all(),
+            intents=discord.Intents(
+                guilds=True,
+                members=True,
+                voice_states=True,
+                presences=True,  # TODO: probably will remove it soon
+                messages=True,
+                message_content=True,
+            ),
             help_command=None,
             allowed_contexts=app_commands.AppCommandContext(
                 dm_channel=False, guild=True
