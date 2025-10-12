@@ -339,15 +339,15 @@ class Music(FurinaCog):
     ) -> None:
         """Allows music commands in a channel
 
-        Adds the channel into the music commands whitelist.
+        Set a channel as the music channel.
         Defaults to the current channel if not specified.
-        Use `disallowmusic` to disallow the channel frm using music commands.
+        Use `disallowmusic` to unset the channel.
         Can only be used by member with `Manage Server` permission.
 
         Parameters
         ----------
         channel: TextChannel, optional
-            The channel you allow to use music commands
+            The channel want to set as the music channel
         """
         channel = channel or ctx.channel
         await ctx.bot.pool.execute(
@@ -363,7 +363,7 @@ class Music(FurinaCog):
                 Container(
                     ui.TextDisplay(
                         f"### {settings.CHECKMARK} "
-                        f"Added {channel.mention} to music channel list"
+                        f"Set server's music channel to {channel.mention}"
                     )
                 )
             )
@@ -376,15 +376,15 @@ class Music(FurinaCog):
     ) -> None:
         """Disallows music commands from a channel
 
-        Removes the channel from the music commands whitelist.
+        Unset the channel as a music channel.
         Defaults to the current channel if not specified.
-        Use `allowmusic` to whitelist the channel again.
+        Use `allowmusic` to set music channel.
         Can only be used by member with `Manage Server` permission.
 
         Parameters
         ----------
         channel: TextChannel, optional
-            The channel you want to remove from the music channel list
+            The channel you want to unset as a music channel
         """
         channel = channel or ctx.channel
         await ctx.bot.pool.execute(
@@ -399,7 +399,7 @@ class Music(FurinaCog):
                 Container(
                     ui.TextDisplay(
                         f"### {settings.CHECKMARK} "
-                        f"Removed {channel.mention} from music channel list"
+                        f"Unset server's music channel"
                     )
                 )
             )
