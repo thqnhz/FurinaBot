@@ -624,7 +624,7 @@ class Music(FurinaCog):
         """Disconnects the player"""
         if ctx.voice_client:
             await ctx.tick()
-            await self._get_player(ctx).destroy()
+            await ctx.voice_client.disconnect(force=True)
 
 
 async def setup(bot: FurinaBot) -> None:
