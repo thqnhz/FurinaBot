@@ -173,11 +173,11 @@ class Fun(FurinaCog):
             How many times you want to roll the dice, default is `1`
         """
         if number == 1 or number not in range(1, 1000):
-            rand_num = self.rng.randint(1, 7)
+            rand_num = self.rng.integers(1, 7)
             header = f"{ctx.author.mention} rolled a dice"
             seq = None
         else:
-            seq: list[int] = self.rng.randint(1, 7, size=number).tolist()
+            seq: list[int] = self.rng.integers(1, 7, size=number).tolist()
             seq: list[str] = [str(seq_) for seq_ in seq]
             rand_num = seq[-1]
             seq: str = " ".join(seq[:100]) + ("..." if len(seq) > 100 else "")
