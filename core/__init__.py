@@ -16,5 +16,6 @@ from .furina import (
     FurinaBot as FurinaBot,
     FurinaCog as FurinaCog,
     FurinaCtx as FurinaCtx,
+    FurinaGroupCog as FurinaGroupCog,
 )
 from .lavalink import Lavalink as Lavalink

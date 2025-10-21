@@ -247,3 +247,16 @@ class FurinaCog(commands.Cog):
     def embed(self) -> discord.Embed:
         """Shortcut for `FurinaBot.embed`"""
         return self.bot.embed
+
+
+class FurinaGroupCog(commands.GroupCog):
+    """Base class for all group cogs"""
+
+    def __init__(self, bot: FurinaBot) -> None:
+        self.bot = bot
+        self.pool: SQL = bot.pool
+        self.cs = bot.cs
+
+    async def cog_load(self) -> None:
+        logging.info("Cog %s has been loaded", self.__cog_name__)
+
