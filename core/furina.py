@@ -70,31 +70,24 @@ class FurinaCtx(commands.Context):
 
 
 class FurinaBot(commands.Bot):
-    r"""Customized :class:`commands.Bot` class
+    r"""Customized `commands.Bot` class
 
     Attributes
     ----------
-    client_session : :class:`aiohttp.ClientSession`
+    client_session : `aiohttp.ClientSession`
         Aiohttp client session for making requests
-    skip_lavalink : :class:`bool`
-        Whether to skip Lavalink or not
 
     Usage
     -----
     .. code-block:: python
         async with aiohttp.ClientSession() as client_session, \
-            FurinaBot(
-                client_session=client_session,
-                skip_lavalink=True
-            ) as bot:
+            FurinaBot(client_session=client_session) as bot:
                 await bot.start()
     """
 
     DEFAULT_PREFIX: str = settings.DEFAULT_PREFIX
 
-    def __init__(
-        self, *, client_session: aiohttp.ClientSession, skip_lavalink: bool
-    ) -> None:
+    def __init__(self, *, client_session: aiohttp.ClientSession) -> None:
         super().__init__(
             command_prefix=self.get_pre,
             case_insensitive=True,
@@ -115,7 +108,6 @@ class FurinaBot(commands.Bot):
             ),
         )
         self.owner_id = settings.OWNER_ID
-        self.skip_lavalink = skip_lavalink
         self._lavalink = None
         self.cs = client_session
         # custom prefixes, in `{guild_id: prefix}` format
@@ -162,16 +154,16 @@ class FurinaBot(commands.Bot):
 
         Parameters
         ----------
-        _ : :class:`FurinaBot`
+        _ : `FurinaBot`
             The bot instance,
             but since this is a method in the bot class,
             we already have `self` as bot
-        message : :class:`discord.Message`
+        message : `discord.Message`
             The message to get the prefix
 
         Returns
         -------
-        :class:`list[str]`
+        `list[str]`
             The prefix for the bot, including mention
         """
         if not message.guild:

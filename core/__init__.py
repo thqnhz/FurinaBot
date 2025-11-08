@@ -18,4 +18,3 @@ from .furina import (
     FurinaCtx as FurinaCtx,
     FurinaGroupCog as FurinaGroupCog,
 )
-from .lavalink import Lavalink as Lavalink
