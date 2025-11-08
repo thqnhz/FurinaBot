@@ -48,13 +48,11 @@ class TagEntry:
         if len(self.content) > 100:
             self.content_preview += "..."
         self._raw_created_at: str = data["created_at"]
-        self.created_at: str = f"<t:{
-            int(
-                datetime.datetime.strptime(
-                    self._raw_created_at, r'%Y-%m-%d %H:%M:%S.%f%z'
-                ).timestamp()
+        self.created_at: str = utils.format_dt(
+            datetime.datetime.strptime(
+                self._raw_created_at, r'%Y-%m-%d %H:%M:%S.%f%z'
             )
-        }"
+        )
         self.uses: int = data["uses"]
 
 
