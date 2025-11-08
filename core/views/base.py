@@ -57,6 +57,8 @@ class View(ui.View):
 
     async def on_timeout(self) -> None:
         for child in self.children:
+            if isinstance(child, ui.Button) and child.url:
+                continue
             child.disabled = True
         try:
             await self.message.edit(view=self)
@@ -99,6 +101,8 @@ class LayoutView(ui.LayoutView):
 
     async def on_timeout(self) -> None:
         for child in self.walk_children():
+            if isinstance(child, ui.Button) and child.url:
+                continue
             child.disabled = True
         try:
             await self.message.edit(view=self)
