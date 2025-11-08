@@ -182,14 +182,14 @@ class Tags(FurinaCog):
 
         Parameters
         ----------
-        guild_id : :class:`int`
+        guild_id : `int`
             Guild ID that is fetching the tag.
-        name : :class:`str`
+        name : `str`
             Name of the tag to fetch
 
         Returns
         -------
-        :class:`str`, optional
+        `str`, optional
             Tag content if it exists, else `None`
         """
         return await self.pool.fetchval(
@@ -199,8 +199,6 @@ class Tags(FurinaCog):
             ON T.guild_id = TA.guild_id AND T.name = TA.name
             WHERE T.guild_id = ? AND (T.name = ? OR TA.alias = ?)
             """,
-            name,
-            guild_id,
             guild_id,
             name,
             name,
@@ -238,14 +236,14 @@ class Tags(FurinaCog):
 
         Parameters
         ----------
-        ctx : :class:`FurinaCtx`
+        ctx : `FurinaCtx`
             Context of the command
-        name : :class:`str`
+        name : `str`
             Name of the tag to check
 
         Returns
         -------
-        :class:`bool`
+        `bool`
             Whether the tag exists or not
         """
         # list of reserved tag names
@@ -273,11 +271,11 @@ class Tags(FurinaCog):
 
         Parameters
         ----------
-        ctx : :class:`FurinaCtx`
+        ctx : `FurinaCtx`
             Invoked context
-        name : :class:`str`, optional
+        name : `str`, optional
             Name of the tag
-        content : :class:`str`, optional
+        content : `str`, optional
             Content of the tag
         """
         # tag create /BLANK/
