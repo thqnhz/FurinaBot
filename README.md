@@ -54,7 +54,7 @@ If you don't want to use my instance of the bot, you can host your own instance.
 1. Clone the repository:
 
     ```bash
-    git clone https://gitlab.com/thanhz/FurinaBot.git
+    git clone https://github.com/thqnhz/FurinaBot.git
     cd FurinaBot
     ```
 
@@ -87,7 +87,10 @@ If you don't want to use my instance of the bot, you can host your own instance.
 4. Run the bot:
 
     ```bash
+    # using python
     python -m main.py
+    # using uv
+    uv run main.py
     ```
 
 ## Usage
@@ -97,7 +100,7 @@ If you don't want to use my instance of the bot, you can host your own instance.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to open issues or submit a merge requests (or pull requests in github term).
+Contributions are welcome! Please feel free to open issues or submit a pull request.
 
 ## License
 
