@@ -220,7 +220,7 @@ class Utils(FurinaCog):
 
         Returns
         -------
-        :class:`float`
+        float
             The time it takes for the database to respond
         """
         time = perf_counter()

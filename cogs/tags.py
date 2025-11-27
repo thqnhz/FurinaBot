@@ -181,14 +181,14 @@ class Tags(FurinaCog):
 
         Parameters
         ----------
-        guild_id : `int`
+        guild_id : int
             Guild ID that is fetching the tag.
-        name : `str`
+        name : str
             Name of the tag to fetch
 
         Returns
         -------
-        `str`, optional
+        str, optional
             Tag content if it exists, else `None`
         """
         return await self.pool.fetchval(
@@ -235,14 +235,14 @@ class Tags(FurinaCog):
 
         Parameters
         ----------
-        ctx : `FurinaCtx`
+        ctx : FurinaCtx
             Context of the command
-        name : `str`
+        name : str
             Name of the tag to check
 
         Returns
         -------
-        `bool`
+        bool
             Whether the tag exists or not
         """
         # list of reserved tag names
@@ -270,11 +270,11 @@ class Tags(FurinaCog):
 
         Parameters
         ----------
-        ctx : `FurinaCtx`
+        ctx : FurinaCtx
             Invoked context
-        name : `str`, optional
+        name : str, optional
             Name of the tag
-        content : `str`, optional
+        content : str, optional
             Content of the tag
         """
         # tag create /BLANK/
@@ -316,11 +316,11 @@ class Tags(FurinaCog):
 
         Parameters
         ----------
-        interaction : :class:`Interaction`
+        interaction : Interaction
             Invoked interaction
-        name : :class:`str`, optional
+        name : str, optional
             Name of the tag
-        content : :class:`str`, optional
+        content : str, optional
             Content of the tag
         """
         await interaction.response.defer(ephemeral=True)
@@ -346,13 +346,13 @@ class Tags(FurinaCog):
 
         Parameters
         ----------
-        guild_id : :class:`int`
+        guild_id : int
             Guild ID
-        owner : :class:`int`
+        owner : int
             ID of the owner of the tag
-        name : :class:`str`
+        name : str
             Name of the tag
-        content : :class:`str`
+        content : str
             Content of the tag
         """
         await self.pool.execute(

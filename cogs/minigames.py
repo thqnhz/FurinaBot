@@ -71,7 +71,7 @@ class RPSButton(ui.Button):
 
         Returns
         -----------
-        `int`
+        int
             - Number of players in the game
         """
         view.players[interaction.user] = self.LABEL_TO_NUMBER[self.label]
@@ -122,9 +122,8 @@ class RPSView(ui.View):
 
         Returns
         -----------
-        `User | int`
-            - If the result is 0, it's a draw
-            - Else it's the User who won
+        User | int
+            `User` if there is a winner or 0 if it's a draw
         """
         self.disable_buttons()
         players = list(self.players.keys())
@@ -613,12 +612,12 @@ class WordleView(WordleABC):
 
         Parameters
         ----------
-        guess : :class:`str`
+        guess : str
             The guessed word
 
         Returns
         -------
-        :class:`bool`
+        bool
             `True` if the guess is a valid word, else `False`
         """
         if guess in self.history:

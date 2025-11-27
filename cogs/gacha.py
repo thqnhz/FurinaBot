@@ -63,11 +63,11 @@ class Gacha(FurinaCog):
 
         Parameters
         ----------
-        sql : :class:`str`
+        sql : str
             SQL query to execute
-        user_id : :class:`int`
+        user_id : int
             Discord user ID
-        uid : :class:`str`
+        uid : str
             UID to set
         """
         await self.pool.execute(sql, user_id, uid)
@@ -77,9 +77,9 @@ class Gacha(FurinaCog):
 
         Parameters
         ----------
-        sql : :class:`str`
+        sql : str
             SQL query to execute
-        user_id : :class:`int`
+        user_id : int
             Discord user ID
 
         Returns

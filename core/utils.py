@@ -121,18 +121,19 @@ async def call_dictionary(word: str, cs: ClientSession) -> PaginatedLayoutView:
     Make a http request to dictionaryapi.dev to get definition of a word.
     If the word has no definition or has a single definition,
     returns a single embed.
-    *(already processed inside :class:`~core.views.PaginatedView`)*
+
+    *(already processed inside `~core.views.PaginatedView`)*
 
     Parameters
     ----------
-    word : :class:`str`
+    word : str
         The word to get the definition.
-    cs : :class:`aiohttp.ClientSession`
+    cs : aiohttp.ClientSession
         Client session to make request.
 
     Returns
     -------
-    :class:`~core.views.PaginatedLayoutView`
+    ~core.views.PaginatedLayoutView
         The paginated view with embeds of the word's definitions.
     """
     containers: list[Container] = []
@@ -192,12 +193,12 @@ def __get_pronunciations(data: list[dict]) -> list[str]:
 
     Parameters
     ----------
-    data : :class:`dict`
+    data : dict
         The returned data from the API call.
 
     Returns
     -------
-    :class:`list[str]`
+    list[str]
         The word's pronunciations.
         If no pronunciations found for that definition,
         the string at that index will be empty.

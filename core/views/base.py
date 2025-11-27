@@ -68,7 +68,7 @@ class View(ui.View):
 
 class LayoutView(ui.LayoutView):
     """
-    A :class:`discord.ui.LayoutView`
+    A `ui.LayoutView`
     that auto disable its children when timed out
     and has per user rate limit
     """

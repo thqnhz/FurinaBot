@@ -19,7 +19,7 @@ from typing_extensions import Self
 
 
 class Container(ui.Container):
-    """Subclass off :class:`discord.ui.Container` with `add_footer` method"""
+    """Subclass off `discord.ui.Container` with `add_footer` method"""
 
     def add_footer(self) -> Self:
         return super().add_item(ui.TextDisplay("-# Coded by ThanhZ"))

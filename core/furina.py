@@ -74,7 +74,7 @@ class FurinaBot(commands.Bot):
 
     Attributes
     ----------
-    client_session : `aiohttp.ClientSession`
+    client_session : aiohttp.ClientSession
         Aiohttp client session for making requests
 
     Usage
@@ -154,16 +154,16 @@ class FurinaBot(commands.Bot):
 
         Parameters
         ----------
-        _ : `FurinaBot`
+        _ : FurinaBot
             The bot instance,
             but since this is a method in the bot class,
             we already have `self` as bot
-        message : `discord.Message`
+        message : discord.Message
             The message to get the prefix
 
         Returns
         -------
-        `list[str]`
+        list[str]
             The prefix for the bot, including mention
         """
         if not message.guild:

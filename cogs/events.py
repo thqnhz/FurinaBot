@@ -56,7 +56,7 @@ class BotEvents(FurinaCog):
 
         Parameters
         ----------
-        ctx: `~core.FurinaCtx`
+        ctx : FurinaCtx
             The invoked context
         """
         if ctx.guild is None or "jishaku" in ctx.command.qualified_name:
@@ -95,9 +95,9 @@ class BotEvents(FurinaCog):
 
         Parameters
         ----------
-        interaction : `discord.Interaction`
+        interaction : Interaction
             The completed interaction
-        command : `Union[app_commands.Command, app_commands.ContextMenu]`
+        command : Union[app_commands.Command, app_commands.ContextMenu]
             The completed command (slash and context menu)
         """
         await self.pool.execute(
