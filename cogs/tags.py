@@ -50,7 +50,7 @@ class TagEntry:
         self._raw_created_at: str = data["created_at"]
         self.created_at: str = utils.format_dt(
             datetime.datetime.strptime(
-                self._raw_created_at, r'%Y-%m-%d %H:%M:%S.%f%z'
+                self._raw_created_at, r"%Y-%m-%d %H:%M:%S.%f%z"
             )
         )
         self.uses: int = data["uses"]
@@ -62,11 +62,10 @@ class TagCreateLayoutView(LayoutView):
     def __init__(
         self, *, name: str | None = None, content: str | None = None, cog: Tags
     ) -> None:
-        super().__init__(timeout=180)
         self.name = name
         self.content = content
         self._cog = cog
-        self.add_item(self.container)
+        super().__init__(self.container, timeout=180)
 
     @property
     def container(self) -> Container:
@@ -380,7 +379,7 @@ class Tags(FurinaCog):
         Parameters
         ----------
         name : str
-            - Name of the tag
+            Name of the tag
         """
         tag_content = await self.__get_tag_content(
             guild_id=ctx.guild.id, name=name.lower()
