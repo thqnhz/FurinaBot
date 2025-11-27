@@ -70,43 +70,44 @@ class FurinaCtx(commands.Context):
 
 
 class FurinaBot(commands.Bot):
-    r"""Customized :class:`commands.Bot` class
+    r"""Customized `commands.Bot` class
 
     Attributes
     ----------
-    client_session : :class:`aiohttp.ClientSession`
+    client_session : aiohttp.ClientSession
         Aiohttp client session for making requests
-    skip_lavalink : :class:`bool`
-        Whether to skip Lavalink or not
 
     Usage
     -----
     .. code-block:: python
         async with aiohttp.ClientSession() as client_session, \
-            FurinaBot(
-                client_session=client_session,
-                skip_lavalink=True
-            ) as bot:
+            FurinaBot(client_session=client_session) as bot:
                 await bot.start()
     """
 
     DEFAULT_PREFIX: str = settings.DEFAULT_PREFIX
 
-    def __init__(self, *, client_session: aiohttp.ClientSession, skip_lavalink: bool) -> None:
+    def __init__(self, *, client_session: aiohttp.ClientSession) -> None:
         super().__init__(
             command_prefix=self.get_pre,
             case_insensitive=True,
             strip_after_prefix=True,
-            intents=discord.Intents.all(),
-            help_command=None,
-            allowed_contexts=app_commands.AppCommandContext(dm_channel=False, guild=True),
-            allowed_mentions=discord.AllowedMentions(everyone=False, roles=False, users=True),
+            intents=discord.Intents(
+                guilds=True,
+                members=True,
+                voice_states=True,
+                messages=True,
+                message_content=True,
+            ),
+            allowed_contexts=app_commands.AppCommandContext(
+                dm_channel=False, guild=True
+            ),
+            allowed_mentions=discord.AllowedMentions.none(),
             activity=discord.Activity(
                 type=discord.ActivityType.playing, name=settings.ACTIVITY_NAME
             ),
         )
         self.owner_id = settings.OWNER_ID
-        self.skip_lavalink = skip_lavalink
         self._lavalink = None
         self.cs = client_session
         # custom prefixes, in `{guild_id: prefix}` format
@@ -121,16 +122,22 @@ class FurinaBot(commands.Bot):
 
     @property
     def uptime(self) -> str:
-        """The bot uptime, formatted as `Xd Xh Xm`"""
+        """The bot uptime, formatted as `Xd Yh Zm`"""
         uptime_td = utils.utcnow() - self._startup
-        return f"`{uptime_td.days}d {uptime_td.seconds // 3600}h {(uptime_td.seconds // 60) % 60}m`"
+        return (
+            f"`{uptime_td.days}d {uptime_td.seconds // 3600}h"
+            f" {(uptime_td.seconds // 60) % 60}m`"
+        )
 
     @property
     def lavalink(self) -> lavalink.Client:
         if not self._lavalink:
             self._lavalink = lavalink.Client(self.user.id)
             self._lavalink.add_node(
-                host=settings.LAVA_URL, region="us", port=1710, password=settings.LAVA_PW
+                host=settings.LAVA_URL,
+                region="us",
+                port=1710,
+                password=settings.LAVA_PW,
             )
         return self._lavalink
 
@@ -147,15 +154,16 @@ class FurinaBot(commands.Bot):
 
         Parameters
         ----------
-        _ : :class:`FurinaBot`
+        _ : FurinaBot
             The bot instance,
-            but since this is a method in the bot class, we already have `self` as bot
-        message : :class:`discord.Message`
+            but since this is a method in the bot class,
+            we already have `self` as bot
+        message : discord.Message
             The message to get the prefix
 
         Returns
         -------
-        :class:`list[str]`
+        list[str]
             The prefix for the bot, including mention
         """
         if not message.guild:
@@ -188,7 +196,7 @@ class FurinaBot(commands.Bot):
         logging.info("Lavalink.py v%s", lavalink.__version__)
         logging.info("Running Python %s", python_version())
         logging.info("Fetching bot emojis...")
-        self.app_emojis: list[discord.Emoji] = await self.fetch_application_emojis()
+        self.app_emojis = await self.fetch_application_emojis()
         db_path = Path() / "db"
         db_path.mkdir(exist_ok=True)
         self.pool = SQL(await asqlite.create_pool(Path() / "db" / "furina.db"))  # type: ignore[reportArgumentType]
@@ -204,10 +212,13 @@ class FurinaBot(commands.Bot):
                 await self.load_extension(extension)
             except errors.NoEntryPointError:
                 logging.exception(
-                    "Extension %s has no setup function so it cannot be loaded", extension_name
+                    "Extension %s has no setup function so it cannot be loaded",
+                    extension_name,
                 )
             except Exception:
-                logging.exception("An error occured when trying to load %s", extension_name)
+                logging.exception(
+                    "An error occured when trying to load %s", extension_name
+                )
 
     async def start(self) -> None:
         await super().start(settings.TOKEN)
@@ -228,3 +239,16 @@ class FurinaCog(commands.Cog):
     def embed(self) -> discord.Embed:
         """Shortcut for `FurinaBot.embed`"""
         return self.bot.embed
+
+
+class FurinaGroupCog(commands.GroupCog):
+    """Base class for all group cogs"""
+
+    def __init__(self, bot: FurinaBot) -> None:
+        self.bot = bot
+        self.pool: SQL = bot.pool
+        self.cs = bot.cs
+
+    async def cog_load(self) -> None:
+        logging.info("Cog %s has been loaded", self.__cog_name__)
+

@@ -43,17 +43,22 @@ class View(ui.View):
             raise UIElementOnCoolDownError(retry_after=retry_after)
         return True
 
-    async def on_error(self, interaction: Interaction, error: Exception, item: ui.Item) -> None:
+    async def on_error(
+        self, interaction: Interaction, error: Exception, item: ui.Item
+    ) -> None:
         if isinstance(error, UIElementOnCoolDownError):
             seconds = str(error.retry_after)[:3]
             await interaction.response.send_message(
-                f"You are clicking too fast, try again in {seconds} seconds!", ephemeral=True
+                f"You are clicking too fast, try again in {seconds} seconds!",
+                ephemeral=True,
             )
         else:
             await super().on_error(interaction, error, item)
 
     async def on_timeout(self) -> None:
         for child in self.children:
+            if isinstance(child, ui.Button) and child.url:
+                continue
             child.disabled = True
         try:
             await self.message.edit(view=self)
@@ -63,7 +68,8 @@ class View(ui.View):
 
 class LayoutView(ui.LayoutView):
     """
-    A :class:`discord.ui.LayoutView` that auto disable its children when timed out
+    A `ui.LayoutView`
+    that auto disable its children when timed out
     and has per user rate limit
     """
 
@@ -83,7 +89,9 @@ class LayoutView(ui.LayoutView):
             raise UIElementOnCoolDownError(retry_after=retry_after)
         return True
 
-    async def on_error(self, interaction: Interaction, error: Exception, item: ui.Item) -> None:
+    async def on_error(
+        self, interaction: Interaction, error: Exception, item: ui.Item
+    ) -> None:
         if isinstance(error, UIElementOnCoolDownError):
             await interaction.response.send_message(
                 "Slow down! You are clicking too fast!", ephemeral=True
@@ -93,6 +101,8 @@ class LayoutView(ui.LayoutView):
 
     async def on_timeout(self) -> None:
         for child in self.walk_children():
+            if isinstance(child, ui.Button) and child.url:
+                continue
             child.disabled = True
         try:
             await self.message.edit(view=self)

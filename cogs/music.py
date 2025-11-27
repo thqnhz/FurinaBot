@@ -37,20 +37,26 @@ class TrackNotFound(Exception): ...
 
 
 class VoiceProtocol(discord.VoiceProtocol):
-    def __init__(self, client: FurinaBot, channel: discord.abc.Connectable) -> None:
+    def __init__(
+        self, client: FurinaBot, channel: discord.abc.Connectable
+    ) -> None:
         super().__init__(client, channel)
         self.guild_id = self.channel.guild.id
         self._destroyed = False
 
         self.lavalink = client.lavalink
 
-    async def _transform_voice_update_data(self, *, type_: str, data: typing.Any) -> None:
+    async def _transform_voice_update_data(
+        self, *, type_: str, data: typing.Any
+    ) -> None:
         """Transform voice update data and pass it into lavalink handler"""
         lavalink_data: dict[str, typing.Any] = {"t": type_, "d": data}
         await self.lavalink.voice_update_handler(lavalink_data)
 
     async def on_voice_server_update(self, data: typing.Any) -> None:
-        await self._transform_voice_update_data(type_="VOICE_SERVER_UPDATE", data=data)
+        await self._transform_voice_update_data(
+            type_="VOICE_SERVER_UPDATE", data=data
+        )
 
     async def on_voice_state_update(self, data: typing.Any) -> None:
         channel_id = data["channel_id"]
@@ -61,10 +67,17 @@ class VoiceProtocol(discord.VoiceProtocol):
 
         self.channel = self.client.get_channel(int(channel_id))
 
-        await self._transform_voice_update_data(type_="VOICE_STATE_UPDATE", data=data)
+        await self._transform_voice_update_data(
+            type_="VOICE_STATE_UPDATE", data=data
+        )
 
     async def connect(
-        self, *, timeout: float, reconnect: bool, self_deaf: bool = False, self_mute: bool = False
+        self,
+        *,
+        timeout: float,
+        reconnect: bool,
+        self_deaf: bool = False,
+        self_mute: bool = False,
     ) -> None:
         """
         Connect the bot to the voice channel and create a player_manager
@@ -81,7 +94,9 @@ class VoiceProtocol(discord.VoiceProtocol):
         Handles the disconnect.
         Cleans up running player and leaves the voice client.
         """
-        player: lavalink.DefaultPlayer = self.lavalink.player_manager.get(self.channel.guild.id)
+        player: lavalink.DefaultPlayer = self.lavalink.player_manager.get(
+            self.channel.guild.id
+        )
 
         # no need to disconnect if we are not connected
         if not force and not player.is_connected:
@@ -91,7 +106,8 @@ class VoiceProtocol(discord.VoiceProtocol):
         await self.channel.guild.change_voice_state(channel=None)
 
         # update the channel_id of the player to None
-        # this must be done because the on_voice_state_update that would set channel_id
+        # this must be done because the on_voice_state_update
+        # that would set channel_id
         # to None doesn't get dispatched after the disconnect
         player.channel_id = None
         await self._destroy()
@@ -100,7 +116,8 @@ class VoiceProtocol(discord.VoiceProtocol):
         self.cleanup()
 
         if self._destroyed:
-            # Idempotency handling, if `disconnect()` is called, the changed voice state
+            # Idempotency handling, if `disconnect()` is called,
+            # the changed voice state
             # could cause this to run a second time.
             return
 
@@ -132,21 +149,30 @@ def ms_to_mm_ss(length: int) -> str:
 async def create_player_check(ctx: FurinaCtx) -> bool:
     """A check to see if we need to create a player"""
     if not ctx.guild:
-        raise commands.CommandInvokeError("""You can't use this command in DM""")
+        raise commands.CommandInvokeError(
+            """You can't use this command in DM"""
+        )
 
-    player: lavalink.DefaultPlayer = ctx.bot.lavalink.player_manager.create(ctx.guild.id)
+    player: lavalink.DefaultPlayer = ctx.bot.lavalink.player_manager.create(
+        ctx.guild.id
+    )
 
     should_connect = ctx.command.name == "play"
 
     voice_client = ctx.voice_client
 
     if not ctx.author.voice or not ctx.author.voice.channel:
-        # Check if we're in a voice channel. If we are, tell the user to join our voice channel.
+        # Check if we're in a voice channel.
+        # If we are, tell the user to join our voice channel.
         if voice_client is not None:
-            raise commands.CommandInvokeError("""You need to join my voice channel first.""")
+            raise commands.CommandInvokeError(
+                """You need to join my voice channel first."""
+            )
 
         # Otherwise, tell them to join any voice channel to begin playing music.
-        raise commands.CommandInvokeError("""You are not in any voice channel.""")
+        raise commands.CommandInvokeError(
+            """You are not in any voice channel."""
+        )
 
     voice_channel = ctx.author.voice.channel
 
@@ -157,7 +183,9 @@ async def create_player_check(ctx: FurinaCtx) -> bool:
         permissions = voice_channel.permissions_for(ctx.me)
 
         if not permissions.connect or not permissions.speak:
-            raise commands.CommandInvokeError("I need the `CONNECT` and `SPEAK` permissions.")
+            raise commands.CommandInvokeError(
+                "I need the `CONNECT` and `SPEAK` permissions."
+            )
 
         if (
             voice_channel.user_limit > 0
@@ -167,7 +195,9 @@ async def create_player_check(ctx: FurinaCtx) -> bool:
             raise commands.CommandInvokeError("Your voice channel is full!")
 
         player.store("channel", ctx.channel.id)
-        await ctx.author.voice.channel.connect(cls=VoiceProtocol, self_deaf=True)
+        await ctx.author.voice.channel.connect(
+            cls=VoiceProtocol, self_deaf=True
+        )
     elif voice_client.channel.id != voice_channel.id:
         raise commands.CommandInvokeError("You need to be in my voicechannel.")
 
@@ -176,6 +206,10 @@ async def create_player_check(ctx: FurinaCtx) -> bool:
 
 class Music(FurinaCog):
     """Music Related Commands"""
+
+    @property
+    def emoji(self) -> discord.PartialEmoji:
+        return discord.PartialEmoji.from_str("\U0001f3a7")
 
     def __init__(self, bot: FurinaBot) -> None:
         super().__init__(bot)
@@ -191,11 +225,14 @@ class Music(FurinaCog):
         if ctx.command.name in ("allowmusic", "disallowmusic"):
             return True
         channel_id: int = await ctx.bot.pool.fetchval(
-            """SELECT channel_id FROM music_channel WHERE guild_id = ?""", ctx.guild.id
+            """SELECT channel_id FROM music_channel WHERE guild_id = ?""",
+            ctx.guild.id,
         )
         if ctx.channel.id == channel_id:
             return True
-        raise commands.CommandInvokeError("""Music commands are not allowed in this channel""")
+        raise commands.CommandInvokeError(
+            """Music commands are not allowed in this channel"""
+        )
 
     @property
     def embed(self) -> Embed:
@@ -219,7 +256,8 @@ class Music(FurinaCog):
         view = LayoutView(
             Container(
                 ui.Section(
-                    f"### {settings.PLAYING_EMOJI} [**{track.title}**](<{track.uri}>)\n"
+                    f"### {settings.PLAYING_EMOJI} "
+                    f"[**{track.title}**](<{track.uri}>)\n"
                     f"> **By:** {track.author}\n"
                     f"> **Duration:** `{ms_to_mm_ss(track.duration)}`\n"
                     f"> **Requester:** <@{track.extra['requester']}>",
@@ -275,13 +313,16 @@ class Music(FurinaCog):
 
             container.add_item(
                 ui.TextDisplay(
-                    f"### Playlist Enqueued!\n{results.playlist_info.name} - {len(tracks)} tracks"
+                    "### Playlist Enqueued!\n"
+                    f"{results.playlist_info.name} - {len(tracks)} tracks"
                 )
             )
         else:
             track = results.tracks[0]
             container.add_item(
-                ui.TextDisplay(f"### Track Enqueued\n[{track.title}](<{track.uri}>)")
+                ui.TextDisplay(
+                    f"### Track Enqueued\n[{track.title}](<{track.uri}>)"
+                )
             )
             track.extra["requester"] = ctx.author.id
             player.add(track=track)
@@ -298,15 +339,15 @@ class Music(FurinaCog):
     ) -> None:
         """Allows music commands in a channel
 
-        Adds the channel into the music commands whitelist.
+        Set a channel as the music channel.
         Defaults to the current channel if not specified.
-        Use `disallowmusic` to disallow the channel frm using music commands.
+        Use `disallowmusic` to unset the channel.
         Can only be used by member with `Manage Server` permission.
 
         Parameters
         ----------
         channel: TextChannel, optional
-            The channel you allow to use music commands
+            The channel want to set as the music channel
         """
         channel = channel or ctx.channel
         await ctx.bot.pool.execute(
@@ -321,7 +362,8 @@ class Music(FurinaCog):
             view=LayoutView(
                 Container(
                     ui.TextDisplay(
-                        f"### {settings.CHECKMARK} Added {channel.mention} to music channel list"
+                        f"### {settings.CHECKMARK} "
+                        f"Set server's music channel to {channel.mention}"
                     )
                 )
             )
@@ -334,15 +376,15 @@ class Music(FurinaCog):
     ) -> None:
         """Disallows music commands from a channel
 
-        Removes the channel from the music commands whitelist.
+        Unset the channel as a music channel.
         Defaults to the current channel if not specified.
-        Use `allowmusic` to whitelist the channel again.
+        Use `allowmusic` to set music channel.
         Can only be used by member with `Manage Server` permission.
 
         Parameters
         ----------
         channel: TextChannel, optional
-            The channel you want to remove from the music channel list
+            The channel you want to unset as a music channel
         """
         channel = channel or ctx.channel
         await ctx.bot.pool.execute(
@@ -357,7 +399,7 @@ class Music(FurinaCog):
                 Container(
                     ui.TextDisplay(
                         f"### {settings.CHECKMARK} "
-                        f"Removed {channel.mention} from music channel list"
+                        f"Unset server's music channel"
                     )
                 )
             )
@@ -368,7 +410,8 @@ class Music(FurinaCog):
     async def play_group(self, ctx: FurinaCtx, *, query: str) -> None:
         """Searches and plays a track from a given query
 
-        Use `play <track name>` or `play <track url>` to search and play the track.
+        Use `play <track name>` or `play <track url>`
+        to search and play the track.
         Use `play <playlist url>` to search and play the playlist.
 
         Parameters
@@ -412,14 +455,20 @@ class Music(FurinaCog):
         await player.set_pause(False)
         container = Container(
             ui.TextDisplay(
-                f"### Resumed the player\n-# Use `{ctx.prefix}pause` or `/pause` to pause"
+                "### Resumed the player\n"
+                f"-# Use `{ctx.prefix}pause` or `/pause` to pause"
             )
         )
         await ctx.reply(view=LayoutView(container))
 
-    @commands.hybrid_command(name="nowplaying", aliases=["np", "now", "current"])
+    @commands.hybrid_command(
+        name="nowplaying", aliases=["np", "now", "current"]
+    )
     async def nowplaying_command(self, ctx: FurinaCtx) -> None:
-        """Gets the on going track"""
+        """Gets the on going track
+
+        Get the title, url, thumbnail and the current position of the track.
+        """
         player = self._get_player(ctx)
         current = player.current
         played = int((player.position / current.duration) * 20)
@@ -433,7 +482,8 @@ class Music(FurinaCog):
             ui.MediaGallery(discord.MediaGalleryItem(current.artwork_url)),
             ui.Separator(),
             ui.TextDisplay(
-                ("▰" * played + "▱" * (20 - played) + "\n") + f"`{ms_to_mm_ss(player.position)} / "
+                ("▰" * played + "▱" * (20 - played) + "\n")
+                + f"`{ms_to_mm_ss(player.position)} / "
                 f"{ms_to_mm_ss(current.duration)}`"
             ),
         )
@@ -445,7 +495,9 @@ class Music(FurinaCog):
         player = self._get_player(ctx)
         track = player.current
         if track:
-            embed = Embed().set_author(name=f"Skipped {track.title}", icon_url=settings.SKIP_EMOJI)
+            embed = Embed().set_author(
+                name=f"Skipped {track.title}", icon_url=settings.SKIP_EMOJI
+            )
             await player.skip()
         else:
             embed = self.embed
@@ -460,7 +512,8 @@ class Music(FurinaCog):
         player.queue.clear()
         await player.stop(force=True)
         embed = Embed().set_author(
-            name="Stopped playing and cleared the queue", icon_url=settings.SKIP_EMOJI
+            name="Stopped playing and cleared the queue",
+            icon_url=settings.SKIP_EMOJI,
         )
         await ctx.reply(embed=embed)
 
@@ -486,8 +539,10 @@ class Music(FurinaCog):
         queue_embeds: list[Embed] = []
         q: str = ""
         for i, track in enumerate(player.queue, 1):
-            q += f"{i}. [**{track.title}**](<{track.uri}>)"
-            f"({ms_to_mm_ss(track.duration)})\n"
+            q += (
+                f"{i}. [**{track.title}**](<{track.uri}>) "
+                f"({ms_to_mm_ss(track.duration)})\n"
+            )
             if i % 10 == 0:
                 embed = self._create_queue_embed(player, q)
                 queue_embeds.append(embed)
@@ -497,7 +552,9 @@ class Music(FurinaCog):
             queue_embeds.append(embed)
         return queue_embeds
 
-    def _create_queue_embed(self, player: lavalink.DefaultPlayer, q: str) -> Embed:
+    def _create_queue_embed(
+        self, player: lavalink.DefaultPlayer, q: str
+    ) -> Embed:
         embed = self.embed
         embed.color = Color.blue()
         embed.title = f"Queued: {len(player.queue)} tracks"
@@ -507,12 +564,17 @@ class Music(FurinaCog):
             track = player.current
             embed.add_field(
                 name="Playing",
-                value=f"[**{track.title}**](<{track.uri}>) ({ms_to_mm_ss(track.duration)})",
+                value=(
+                    f"[**{track.title}**](<{track.uri}>) "
+                    f"({ms_to_mm_ss(track.duration)})"
+                ),
             )
         return embed
 
     @app_commands.command(name="remove")
-    async def remove_slashcommand(self, interaction: Interaction, track_name: str) -> None:
+    async def remove_slashcommand(
+        self, interaction: Interaction, track_name: str
+    ) -> None:
         """Removes a track from the queue
 
         Parameters
@@ -521,7 +583,9 @@ class Music(FurinaCog):
             Name of the track to remove
         """
         player = self._get_player(interaction)
-        player.queue.remove(track for track in player.queue if track.title == track_name)
+        player.queue.remove(
+            track for track in player.queue if track.title == track_name
+        )
         deleted: str = track_name
 
         await interaction.response.send_message(
@@ -539,10 +603,13 @@ class Music(FurinaCog):
             if current.lower() in track.title.lower()
         ][:25]
 
-    @commands.command(
-        name="remove", aliases=["rm", "delete"], description="Xóa một bài hát khỏi hàng chờ"
-    )
+    @commands.command(name="remove", aliases=["rm", "delete"])
     async def remove_prefixcommand(self, ctx: FurinaCtx) -> None:
+        """Removes the last added track from the queue
+
+        Only remove the last one from the queue.
+        If you want to remove a specific one, use `/remove` instead.
+        """
         player = self._get_player(ctx)
         if len(player.queue) == 0:
             return

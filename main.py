@@ -19,29 +19,18 @@ import sys
 
 from aiohttp import ClientSession
 
-from core import FurinaBot, Lavalink, settings, utils
+from core import FurinaBot, settings, utils
 
 
-async def main(*, skip_ll: bool) -> None:
-    """Setting up loggings and starting the bot.
-
-    Parameters
-    ----------
-    skip_ll : :class:`bool`
-        Whether to skip Lavalink or not.
-    """
+async def main() -> None:
+    """Setting up loggings and starting the bot."""
     utils.setup_logging()
     async with (
         ClientSession() as client_session,
-        FurinaBot(client_session=client_session, skip_lavalink=skip_ll) as bot,
+        FurinaBot(client_session=client_session) as bot,
     ):
-        if not skip_ll:
-            with Lavalink().start():
-                await bot.start()
-        else:
-            await bot.start()
+        await bot.start()
 
 
 if __name__ == "__main__":
-    skip_ll = bool("--skip-ll" in sys.argv or settings.SKIP_LL)
-    asyncio.run(main(skip_ll=skip_ll))
+    asyncio.run(main())

@@ -176,7 +176,9 @@ class SQL:
         async with self.pool.acquire() as conn, conn.transaction():
             await conn.executemany(query, *args)
 
-    async def fetchall(self, query: str, *args: typing.Any) -> list[sqlite3.Row]:
+    async def fetchall(
+        self, query: str, *args: typing.Any
+    ) -> list[sqlite3.Row]:
         async with self.pool.acquire() as conn:
             return await conn.fetchall(query, *args)
 
@@ -184,7 +186,9 @@ class SQL:
         async with self.pool.acquire() as conn:
             return await conn.fetchone(query, *args)
 
-    async def fetchval(self, query: str, *args: typing.Any) -> typing.Any | None:
+    async def fetchval(
+        self, query: str, *args: typing.Any
+    ) -> typing.Any | None:
         async with self.pool.acquire() as conn:
             row = await conn.fetchone(query, *args)
             return None if not row else row[0]

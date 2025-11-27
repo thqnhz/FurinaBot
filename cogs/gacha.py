@@ -22,7 +22,7 @@ from discord import ui
 from discord.ext import commands
 
 from core import FurinaCog, FurinaCtx
-from core.views import LayoutView
+from core.views import Container, LayoutView
 
 if TYPE_CHECKING:
     from core import FurinaBot
@@ -35,26 +35,39 @@ class NotFoundError(Exception):
 class Gacha(FurinaCog):
     """Gacha Related Commands"""
 
+    @property
+    def emoji(self) -> discord.PartialEmoji:
+        return discord.PartialEmoji.from_str("\U0001f3b0")
+
     def __init__(self, bot: FurinaBot) -> None:
         super().__init__(bot)
         self.gi = enka.GenshinClient()
         self.hsr = enka.HSRClient()
 
+    async def cog_load(self) -> None:
+        await self.gi.start()
+        await self.gi.update_assets()
+        await self.hsr.start()
+        await self.hsr.update_assets()
+        await super().cog_load()
+
     @property
     def embed(self) -> discord.Embed:
         """Shortcut for `FurinaBot.embed`, with extra footer"""
-        return self.bot.embed.set_footer(text="Coded by ThanhZ | Powered by Enka Network")
+        return self.bot.embed.set_footer(
+            text="Coded by ThanhZ | Powered by Enka Network"
+        )
 
     async def set_uid(self, sql: str, user_id: int, uid: str) -> None:
         """Insert a user's UID with provided game to the database
 
         Parameters
         ----------
-        sql : :class:`str`
+        sql : str
             SQL query to execute
-        user_id : :class:`int`
+        user_id : int
             Discord user ID
-        uid : :class:`str`
+        uid : str
             UID to set
         """
         await self.pool.execute(sql, user_id, uid)
@@ -64,9 +77,9 @@ class Gacha(FurinaCog):
 
         Parameters
         ----------
-        sql : :class:`str`
+        sql : str
             SQL query to execute
-        user_id : :class:`int`
+        user_id : int
             Discord user ID
 
         Returns
@@ -95,29 +108,33 @@ class Gacha(FurinaCog):
             Genshin UID
         """
         if uid is None:
-            uid = await self.get_uid("SELECT uid FROM gi_uid WHERE user_id = ?", ctx.author.id)
+            uid = await self.get_uid(
+                "SELECT uid FROM gi_uid WHERE user_id = ?", ctx.author.id
+            )
 
         async with self.gi as api:
             response = await api.fetch_showcase(uid)
             p_info = response.player
-        abyss = f"{p_info.abyss_floor}-{p_info.abyss_level} ({p_info.abyss_stars})"
-
-        container = self.container
-        container.add_item(ui.MediaGallery(discord.MediaGalleryItem(p_info.namecard.full)))
-        container.add_item(ui.Separator())
-        header = ui.Section(
-            ui.TextDisplay(f"## {p_info.nickname} ({uid})"),
-            ui.TextDisplay(
-                f"> {p_info.signature}\n"
-                f"**Adventure Rank:** `{p_info.level}` ▪ **World Level:** `{p_info.world_level}`\n"
-                f"**Achievements:** `{p_info.achievements}`\n"
-                f"**Abyss Floor:** `{abyss}`"
-            ),
-            accessory=ui.Thumbnail(p_info.profile_picture_icon.circle),
+        abyss = (
+            f"{p_info.abyss_floor}-{p_info.abyss_level} ({p_info.abyss_stars})"
         )
-        container.add_item(header)
-        container.add_item(ui.Separator())
-        await ctx.reply(view=LayoutView().add_item(container))
+
+        container = Container(
+            ui.MediaGallery(discord.MediaGalleryItem(p_info.namecard.full)),
+            ui.Separator(),
+            ui.Section(
+                ui.TextDisplay(f"## {p_info.nickname} ({uid})"),
+                ui.TextDisplay(
+                    f"> {p_info.signature}\n"
+                    f"**Adventure Rank:** `{p_info.level}` "
+                    f"▪ **World Level:** `{p_info.world_level}`\n"
+                    f"**Achievements:** `{p_info.achievements}`\n"
+                    f"**Abyss Floor:** `{abyss}`"
+                ),
+                accessory=ui.Thumbnail(p_info.profile_picture_icon.circle),
+            ),
+        ).add_footer()
+        await ctx.reply(view=LayoutView(container))
 
     @gi_group.command(name="set")
     async def set_uid_gi(self, ctx: FurinaCtx, *, uid: str) -> None:
@@ -133,7 +150,9 @@ class Gacha(FurinaCog):
         async with self.gi as api:
             await api.fetch_showcase(uid, info_only=True)
         await self.set_uid(
-            "INSERT OR REPLACE INTO gi_uid (user_id, uid) VALUES (?, ?)", ctx.author.id, uid
+            "INSERT OR REPLACE INTO gi_uid (user_id, uid) VALUES (?, ?)",
+            ctx.author.id,
+            uid,
         )
         await ctx.reply("Your GI UID has been set to: " + uid)
 
@@ -151,7 +170,9 @@ class Gacha(FurinaCog):
             HSR UID
         """
         if not uid:
-            uid = await self.get_uid("SELECT uid FROM hsr_uid WHERE user_id = ?", ctx.author.id)
+            uid = await self.get_uid(
+                "SELECT uid FROM hsr_uid WHERE user_id = ?", ctx.author.id
+            )
 
         async with self.hsr as api:
             response = await api.fetch_showcase(uid)
@@ -185,7 +206,9 @@ class Gacha(FurinaCog):
         async with self.hsr as api:
             await api.fetch_showcase(uid, info_only=True)
         await self.set_uid(
-            "INSERT OR REPLACE INTO hsr_uid (user_id, uid) VALUES (?, ?)", ctx.author.id, uid
+            "INSERT OR REPLACE INTO hsr_uid (user_id, uid) VALUES (?, ?)",
+            ctx.author.id,
+            uid,
         )
         await ctx.reply("Your HSR UID has been set to: " + uid)
 

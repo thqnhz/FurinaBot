@@ -47,14 +47,14 @@ And more...
 
 ## Self host
 
-If you don't want to use my instance of the bot, you can host your own instace. Here are the step by step instructions:
+If you don't want to use my instance of the bot, you can host your own instance. Here is the step by step instruction:
 
 > Requires Python 3.10+ (preferably newest stable)
 
 1. Clone the repository:
 
     ```bash
-    git clone https://gitlab.com/thanhz/FurinaBot.git
+    git clone https://github.com/thqnhz/FurinaBot.git
     cd FurinaBot
     ```
 
@@ -87,7 +87,10 @@ If you don't want to use my instance of the bot, you can host your own instace. 
 4. Run the bot:
 
     ```bash
+    # using python
     python -m main.py
+    # using uv
+    uv run main.py
     ```
 
 ## Usage
@@ -97,7 +100,7 @@ If you don't want to use my instance of the bot, you can host your own instace. 
 
 ## Contributing
 
-Contributions are welcome! Please feel free to open issues or submit a merge requests (or pull requests in github term).
+Contributions are welcome! Please feel free to open issues or submit a pull request.
 
 ## License
 
