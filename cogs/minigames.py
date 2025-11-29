@@ -19,6 +19,7 @@ import asyncio
 import logging
 import pathlib
 import string
+import sys
 from collections import Counter
 from enum import IntEnum
 from typing import TYPE_CHECKING, ClassVar
@@ -38,7 +39,6 @@ from discord import (
     ui,
 )
 from discord.ext import commands
-from tqdm import tqdm
 
 from core import utils
 from core.views import Container, LayoutView, PaginatedLayoutView, PaginatedView
@@ -934,11 +934,24 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         logging.info("Uploading missing wordle emojis...")
 
         wordle_letters_path = pathlib.Path() / "assets" / "wordle"
-        filenames = wordle_letters_path.iterdir()
-        for _, filename in enumerate(
-            tqdm(filenames, desc="Uploading", unit=" emojis"), 1
-        ):
-            file = (wordle_letters_path / filename).read_bytes()
+        filenames = list(wordle_letters_path.iterdir())
+        total = len(filenames)
+        if not total:
+            logging.error("Failed to get emoji files")
+            return
+        bar_width = 50
+        for index, filename in enumerate(filenames, 1):
+            percentage = index / total
+            filled = int(bar_width * percentage)
+            bar = "#" * filled + "-" * (bar_width - filled)
+            sys.stdout.write(
+                f"\r[{bar}] {index}/{total} ({percentage * 100:.2f}%)"
+            )
+            sys.stdout.flush()
+            if index == total:
+                sys.stdout.write("\n")
+                sys.stdout.flush()
+            file = filename.read_bytes()
             try:
                 await self.bot.create_application_emoji(
                     name=filename.stem, image=file

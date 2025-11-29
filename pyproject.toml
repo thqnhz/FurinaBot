@@ -16,7 +16,6 @@ dependencies = [
     "psutil",
     "pynacl",
     "python-dotenv",
-    "tqdm",
     "lavalink",
     "typing-extensions>=4.14.1",
     "anyio>=4.11.0",
