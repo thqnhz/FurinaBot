@@ -233,7 +233,7 @@ class Tags(FurinaCog):
 
         try:
             await ctx.send(prompt)
-            msg = await self.bot.wait_for("message", check=check, timeout=30)
+            msg = await self.bot.wait_for("message", check=check, timeout=180)
             if msg.content.lower() == "cancel":
                 await ctx.send("Tag creation cancelled")
                 return None
