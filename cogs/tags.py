@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import asqlite
 import discord
@@ -73,7 +73,9 @@ class TagCreateLayoutView(LayoutView):
             self.name_textdisplay,
             ui.Separator(),
             self.content_textdisplay,
-            TagCreateActionRow(name=self.name, content=self.content),
+            TagCreateActionRow(
+                name=self.name, content=self.content, cog=self._cog
+            ),
         )
 
     @property
@@ -85,6 +87,8 @@ class TagCreateLayoutView(LayoutView):
         return ui.TextDisplay(self.content or "*<!> Content not set <!>*")
 
     async def insert_tag(self, *, guild_id: int, owner: int) -> None:
+        assert self.name is not None
+        assert self.content is not None
         await self._cog.__insert_tag(
             guild_id=guild_id, owner=owner, name=self.name, content=self.content
         )
@@ -92,17 +96,22 @@ class TagCreateLayoutView(LayoutView):
 
 class TagCreateActionRow(ui.ActionRow):
     def __init__(
-        self, *, name: str | None = None, content: str | None = None
+        self, *, name: str | None = None, content: str | None = None, cog: Tags
     ) -> None:
         super().__init__()
         self.name = name
         self.content = content
+        self.message: Message | None
+        self.cog = cog
 
     @ui.button(label="Edit", emoji="\U0000270f\U0000fe0f")
     async def edit_button(
         self, interaction: Interaction, button: ui.Button
     ) -> None:
-        modal = TagCreateModal(name=self.name, content=self.content)
+        assert self.view is not None
+        modal = TagCreateModal(
+            name=self.name, content=self.content, cog=self.cog
+        )
         await interaction.response.send_modal(modal)
         await modal.wait()
         self.view.message = None
@@ -111,15 +120,16 @@ class TagCreateActionRow(ui.ActionRow):
     async def create_button(
         self, interaction: Interaction, button: ui.Button
     ) -> None:
+        assert self.view is not None
         view: TagCreateLayoutView = self.view
-        assert view is not None
         if not view.name or not view.content:
             await interaction.response.send(
                 "Name or content cannot be empty!", ephemeral=True
             )
         elif view.name and view.content:
+            assert interaction.guild_id is not None
             await view.insert_tag(
-                guild_id=interaction.guild.id, owner=interaction.user.id
+                guild_id=interaction.guild_id, owner=interaction.user.id
             )
             await interaction.response.send(
                 f"Created tag `{view.name}`", ephemeral=True
@@ -131,7 +141,7 @@ class TagCreateModal(ui.Modal, title="Create A Tag"):
     """Modal for creating a tag"""
 
     def __init__(
-        self, *, name: str | None = None, content: str | None = None
+        self, *, name: str | None = None, content: str | None = None, cog: Tags
     ) -> None:
         super().__init__()
         if name:
@@ -140,6 +150,7 @@ class TagCreateModal(ui.Modal, title="Create A Tag"):
         if content:
             self.content.required = False
             self._content = content
+        self.cog = cog
 
     name = ui.TextInput(
         label="Name", placeholder="Name of the tag", max_length=100
@@ -156,6 +167,7 @@ class TagCreateModal(ui.Modal, title="Create A Tag"):
             view=TagCreateLayoutView(
                 name=self.name.value or self._name,
                 content=self.content.value or self._content,
+                cog=self.cog
             )
         )
 
@@ -169,7 +181,7 @@ class Tags(FurinaCog):
 
     async def cog_load(self) -> None:
         self.pool: TagSQL = TagSQL(
-            await asqlite.create_pool(Path() / "db" / "tags.db")
+            await asqlite.create_pool(str(Path() / "db" / "tags.db"))
         )
         await self.pool.create_tables()
         return await super().cog_load()
@@ -213,7 +225,7 @@ class Tags(FurinaCog):
             return (
                 m.author == ctx.author
                 and m.channel == ctx.channel
-                and m.content
+                and m.content != ""
                 and not m.content.startswith(
                     tuple(self.bot.get_pre(self.bot, m))
                 )
@@ -230,13 +242,13 @@ class Tags(FurinaCog):
             await ctx.send("No user input, cancelling tag creation")
             return None
 
-    async def __check_tag_name(self, ctx: FurinaCtx, *, name: str) -> bool:
+    async def __check_tag_name(self, guild_id: int, *, name: str) -> bool:
         """Check if a tag already exists
 
         Parameters
         ----------
-        ctx : FurinaCtx
-            Context of the command
+        guild_id : int
+            Guild id where the tag belong
         name : str
             Name of the tag to check
 
@@ -255,7 +267,7 @@ class Tags(FurinaCog):
         if name.startswith(tuple(reserved)):
             return True
         # None -> Tag does not exist
-        fetched = await self.__get_tag_content(guild_id=ctx.guild.id, name=name)
+        fetched = await self.__get_tag_content(guild_id=guild_id, name=name)
         in_fetched = fetched is not None
         return bool(in_fetched)
 
@@ -284,7 +296,7 @@ class Tags(FurinaCog):
             )
             if not name:
                 return
-        if await self.__check_tag_name(ctx, name=name):
+        if await self.__check_tag_name(ctx.guild.id, name=name):
             await ctx.send(
                 f"Tag `{name}` already exists or in reserved names list"
             )
@@ -324,10 +336,11 @@ class Tags(FurinaCog):
             Content of the tag
         """
         await interaction.response.defer(ephemeral=True)
+        assert interaction.guild_id is not None
         if (
             name
             and content
-            and not await self.__check_tag_name(interaction, name=name)
+            and not await self.__check_tag_name(interaction.guild_id, name=name)
         ):
             await self.__insert_tag(
                 guild_id=interaction.guild_id,
@@ -336,7 +349,7 @@ class Tags(FurinaCog):
                 content=content,
             )
             return
-        view = TagCreateLayoutView(name=name, content=content)
+        view = TagCreateLayoutView(name=name, content=content, cog=self)
         view.message = await interaction.followup.send(view=view)
 
     async def __insert_tag(
@@ -425,6 +438,7 @@ class Tags(FurinaCog):
                 ctx, name=name, content=content
             )
         else:
+            ctx: Interaction = cast("Interaction", ctx)
             await self.__handle_tag_creation_slash(
                 ctx, name=name, content=content
             )
@@ -491,7 +505,7 @@ class Tags(FurinaCog):
         self, *, guild_id: int, owner: int, name: str
     ) -> str:
         """Check if the user is the owner of the tag and force delete it"""
-        tag_owner: int = await self.pool.fetchval(
+        tag_owner = await self.pool.fetchval(
             """
             SELECT owner FROM tags
             WHERE guild_id = ? AND name = ?
@@ -518,11 +532,13 @@ class Tags(FurinaCog):
         name : str
             Name of the tag
         """
-        check_alias_exist = await self.__check_tag_name(ctx, name=alias)
+        check_alias_exist = await self.__check_tag_name(
+            ctx.guild.id, name=alias
+        )
         if check_alias_exist:
             await ctx.send(f"Tag `{alias}` already exists")
             return
-        check_name_exist = await self.__check_tag_name(ctx, name=name)
+        check_name_exist = await self.__check_tag_name(ctx.guild.id, name=name)
         if not check_name_exist:
             await ctx.send(f"Cannot create alias for non-existent tag `{name}`")
             return
@@ -578,8 +594,8 @@ class Tags(FurinaCog):
         owner = self.bot.get_user(tag.owner)
         embed.description = tag.content_preview
         embed.add_field(name="Name", value=f"`{tag.content}`")
-        embed.set_thumbnail(url=owner.display_avatar.url)
         if owner:
+            embed.set_thumbnail(url=owner.display_avatar.url)
             embed.add_field(name="Owner", value=owner.mention)
         else:
             embed.add_field(name="Owner", value="Owner left the server")
