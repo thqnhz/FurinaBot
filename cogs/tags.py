@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, cast
 
 import asqlite
 import discord
-from discord import ui
+from discord import app_commands, ui
 from discord.ext import commands
 
 from core import FurinaCog, FurinaCtx, utils
@@ -410,6 +410,28 @@ class Tags(FurinaCog):
                 name,
             )
             await ctx.send(tag_content)
+
+    @tag_group.autocomplete("name")
+    async def tag_name_autocomplete(
+        self, interaction: Interaction, current: str
+    ) -> list[app_commands.Choice]:
+        rows = await self.pool.fetchall(
+            """
+            SELECT T.name FROM tags T
+            LEFT JOIN tag_aliases TA
+                ON T.guild_id = TA.guild_id
+                AND T.name = TA.name
+            WHERE T.guild_id = ?
+                AND (
+                    instr(T.name, ?) > 0 OR instr(TA.alias, ?)
+                )
+            LIMIT 25
+            """,
+            interaction.guild_id,
+            current,
+            current,
+        )
+        return [app_commands.Choice(name=row["name"]) for row in rows]
 
     @tag_group.command(name="create")
     async def tag_create_command(
