@@ -431,7 +431,10 @@ class Tags(FurinaCog):
             current,
             current,
         )
-        return [app_commands.Choice(name=row["name"]) for row in rows]
+        return [
+            app_commands.Choice(name=row["name"], value=row["name"])
+                for row in rows
+        ]
 
     @tag_group.command(name="create")
     async def tag_create_command(
