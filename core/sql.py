@@ -133,7 +133,7 @@ TAG_ALIASES_SQL = """
     (
         guild_id INTEGER NOT NULL,
         owner INTEGER NOT NULL, -- owner of the alias, not the tag owner
-        name TEXT NOT NULL,
+        name TEXT NOT NULL, -- original tag name
         alias TEXT NOT NULL,
         created_at INTEGER NOT NULL,
         uses INTEGER DEFAULT 0,
