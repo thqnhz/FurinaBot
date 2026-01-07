@@ -278,7 +278,8 @@ class Tags(FurinaCog):
         name: str | None = None,
         content: str | None = None,
     ) -> None:
-        """Handle tag creation when invoked with prefix
+        """|coro|
+        Handle tag creation when invoked with prefix
 
         Parameters
         ----------
@@ -324,7 +325,8 @@ class Tags(FurinaCog):
         name: str | None = None,
         content: str | None = None,
     ) -> None:
-        """Handle tag creation when invoked with slash
+        """|coro|
+        Handle tag creation when invoked with slash
 
         Parameters
         ----------
@@ -355,7 +357,8 @@ class Tags(FurinaCog):
     async def __insert_tag(
         self, *, guild_id: int, owner: int, name: str, content: str
     ) -> None:
-        """Insert a tag into the database
+        """|coro|
+        Insert a tag into the database
 
         Parameters
         ----------
@@ -467,6 +470,101 @@ class Tags(FurinaCog):
             await self.__handle_tag_creation_slash(
                 ctx, name=name, content=content
             )
+
+    @tag_group.command(name="edit")
+    async def tag_edit_command(
+        self, ctx: FurinaCtx, name: str, *, content: str
+    ) -> None:
+        """Edit your tag
+
+        You can only edit your own tag.
+        If you edit the tag that originally is an alias of another tag,
+        it will become a new tag.
+
+        Parameters
+        ----------
+        name : str
+            The name of the tag you want to edit
+        content : str
+            The new content of the tag
+        """
+        tag_owner = await self.pool.fetchval(
+            """
+            SELECT owner FROM tags
+            WHERE guild_id = ? AND name = ? AND owner = ?
+            """,
+            ctx.guild.id,
+            name,
+            ctx.author.id,
+        )
+        if tag_owner is not None:
+            await self.pool.execute(
+                """
+                UPDATE tags
+                SET content = ?
+                WHERE guild_id = ? AND name = ?
+                """,
+                content,
+                ctx.guild.id,
+                name,
+            )
+            await ctx.reply(f"Updated tag `{name}`")
+            return
+        tag_alias_owner = await self.pool.fetchval(
+            """
+            SELECT owner
+            FROM tag_aliases
+            WHERE guild_id = ? AND alias = ? AND owner = ?
+            """,
+            ctx.guild.id,
+            name,
+            ctx.author.id,
+        )
+        if tag_alias_owner is not None:
+            await self.pool.execute(
+                """
+                DELETE FROM tag_aliases
+                WHERE guild_id = ? AND alias = ?
+                """,
+                ctx.guild.id,
+                name,
+            )
+            await self.__insert_tag(
+                guild_id=ctx.guild.id,
+                owner=ctx.author.id,
+                name=name,
+                content=content
+            )
+            await ctx.reply(f"Updated tag `{name}`")
+            return
+        await ctx.reply("Failed to edit the tag, is the tag even exist?")
+
+    @tag_edit_command.autocomplete(name="name")
+    async def owned_tag_name_autocomplete(
+        self, interaction: Interaction, current: str
+    ) -> list[app_commands.Choice]:
+        rows = await self.pool.fetchall(
+            """
+            SELECT T.name FROM tags T
+            LEFT JOIN tag_aliases TA
+                ON T.guild_id = TA.guild_id
+                AND T.name = TA.name
+            WHERE T.guild_id = ?
+                AND T.owner = ?
+                AND (
+                    instr(T.name, ?) > 0 OR instr(TA.alias, ?)
+                )
+            LIMIT 25
+            """,
+            interaction.guild_id,
+            interaction.user.id,
+            current,
+            current,
+        )
+        return [
+            app_commands.Choice(name=row["name"], value=row["name"])
+                for row in rows
+        ]
 
     @tag_group.command(name="delete", aliases=["del"])
     async def tag_delete(self, ctx: FurinaCtx, *, name: str) -> None:
@@ -618,7 +716,7 @@ class Tags(FurinaCog):
         tag = TagEntry(fetched)
         owner = self.bot.get_user(tag.owner)
         embed.description = tag.content_preview
-        embed.add_field(name="Name", value=f"`{tag.content}`")
+        embed.add_field(name="Name", value=f"`{tag.name}`")
         if owner:
             embed.set_thumbnail(url=owner.display_avatar.url)
             embed.add_field(name="Owner", value=owner.mention)
