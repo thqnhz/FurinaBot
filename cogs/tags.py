@@ -225,7 +225,7 @@ class Tags(FurinaCog):
             return (
                 m.author == ctx.author
                 and m.channel == ctx.channel
-                and m.content != ""
+                and len(m.content) > 0
                 and not m.content.startswith(
                     tuple(self.bot.get_pre(self.bot, m))
                 )
