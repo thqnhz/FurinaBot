@@ -172,7 +172,7 @@ class FurinaBot(commands.Bot):
         return when_mentioned_or(prefix)(self, message)
 
     async def on_ready(self) -> None:
-        assert self.user is discord.ClientUser
+        assert self.user is not None
         logging.info("Logged in as %s", self.user.name)
         await self.pool.executemany(
             """INSERT OR REPLACE INTO guilds (id) VALUES (?)""",
