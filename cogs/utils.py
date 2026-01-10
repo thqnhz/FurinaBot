@@ -187,31 +187,39 @@ class Utils(FurinaCog):
     async def ping_command(self, ctx: FurinaCtx) -> None:
         """Get the bot's pings
 
-        Get latencies of bot to Discord server, to Voice server and to Database.
-        For voice, `-1ms` means it is not connected to any voice channels.
-        For lavalink node:
-        - :white_check_mark: means it is connected.
-        - :arrows_clockwise: means it is still trying to connect
-        (maybe the password is wrong).
-        - :negative_squared_cross_mark: means it is disconnected.
+        Get latencies of bot to Discord server, to Lavalink server and to Database.
         """
-        bot_latency: float = self.bot.latency
-        voice_latency: float | int = (
-            await self.bot.lavalink.nodes[0].get_rest_latency()
-            if ctx.guild.voice_client
-            else -1
-        )
-        db_latency: float = await self.db_ping()
+        bot_latency: float = min(self.bot.latency * 1000, 999.99)
+        lavalink_latency: float = min(await self.bot.lavalink.nodes[0].get_rest_latency(), 999.99)
+        db_latency: float = min(await self.db_ping() * 1000, 999.99)
         container = Container(
             ui.TextDisplay("## Pong!"),
             ui.Separator(),
             ui.TextDisplay(
-                f"**Bot Latency:** `{bot_latency * 1000:.2f}ms`\n"
-                f"**Voice Latency:** `{voice_latency:.2f}ms`\n"
-                f"**Database Latency:** `{db_latency * 1000:.2f}ms`"
+                "```ansi\n"
+                f"|          | Latency (ms) |\n"
+                f"|----------|--------------|\n"
+                f"| Bot      | {self.latency_ansi(bot_latency)} |\n"
+                f"| Lavalink | {self.latency_ansi(lavalink_latency)} |\n"
+                f"| Database | {self.latency_ansi(db_latency)} |\n"
+                "```"
             ),
         ).add_footer()
         await ctx.reply(view=LayoutView(container))
+
+    # TODO: Expand this to some support class
+    def latency_ansi(self, latency: float) -> str:
+        """Ansi coloring for latency
+
+        Cyan if < 100. Yellow if in range 100-300. Otherwise red.
+        Why cyan? Because green looks kinda bad.
+        """
+        color: str = "\x1b[31m" # red
+        if latency < 100:
+            color = "\x1b[36m"
+        elif latency < 300:
+            color = "\x1b[33m"
+        return f"{color}{latency:>12.2f}\x1b[0m"
 
     async def db_ping(self) -> float:
         """|coro|
