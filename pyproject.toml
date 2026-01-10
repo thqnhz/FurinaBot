@@ -95,6 +95,7 @@ ignore = [
     "Q000",
     "RUF001",
     "RUF009",
+    "RUF067", # ??? inconsistent rule in Ruff, something to note about in ci. TODO: remove this if ruff doesn't complain about this anymore for some reasons
     "S101",     # assert is used for type checking in this codebase
     "SIM105",
     "TRY003",   # over-eager rule

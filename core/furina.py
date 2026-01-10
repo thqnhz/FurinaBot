@@ -172,7 +172,7 @@ class FurinaBot(commands.Bot):
         return when_mentioned_or(prefix)(self, message)
 
     async def on_ready(self) -> None:
-        self.user: discord.ClientUser
+        assert self.user is discord.ClientUser
         logging.info("Logged in as %s", self.user.name)
         await self.pool.executemany(
             """INSERT OR REPLACE INTO guilds (id) VALUES (?)""",
@@ -199,7 +199,9 @@ class FurinaBot(commands.Bot):
         self.app_emojis = await self.fetch_application_emojis()
         db_path = Path() / "db"
         db_path.mkdir(exist_ok=True)
-        self.pool = SQL(await asqlite.create_pool(Path() / "db" / "furina.db"))  # type: ignore[reportArgumentType]
+        self.pool = SQL(
+            await asqlite.create_pool(str(Path() / "db" / "furina.db"))
+        )
         await self.pool.create_tables()
         await self.__load_extensions()
 
