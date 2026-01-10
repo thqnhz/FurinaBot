@@ -223,6 +223,9 @@ class FurinaBot(commands.Bot):
     async def start(self) -> None:
         await super().start(settings.TOKEN)
 
+    async def close(self) -> None:
+        await self.pool.pool.close()
+
 
 class FurinaCog(commands.Cog):
     """Base class for all cogs"""

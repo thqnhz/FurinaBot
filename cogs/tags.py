@@ -186,6 +186,9 @@ class Tags(FurinaCog):
         await self.pool.create_tables()
         return await super().cog_load()
 
+    async def cog_unload(self) -> None:
+        await self.pool.pool.close()
+
     async def __get_tag_content(
         self, *, guild_id: int, name: str
     ) -> str | None:
