@@ -187,10 +187,13 @@ class Utils(FurinaCog):
     async def ping_command(self, ctx: FurinaCtx) -> None:
         """Get the bot's pings
 
-        Get latencies of bot to Discord server, to Lavalink server and to Database.
+        Get latencies of bot to Discord, to Lavalink server and to Database.
         """
         bot_latency: float = min(self.bot.latency * 1000, 999.99)
-        lavalink_latency: float = min(await self.bot.lavalink.nodes[0].get_rest_latency(), 999.99)
+        lavalink_latency: float = min(
+            await self.bot.lavalink.nodes[0].get_rest_latency(),
+            999.99
+        )
         db_latency: float = min(await self.db_ping() * 1000, 999.99)
         container = Container(
             ui.TextDisplay("## Pong!"),
@@ -214,7 +217,7 @@ class Utils(FurinaCog):
         Cyan if < 100. Yellow if in range 100-300. Otherwise red.
         Why cyan? Because green looks kinda bad.
         """
-        color: str = "\x1b[31m" # red
+        color: str = "\x1b[31m"  # red
         if latency < 100:
             color = "\x1b[36m"
         elif latency < 300:
