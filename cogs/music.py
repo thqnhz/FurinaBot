@@ -234,10 +234,6 @@ class Music(FurinaCog):
             """Music commands are not allowed in this channel"""
         )
 
-    @property
-    def embed(self) -> Embed:
-        return self.bot.embed
-
     def _get_player(self, ctx: FurinaCtx) -> lavalink.DefaultPlayer:
         return self.lavalink.player_manager.get(ctx.guild.id)
 
@@ -629,3 +625,4 @@ class Music(FurinaCog):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Music(bot))
+

@@ -130,8 +130,9 @@ class FurinaBot(commands.Bot):
         )
 
     @property
-    def lavalink(self) -> lavalink.Client:
+    def lavalink(self) -> lavalink.Client:  # type: ignore[unresolved-attribute] -- I don't know why ty flag this as an error
         if not self._lavalink:
+            assert self.user is not None
             self._lavalink = lavalink.Client(self.user.id)
             self._lavalink.add_node(
                 host=settings.LAVA_URL,
@@ -143,11 +144,11 @@ class FurinaBot(commands.Bot):
 
     async def get_context(
         self,
-        message: discord.Message,
+        origin: discord.Message | discord.Interaction,
         *,
-        cls: FurinaCtx = FurinaCtx,  # type: ignore[reportArgumentType]
+        cls: type[FurinaCtx] = FurinaCtx,
     ) -> FurinaCtx:
-        return await super().get_context(message, cls=cls)  # type: ignore[reportArgumentType]
+        return await super().get_context(origin, cls=cls)
 
     def get_pre(self, _: FurinaBot, message: discord.Message) -> list[str]:
         """Custom `get_prefix` method
@@ -199,9 +200,7 @@ class FurinaBot(commands.Bot):
         self.app_emojis = await self.fetch_application_emojis()
         db_path = Path() / "db"
         db_path.mkdir(exist_ok=True)
-        self.pool = SQL(
-            await asqlite.create_pool(str(Path() / "db" / "furina.db"))
-        )
+        self.pool = SQL(await asqlite.create_pool(str(db_path / "furina.db")))
         await self.pool.create_tables()
         await self.__load_extensions()
 
@@ -222,38 +221,32 @@ class FurinaBot(commands.Bot):
                     "An error occured when trying to load %s", extension_name
                 )
 
-    async def start(self) -> None:
-        await super().start(settings.TOKEN)
+    async def start(
+        self, token: str = settings.TOKEN, *, reconnect: bool = True
+    ) -> None:
+        await super().start(token)
 
     async def close(self) -> None:
         await self.pool.pool.close()
 
 
-class FurinaCog(commands.Cog):
+class MetaCog:
+    """Meta class for the bot cogs"""
+
+    def __init__(self, bot: FurinaBot) -> None:
+        self.bot = bot
+        self.cs: aiohttp.ClientSession = bot.cs
+        self.pool: SQL = bot.pool
+        self.embed: discord.Embed = bot.embed
+
+    async def cog_load(self) -> None:
+        logging.info("Cog %s has been loaded", self.__cog_name__)
+
+
+class FurinaCog(MetaCog, commands.Cog):
     """Base class for all cogs"""
 
-    def __init__(self, bot: FurinaBot) -> None:
-        self.bot = bot
-        self.pool: SQL = bot.pool
-        self.cs = bot.cs
 
-    async def cog_load(self) -> None:
-        logging.info("Cog %s has been loaded", self.__cog_name__)
-
-    @property
-    def embed(self) -> discord.Embed:
-        """Shortcut for `FurinaBot.embed`"""
-        return self.bot.embed
-
-
-class FurinaGroupCog(commands.GroupCog):
+class FurinaGroupCog(MetaCog, commands.GroupCog):
     """Base class for all group cogs"""
-
-    def __init__(self, bot: FurinaBot) -> None:
-        self.bot = bot
-        self.pool: SQL = bot.pool
-        self.cs = bot.cs
-
-    async def cog_load(self) -> None:
-        logging.info("Cog %s has been loaded", self.__cog_name__)
 

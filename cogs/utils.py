@@ -51,11 +51,10 @@ class HelpSelect(Select):
                 discord.SelectOption(
                     label=cog_name,
                     description=cog.__doc__,
-                    emoji=cog.emoji if hasattr(cog, "emoji") else None
-                    )
+                    emoji=cog.emoji if hasattr(cog, "emoji") else None,
+                )
                 for cog_name, cog in bot.cogs.items()
-                if cog.__cog_commands__
-                and cog_name not in ["Owner", "Jishaku"]
+                if cog.__cog_commands__ and cog_name not in ["Owner", "Jishaku"]
             ],
         )
         self.bot = bot
@@ -81,13 +80,13 @@ class Utils(FurinaCog):
         return discord.PartialEmoji.from_str("\U0001f6e0\U0000fe0f")
 
     async def cog_load(self) -> None:
-        self.bot._help_command_backup = self.bot.help_command
+        self.bot._help_bak: commands.HelpCommand = self.bot.help_command
         self.bot.help_command = None
         await self.__update_custom_prefixes()
         return await super().cog_load()
 
     async def cog_unload(self) -> None:
-        self.bot.help_command = self.bot._help_command_backup
+        self.bot.help_command = self.bot._help_bak
         return await super().cog_unload()
 
     async def __update_custom_prefixes(self) -> None:
@@ -191,8 +190,7 @@ class Utils(FurinaCog):
         """
         bot_latency: float = min(self.bot.latency * 1000, 999.99)
         lavalink_latency: float = min(
-            await self.bot.lavalink.nodes[0].get_rest_latency(),
-            999.99
+            await self.bot.lavalink.nodes[0].get_rest_latency(), 999.99
         )
         db_latency: float = min(await self.db_ping() * 1000, 999.99)
         container = Container(
@@ -602,3 +600,4 @@ class Utils(FurinaCog):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Utils(bot))
+

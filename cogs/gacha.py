@@ -43,6 +43,9 @@ class Gacha(FurinaCog):
         super().__init__(bot)
         self.gi = enka.GenshinClient()
         self.hsr = enka.HSRClient()
+        self.embed = self.embed.set_footer(
+            text="Coded by ThanhZ | Powered by Enka Network"
+        )
 
     async def cog_load(self) -> None:
         await self.gi.start()
@@ -50,13 +53,6 @@ class Gacha(FurinaCog):
         await self.hsr.start()
         await self.hsr.update_assets()
         await super().cog_load()
-
-    @property
-    def embed(self) -> discord.Embed:
-        """Shortcut for `FurinaBot.embed`, with extra footer"""
-        return self.bot.embed.set_footer(
-            text="Coded by ThanhZ | Powered by Enka Network"
-        )
 
     async def set_uid(self, sql: str, user_id: int, uid: str) -> None:
         """Insert a user's UID with provided game to the database
@@ -215,3 +211,4 @@ class Gacha(FurinaCog):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Gacha(bot))
+
