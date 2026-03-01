@@ -90,6 +90,8 @@ class PaginatedView(View):
 
 
 class PaginateActionRow(ui.ActionRow):
+    view: PaginatedLayoutView
+
     def __init__(self, page: int, length: int) -> None:
         super().__init__()
         self.page = page
@@ -107,8 +109,8 @@ class PaginateActionRow(ui.ActionRow):
         return f"{self.page + 1}/{self.length}"
 
     def switch_container(self, page: int) -> PaginatedLayoutView:
-        self.view.clear_items()
-        return self.view.add_item(self.view.containers[page])
+        container = self.view.containers[page]
+        return self.view.clear_items().add_item(container)
 
     @ui.button(label="<<")
     async def first_button(self, interaction: Interaction, _: Button) -> None:
@@ -151,7 +153,7 @@ class PaginatedLayoutView(LayoutView):
         self.length: int = len(self.containers)
         if self.length > 1:
             for i, container in enumerate(self.containers):
-                container.add_item(ui.Separator()).add_item(
-                    PaginateActionRow(i, self.length)
-                )
+                row = PaginateActionRow(i, self.length)
+                container.add_item(ui.Separator()).add_item(row)
         super().__init__(containers[0], timeout=timeout)
+
