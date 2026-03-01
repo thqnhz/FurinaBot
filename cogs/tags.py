@@ -401,7 +401,7 @@ class Tags(FurinaCog):
             Name of the tag
         """
         tag_content = await self.__get_tag_content(
-            guild_id=ctx.guild.id, name=name.lower()
+            guild_id=ctx.guild.id, name=name
         )
         if not tag_content:
             await ctx.send(f"No tags found for query: `{name}`")
@@ -767,3 +767,4 @@ class Tags(FurinaCog):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Tags(bot))
+
