@@ -228,6 +228,7 @@ class FurinaBot(commands.Bot):
 
     async def close(self) -> None:
         await self.pool.pool.close()
+        await super().close()
 
 
 class MetaCog:
