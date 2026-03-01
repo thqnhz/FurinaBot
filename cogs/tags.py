@@ -300,6 +300,7 @@ class Tags(FurinaCog):
             )
             if not name:
                 return
+        assert ctx.guild is not None
         if await self.__check_tag_name(ctx.guild.id, name=name):
             await ctx.send(
                 f"Tag `{name}` already exists or in reserved names list"
@@ -400,6 +401,7 @@ class Tags(FurinaCog):
         name : str
             Name of the tag
         """
+        assert ctx.guild is not None
         tag_content = await self.__get_tag_content(
             guild_id=ctx.guild.id, name=name
         )
@@ -491,6 +493,7 @@ class Tags(FurinaCog):
         content : str
             The new content of the tag
         """
+        assert ctx.guild is not None
         tag_owner = await self.pool.fetchval(
             """
             SELECT owner FROM tags
@@ -583,6 +586,8 @@ class Tags(FurinaCog):
         name : str
             Name of the tag
         """
+        assert ctx.guild is not None
+        ctx.author: discord.Member = cast("discord.Member", ctx.author)
         name = name.lower().replace('"', "").replace("'", "")
         if ctx.author.guild_permissions.manage_guild:
             result = await self.__force_delete_tag(
@@ -658,6 +663,7 @@ class Tags(FurinaCog):
         name : str
             Name of the tag
         """
+        assert ctx.guild is not None
         check_alias_exist = await self.__check_tag_name(
             ctx.guild.id, name=alias
         )
@@ -692,6 +698,7 @@ class Tags(FurinaCog):
         name : str
             Name of the tag
         """
+        assert ctx.guild is not None
         name = name.strip("'\"")
         fetched = await self.pool.fetchone(
             """
@@ -742,6 +749,7 @@ class Tags(FurinaCog):
 
     async def __tag_list(self, ctx: FurinaCtx) -> None:
         """List all tags in the server"""
+        assert ctx.guild is not None
         tags = await self.pool.fetchall(
             """
             SELECT name
@@ -763,6 +771,24 @@ class Tags(FurinaCog):
             embeds.append(embed)
         view = PaginatedView(timeout=180, embeds=embeds)
         await ctx.reply(embed=embeds[0], view=view)
+
+    @tag_group.command(name="raw")
+    async def tag_raw_slash(self, ctx: FurinaCtx, *, name: str) -> None:
+        """Get the raw content of the tag
+
+        Parameters
+        ----------
+        name : str
+            The name of the tag
+        """
+        assert ctx.guild is not None
+        tag_content = await self.__get_tag_content(
+            guild_id=ctx.guild.id, name=name
+        )
+        if not tag_content:
+            await ctx.send(f"No tags found for query: `{name}`")
+        else:
+            await ctx.send(utils.escape_markdown(tag_content))
 
 
 async def setup(bot: FurinaBot) -> None:
