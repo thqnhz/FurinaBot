@@ -211,4 +211,3 @@ class Gacha(FurinaCog):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Gacha(bot))
-

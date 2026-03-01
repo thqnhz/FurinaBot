@@ -167,7 +167,7 @@ class TagCreateModal(ui.Modal, title="Create A Tag"):
             view=TagCreateLayoutView(
                 name=self.name.value or self._name,
                 content=self.content.value or self._content,
-                cog=self.cog
+                cog=self.cog,
             )
         )
 
@@ -439,7 +439,7 @@ class Tags(FurinaCog):
         )
         return [
             app_commands.Choice(name=row["name"], value=row["name"])
-                for row in rows
+            for row in rows
         ]
 
     @tag_group.command(name="create")
@@ -536,7 +536,7 @@ class Tags(FurinaCog):
                 guild_id=ctx.guild.id,
                 owner=ctx.author.id,
                 name=name,
-                content=content
+                content=content,
             )
             await ctx.reply(f"Updated tag `{name}`")
             return
@@ -566,7 +566,7 @@ class Tags(FurinaCog):
         )
         return [
             app_commands.Choice(name=row["name"], value=row["name"])
-                for row in rows
+            for row in rows
         ]
 
     @tag_group.command(name="delete", aliases=["del"])
@@ -767,4 +767,3 @@ class Tags(FurinaCog):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Tags(bot))
-

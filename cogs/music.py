@@ -394,8 +394,7 @@ class Music(FurinaCog):
             view=LayoutView(
                 Container(
                     ui.TextDisplay(
-                        f"### {settings.CHECKMARK} "
-                        f"Unset server's music channel"
+                        f"### {settings.CHECKMARK} Unset server's music channel"
                     )
                 )
             )
@@ -625,4 +624,3 @@ class Music(FurinaCog):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Music(bot))
-

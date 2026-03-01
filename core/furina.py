@@ -250,4 +250,3 @@ class FurinaCog(MetaCog, commands.Cog):
 
 class FurinaGroupCog(MetaCog, commands.GroupCog):
     """Base class for all group cogs"""
-
