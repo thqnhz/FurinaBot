@@ -588,7 +588,7 @@ class Tags(FurinaCog):
         """
         assert ctx.guild is not None
         ctx.author: discord.Member = cast("discord.Member", ctx.author)
-        name = name.lower().replace('"', "").replace("'", "")
+        name = name.replace('"', "").replace("'", "")
         if ctx.author.guild_permissions.manage_guild:
             result = await self.__force_delete_tag(
                 guild_id=ctx.guild.id, name=name
@@ -793,3 +793,4 @@ class Tags(FurinaCog):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Tags(bot))
+
