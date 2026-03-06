@@ -141,12 +141,12 @@ async def call_dictionary(word: str, cs: ClientSession) -> PaginatedLayoutView:
     async with cs.get(dictionary_link) as response:
         if response.status == 404:
             return PaginatedLayoutView(
-                containers=Container(
+                containers=[Container(
                     ui.TextDisplay(
-                        f"## {word.capitalize}\nNo definitions found."
+                        f"## {word.capitalize()}\nNo definitions found."
                         " API call returned 404."
                     )
-                )
+                )]
             )
         data: list[dict] = await response.json()
 
@@ -220,3 +220,4 @@ def __get_pronunciations(data: list[dict]) -> list[str]:
         else:
             result[i] = f"`{phonetics}`"
     return result
+
