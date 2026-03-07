@@ -773,8 +773,11 @@ class Tags(FurinaCog):
         await ctx.reply(embed=embeds[0], view=view)
 
     @tag_group.command(name="raw")
-    async def tag_raw_slash(self, ctx: FurinaCtx, *, name: str) -> None:
+    async def tag_raw_command(self, ctx: FurinaCtx, *, name: str) -> None:
         """Get the raw content of the tag
+
+        Get the content of the tag in raw format (no markdown).
+        Can be used to quickly copy and edit the tag.
 
         Parameters
         ----------
@@ -789,6 +792,65 @@ class Tags(FurinaCog):
             await ctx.send(f"No tags found for query: `{name}`")
         else:
             await ctx.send(utils.escape_markdown(tag_content))
+
+    @tag_group.command(name="claim")
+    async def tag_claim_command(self, ctx: FurinaCtx, *, name: str) -> None:
+        """Claim the tag with given name
+
+        Take ownership of a tag from a left member.
+
+        Parameters
+        ----------
+        name : str
+            The name of the tag you want to claim
+        """
+        assert ctx.guild is not None
+        tag = await self.pool.fetchone(
+            """SELECT * FROM tags WHERE name = ? AND guild_id = ?""",
+            name,
+            ctx.guild.id,
+        )
+        if tag is not None:
+            if ctx.guild.get_member(tag["owner"]):
+                await ctx.send("The tag owner is still in the server")
+                return
+            await self.pool.execute(
+                """
+                UPDATE tags
+                SET owner = ?
+                WHERE guild_id = ? AND name = ? 
+                """,
+                ctx.author.id,
+                ctx.guild.id,
+                name,
+            )
+            await ctx.send(f"Claimed tag `{name}`!")
+            return
+        tag_alias = await self.pool.fetchone(
+            """
+            SELECT owner FROM tag_aliases
+            WHERE alias = ? AND guild_id = ?
+            """,
+            name,
+            ctx.guild.id,
+        )
+        if tag_alias is not None:
+            if ctx.guild.get_member(tag["owner"]):
+                await ctx.send("The tag owner is still in the server")
+                return
+            await self.pool.execute(
+                """
+                UPDATE tag_aliases
+                SET owner = ?
+                WHERE guild_id = ? AND alias = ? 
+                """,
+                ctx.author.id,
+                ctx.guild.id,
+                name,
+            )
+            await ctx.send(f"Claimed tag `{name}`!")
+            return
+        await ctx.send(f"Tag named `{name}` doesn't exists.")
 
 
 async def setup(bot: FurinaBot) -> None:
