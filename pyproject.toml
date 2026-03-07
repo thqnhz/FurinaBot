@@ -8,7 +8,7 @@ dependencies = [
     "aiohttp",
     "asqlite",
     "dateparser",
-    "discord-py",
+    "discord-py[voice]",
     "docstring-parser",
     "enka",
     "jishaku",
