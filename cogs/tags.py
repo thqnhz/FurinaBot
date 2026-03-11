@@ -417,7 +417,11 @@ class Tags(FurinaCog):
                 ctx.guild.id,
                 name,
             )
-            await ctx.send(tag_content)
+            await ctx.send(
+                tag_content,
+                reference=ctx.message.reference,
+                allowed_mentions=discord.AllowedMentions(replied_user=True),
+            )  # ty: ignore[no-matching-overload]
 
     @tag_group.autocomplete("name")
     async def tag_name_autocomplete(
