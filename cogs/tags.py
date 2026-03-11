@@ -809,13 +809,13 @@ class Tags(FurinaCog):
             The name of the tag you want to claim
         """
         assert ctx.guild is not None
-        tag = await self.pool.fetchone(
-            """SELECT * FROM tags WHERE name = ? AND guild_id = ?""",
+        tag_owner = await self.pool.fetchval(
+            """SELECT owner FROM tags WHERE name = ? AND guild_id = ?""",
             name,
             ctx.guild.id,
         )
-        if tag is not None:
-            if ctx.guild.get_member(tag["owner"]):
+        if tag_owner is not None:
+            if ctx.guild.get_member(tag_owner):
                 await ctx.send("The tag owner is still in the server")
                 return
             await self.pool.execute(
@@ -830,7 +830,7 @@ class Tags(FurinaCog):
             )
             await ctx.send(f"Claimed tag `{name}`!")
             return
-        tag_alias = await self.pool.fetchone(
+        tag_alias_owner = await self.pool.fetchval(
             """
             SELECT owner FROM tag_aliases
             WHERE alias = ? AND guild_id = ?
@@ -838,8 +838,8 @@ class Tags(FurinaCog):
             name,
             ctx.guild.id,
         )
-        if tag_alias is not None:
-            if ctx.guild.get_member(tag["owner"]):
+        if tag_alias_owner is not None:
+            if ctx.guild.get_member(tag_alias_owner):
                 await ctx.send("The tag owner is still in the server")
                 return
             await self.pool.execute(
