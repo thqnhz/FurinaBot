@@ -125,7 +125,7 @@ TAGS_SQL = """
         content TEXT NOT NULL,
         created_at INTEGER NOT NULL,
         uses INTEGER DEFAULT 0,
-        PRIMARY KEY (guild_id, owner, name)
+        PRIMARY KEY (guild_id, name)
     )
 """
 TAG_ALIASES_SQL = """
@@ -138,8 +138,8 @@ TAG_ALIASES_SQL = """
         created_at INTEGER NOT NULL,
         uses INTEGER DEFAULT 0,
         PRIMARY KEY (guild_id, name, alias),
-        FOREIGN KEY (guild_id, owner, name)
-        REFERENCES tags (guild_id, owner, name)
+        FOREIGN KEY (guild_id, name)
+        REFERENCES tags (guild_id, name)
         ON DELETE CASCADE
     )
 """
@@ -200,3 +200,4 @@ class TagSQL(SQL):
     def __init__(self, pool: asqlite.Pool) -> None:
         self.pool = pool
         self.create_table_queries = [TAGS_SQL, TAG_ALIASES_SQL]
+
