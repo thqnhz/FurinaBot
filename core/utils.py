@@ -13,6 +13,7 @@ limitations under the License.
 """
 
 from __future__ import annotations
+from core.settings import CROSS
 
 import logging
 import logging.handlers
@@ -20,7 +21,7 @@ import pathlib
 import re
 from typing import TYPE_CHECKING
 
-from discord import ui
+from discord import ui, ButtonStyle
 
 # since multiple utils will be confusing
 # so i will just import everything from discord.utils
@@ -115,6 +116,34 @@ def setup_logging() -> None:
 
 
 # Dictionary related
+async def request(cs: ClientSession, url: str, *, query: str = "") -> tuple(
+    int, list[dict] | dict
+):
+    """|coro|
+
+    Make a call to an api
+
+    Parameters
+    ----------
+    cs: ClientSession
+        The client session to do the request
+    url: str
+        The url to request
+    query: str, optional
+        Additional query
+
+    Returns
+    -------
+    tuple(int, list[dict] | dict)
+        The first value contains the return code.
+        The second value contains the data
+    """
+    async with cs.get(url + query) as response:
+        code = response.status
+        data = await response.json()
+        return code, data
+
+
 async def call_dictionary(word: str, cs: ClientSession) -> PaginatedLayoutView:
     """|coro|
 
@@ -138,18 +167,17 @@ async def call_dictionary(word: str, cs: ClientSession) -> PaginatedLayoutView:
     """
     containers: list[Container] = []
     dictionary_link = f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}"
-    async with cs.get(dictionary_link) as response:
-        if response.status == 404:
-            return PaginatedLayoutView(
-                containers=[Container(
+    status, data = await request(cs, dictionary_link)
+    if status == 404:
+        return PaginatedLayoutView(
+            containers=[
+                Container(
                     ui.TextDisplay(
-                        f"## {word.capitalize()}\nNo definitions found."
-                        " API call returned 404."
+                        f"### {CROSS} {data['title']}\n{data['message']}"
                     )
-                )]
-            )
-        data: list[dict] = await response.json()
-
+                )
+            ]
+        )
     pronunciations = __get_pronunciations(data)
 
     for i, d in enumerate(data):
@@ -220,4 +248,31 @@ def __get_pronunciations(data: list[dict]) -> list[str]:
         else:
             result[i] = f"`{phonetics}`"
     return result
+
+
+async def call_urban(cs: ClientSession, word: str) -> PaginatedLayoutView:
+    url = f"https://unofficialurbandictionaryapi.com/api/search?term={word}&"
+    web_url = f"https://www.urbandictionary.com/define.php?term={word}"
+    status, data = await request(cs, url)
+    if status == 404:
+        return PaginatedLayoutView(
+            containers=[
+                Container(ui.TextDisplay(f"### {CROSS} data['message']"))
+            ]
+        )
+    containers = []
+    definitions = data["data"]
+    for definition in definitions:
+        container = Container(
+            ui.Section(
+                f"## {definition['word']}\n{definition['meaning']}\n",
+                accessory=ui.Button(
+                    style=ButtonStyle.link, label="View on web", url=web_url
+                ),
+            ),
+            ui.Separator(),
+            ui.TextDisplay(f"**Example:**\n{definition['example']}"),
+        )
+        containers.append(container)
+    return PaginatedLayoutView(containers=containers)
 

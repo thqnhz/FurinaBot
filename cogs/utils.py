@@ -493,6 +493,21 @@ class Utils(FurinaCog):
         view = await utils.call_dictionary(word.split(maxsplit=1)[0], self.cs)
         view.message = await ctx.reply(view=view)
 
+    @commands.command(name="urbandictionary", aliases=["urban"])
+    async def urban_command(self, ctx: FurinaCtx, *, query: str) -> None:
+        """Lookup a word in the urban dictionary
+
+        Use UnofficialUrbandictionary API to lookup a word.
+        You might regret what you did. But have fun!
+
+        Parameters
+        ----------
+        query : str
+            The word or phrase you want to look up
+        """
+        view = await utils.call_urban(self.cs, query)
+        view.message = await ctx.reply(view=view)
+
     @commands.command(name="wordoftheday", aliases=["wotd"])
     async def wotd_command(
         self, ctx: FurinaCtx, *, date: str | None = None
@@ -510,7 +525,7 @@ class Utils(FurinaCog):
         """
         date_ = dateparser.parse(
             date
-            or datetime.datetime.now(tz=datetime.timezone.utc).strftime(
+            or utils.utcnow().strftime(
                 r"%Y-%m-%d"
             ),
             settings={"TIMEZONE": "UTC", "RETURN_AS_TIMEZONE_AWARE": True},
@@ -600,3 +615,4 @@ class Utils(FurinaCog):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Utils(bot))
+
