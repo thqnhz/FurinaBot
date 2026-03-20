@@ -13,7 +13,6 @@ limitations under the License.
 """
 
 from __future__ import annotations
-from core.settings import CROSS
 
 import logging
 import logging.handlers
@@ -21,12 +20,13 @@ import pathlib
 import re
 from typing import TYPE_CHECKING
 
-from discord import ui, ButtonStyle
+from discord import ButtonStyle, ui
 
 # since multiple utils will be confusing
 # so i will just import everything from discord.utils
 from discord.utils import *  # type: ignore[wildcardImportFromLibrary]
 
+from core.settings import CROSS
 from core.views import Container, PaginatedLayoutView
 
 if TYPE_CHECKING:
