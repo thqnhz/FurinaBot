@@ -252,6 +252,7 @@ def __get_pronunciations(data: list[dict]) -> list[str]:
 
 async def call_urban(cs: ClientSession, word: str) -> PaginatedLayoutView:
     url = f"https://unofficialurbandictionaryapi.com/api/search?term={word}&"
+    word = word.replace(" ", "+")
     web_url = f"https://www.urbandictionary.com/define.php?term={word}"
     status, data = await request(cs, url)
     if status == 404:
