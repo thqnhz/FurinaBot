@@ -524,10 +524,7 @@ class Utils(FurinaCog):
             The date to get word of the day from
         """
         date_ = dateparser.parse(
-            date
-            or utils.utcnow().strftime(
-                r"%Y-%m-%d"
-            ),
+            date or utils.utcnow().strftime(r"%Y-%m-%d"),
             settings={"TIMEZONE": "UTC", "RETURN_AS_TIMEZONE_AWARE": True},
         )
         date = date_.strftime(r"%Y-%m-%d")
@@ -615,4 +612,3 @@ class Utils(FurinaCog):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Utils(bot))
-

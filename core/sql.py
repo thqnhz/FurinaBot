@@ -200,4 +200,3 @@ class TagSQL(SQL):
     def __init__(self, pool: asqlite.Pool) -> None:
         self.pool = pool
         self.create_table_queries = [TAGS_SQL, TAG_ALIASES_SQL]
-
