@@ -19,6 +19,7 @@ import logging.handlers
 import pathlib
 import re
 from typing import TYPE_CHECKING
+from urllib.parse import urlencode
 
 from discord import ButtonStyle, ui
 
@@ -251,8 +252,8 @@ def __get_pronunciations(data: list[dict]) -> list[str]:
 
 
 async def call_urban(cs: ClientSession, word: str) -> PaginatedLayoutView:
-    word = word.replace("+", "%2B").replace(" ", "+")
-    url = f"http://api.urbandictionary.com/v0/define?term={word}"
+    query = urlencode({"term": word})
+    url = f"http://api.urbandictionary.com/v0/define?{query}"
     status, data = await request(cs, url)
     if status == 404:
         return PaginatedLayoutView(
