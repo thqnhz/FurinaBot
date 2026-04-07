@@ -497,7 +497,6 @@ class Utils(FurinaCog):
     async def urban_command(self, ctx: FurinaCtx, *, query: str) -> None:
         """Lookup a word in the urban dictionary
 
-        Use UnofficialUrbandictionary API to lookup a word.
         You might regret what you did. But have fun!
 
         Parameters
@@ -612,3 +611,4 @@ class Utils(FurinaCog):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Utils(bot))
+

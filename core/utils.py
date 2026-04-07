@@ -251,9 +251,8 @@ def __get_pronunciations(data: list[dict]) -> list[str]:
 
 
 async def call_urban(cs: ClientSession, word: str) -> PaginatedLayoutView:
-    url = f"https://unofficialurbandictionaryapi.com/api/search?term={word}&"
-    word = word.replace(" ", "+").replace("+", "%2B")
-    web_url = f"https://www.urbandictionary.com/define.php?term={word}"
+    word = word.replace("+", "%2B").replace(" ", "+")
+    url = f"http://api.urbandictionary.com/v0/define?term={word}"
     status, data = await request(cs, url)
     if status == 404:
         return PaginatedLayoutView(
@@ -262,13 +261,15 @@ async def call_urban(cs: ClientSession, word: str) -> PaginatedLayoutView:
             ]
         )
     containers = []
-    definitions = data["data"]
+    definitions = data["list"]
     for definition in definitions:
         container = Container(
             ui.Section(
-                f"## {definition['word']}\n{definition['meaning']}\n",
+                f"## {definition['word']}\n{definition['definition']}\n",
                 accessory=ui.Button(
-                    style=ButtonStyle.link, label="View on web", url=web_url
+                    style=ButtonStyle.link,
+                    label="View on web",
+                    url=definition["permalink"]
                 ),
             ),
             ui.Separator(),
