@@ -154,8 +154,9 @@ class BotEvents(FurinaCog):
                 delete_after=60,
             )
 
-        traceback.print_exception(error)
+        logging.exception(error)
 
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(BotEvents(bot))
+
