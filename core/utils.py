@@ -270,7 +270,7 @@ async def call_urban(cs: ClientSession, word: str) -> PaginatedLayoutView:
                 accessory=ui.Button(
                     style=ButtonStyle.link,
                     label="View on web",
-                    url=definition["permalink"]
+                    url=definition["permalink"],
                 ),
             ),
             ui.Separator(),
@@ -278,4 +278,3 @@ async def call_urban(cs: ClientSession, word: str) -> PaginatedLayoutView:
         )
         containers.append(container)
     return PaginatedLayoutView(containers=containers)
-

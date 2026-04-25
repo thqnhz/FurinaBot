@@ -14,7 +14,6 @@ limitations under the License.
 
 from __future__ import annotations
 
-import ast
 import asyncio
 import logging
 import pathlib
@@ -45,6 +44,7 @@ from core.views import Container, LayoutView, PaginatedLayoutView, PaginatedView
 
 if TYPE_CHECKING:
     from core import FurinaBot, FurinaCtx
+    from core.sql import SQL
 
 
 class RPSButton(ui.Button):
@@ -70,10 +70,11 @@ class RPSButton(ui.Button):
         Add the player to the view and update the embed
 
         Returns
-        -----------
+        -------
         int
             - Number of players in the game
         """
+        assert self.label is not None
         view.players[interaction.user] = self.LABEL_TO_NUMBER[self.label]
         view.embed.add_field(
             name=f"Player {len(view.players)}", value=interaction.user.mention
@@ -115,13 +116,14 @@ class RPSView(ui.View):
         for i in range(3):
             self.add_item(RPSButton(i))
         self.embed = Embed().set_author(name="Rock Paper Scissor")
+        self.message: Message | None
 
     def check_winner(self) -> User | int:
         """
         Check the winner of the game
 
         Returns
-        -----------
+        -------
         User | int
             `User` if there is a winner or 0 if it's a draw
         """
@@ -133,19 +135,20 @@ class RPSView(ui.View):
             return 0
         # If the result is 1, player 2 wins, else player 1 wins
         result = (moves[1] - moves[0]) % 3
-        return players[1] if result == 1 else players[0]
+        return players[1].id if result == 1 else players[0].id
 
     def disable_buttons(self) -> None:
         """Disable all the buttons in the view"""
         self.stop()
         for button in self.children:
-            button.disabled = True
+            button.disabled = True  # type: ignore ty[unresolve-attribute]
 
     async def on_timeout(self) -> None:
         self.disable_buttons()
         self.embed.set_footer(
             text="Timed out due to inactive. You have no enemies"
         )
+        assert self.message is not None
         await self.message.edit(embed=self.embed, view=self)
 
 
@@ -175,7 +178,7 @@ class TicTacToeButton(ui.Button["TicTacToe"]):
                 )
                 return
             if view.player_one is None:
-                view.player_one = interaction.user
+                view.player_one: User | Member = interaction.user
                 view.embed.add_field(
                     name="Player 1", value=view.player_one.mention
                 )
@@ -192,7 +195,7 @@ class TicTacToeButton(ui.Button["TicTacToe"]):
                 )
                 return
             if view.player_two is None:
-                view.player_two = interaction.user
+                view.player_two: User | Member = interaction.user
                 view.embed.add_field(
                     name="Player 2", value=view.player_two.mention
                 )
@@ -205,6 +208,8 @@ class TicTacToeButton(ui.Button["TicTacToe"]):
 
         winner = view.check_board_winner()
         if winner is not None:
+            assert view.player_one is not None
+            assert view.player_two is not None
             view.embed.set_author(name="")
             if winner == view.X:
                 view.embed.description = f"### {view.player_one.mention} Won!"
@@ -238,6 +243,7 @@ class TicTacToe(ui.View):
         self.player_one: User | None = None
         self.player_two: User | None = None
         self.embed: Embed = Embed().set_author(name="Tic Tac Toe")
+        self.message: Message | None
 
         for x in range(3):
             for y in range(3):
@@ -245,10 +251,12 @@ class TicTacToe(ui.View):
 
     @property
     def players(self) -> tuple[User, User]:
+        assert self.player_one is not None
+        assert self.player_two is not None
         return self.player_one, self.player_two
 
     def check_board_winner(self) -> int | None:
-        # Check đường thẳng (ngang)
+        # Horizontal line
         for across in self.board:
             value = sum(across)
             if value == 3:
@@ -256,7 +264,7 @@ class TicTacToe(ui.View):
             if value == -3:
                 return self.X
 
-        # Check đường thẳng (dọc)
+        # Vertical line
         for line in range(3):
             value = (
                 self.board[0][line] + self.board[1][line] + self.board[2][line]
@@ -266,7 +274,7 @@ class TicTacToe(ui.View):
             if value == -3:
                 return self.X
 
-        # Check đường chéo
+        # Diagonal
         diag = self.board[0][2] + self.board[1][1] + self.board[2][0]
         if diag == 3:
             return self.O
@@ -279,7 +287,7 @@ class TicTacToe(ui.View):
         if diag == -3:
             return self.X
 
-        # Check hòa
+        # Draw
         if all(i != 0 for row in self.board for i in row):
             return self.Tie
 
@@ -289,7 +297,8 @@ class TicTacToe(ui.View):
         for child in self.children:
             child.disabled = True
 
-        self.embed.set_footer(text="Đã Timeout")
+        self.embed.set_footer(text="Timed out")
+        assert self.message is not None
         await self.message.edit(embed=self.embed, view=self)
 
 
@@ -313,10 +322,10 @@ class WordleABC(LayoutView):
         *,
         bot: FurinaBot,
         word: str,
-        owner: User,
+        owner: User | Member,
         solo: bool,
         attempt: int,
-        pool: asqlite.Pool,
+        pool: SQL,
     ) -> None:
         self.bot = bot
         self.word = word
@@ -358,7 +367,7 @@ class WordleABC(LayoutView):
                 f"### Player: {self.owner.mention}\n"
                 f"**Attempts left:** `{self.attempt}` {status}"
             ),
-            accessory=ui.Thumbnail(self.owner.avatar.url),
+            accessory=ui.Thumbnail(self.owner.display_avatar.url),
         )
 
     @property
@@ -495,9 +504,9 @@ class WordleView(WordleABC):
         *,
         bot: FurinaBot,
         word: str,
-        owner: User,
+        owner: User | Member,
         solo: bool,
-        pool: asqlite.Pool,
+        pool: SQL,
         word_db: asqlite.Pool,
     ) -> None:
         self.word_db = word_db
@@ -591,7 +600,7 @@ class WordleView(WordleABC):
                 letter = black_letters[i]
                 status = WordleLetterStatus.INCORRECT
 
-            if letter:
+            if letter and status:
                 idx = self.LETTER_INDEX[letter]
                 # Because we need to save the best status
                 # of the letter, so we get max of the status
@@ -673,7 +682,12 @@ class WordleGuessButton(ui.Button):
 
 class Letterle(WordleABC):
     def __init__(
-        self, *, bot: FurinaBot, letter: str, owner: User, pool: asqlite.Pool
+        self,
+        *,
+        bot: FurinaBot,
+        letter: str,
+        owner: User | Member,
+        pool: SQL
     ) -> None:
         self.buttons: list[LetterleButton] = [
             LetterleButton(self.ALPHABET[i]) for i in range(len(self.ALPHABET))
@@ -710,6 +724,7 @@ class LetterleButton(ui.Button[Letterle]):
         self.letter = letter
 
     async def callback(self, interaction: Interaction) -> None:
+        assert self.view is not None
         if interaction.user != self.view.owner:
             await interaction.response.send_message(
                 "You can not play this game", ephemeral=True
@@ -725,7 +740,7 @@ class LetterleButton(ui.Button[Letterle]):
                 WordleLetterStatus.CORRECT
             ]
             for child in view.walk_children():
-                child.disabled = True
+                child.disabled = True  # ty:ignore[unresolved-attribute]
             view._is_winning = True
         else:
             button.emoji = Minigames.WORDLE_EMOJIS[self.letter][
@@ -801,7 +816,7 @@ class LookUpButton(ui.Button):
         self.word = word
         self.dict: PaginatedLayoutView | None = None
 
-    async def callback(self, interaction: Interaction) -> None:
+    async def callback(self, interaction: Interaction[FurinaBot]) -> None:
         await interaction.response.defer(thinking=True, ephemeral=True)
         if not self.dict:
             self.dict = await utils.call_dictionary(
@@ -858,7 +873,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
     async def cog_load(self) -> None:
         self.pool = self.bot.pool
         self.wordle_db = await asqlite.create_pool(
-            pathlib.Path() / "db" / "wordle.db"
+            str(pathlib.Path() / "db" / "wordle.db")
         )
         await self.__update_wordle_emojis()
         await self.__create_valid_guess_table()
@@ -968,21 +983,17 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         await self.__update_wordle_emojis()
         return
 
-    @commands.hybrid_command(
-        name="tictactoe", aliases=["ttt", "xo"], description="XO minigame"
-    )
+    @commands.hybrid_command(name="tictactoe")
     @app_commands.allowed_installs(guilds=True, users=True)
     async def tic_tac_toe(self, ctx: FurinaCtx) -> None:
+        """Tic Tac Toe minigame"""
         view = TicTacToe()
         view.message = await ctx.reply(embed=view.embed, view=view)
 
-    @commands.hybrid_command(
-        name="rockpaperscissor",
-        aliases=["keobuabao"],
-        description="Rock Paper Scissor minigame",
-    )
+    @commands.hybrid_command(name="rockpaperscissor")
     @app_commands.allowed_installs(guilds=True, users=True)
     async def rps_command(self, ctx: FurinaCtx) -> None:
+        """Rock Paper Scissors minigame"""
         view = RPSView()
         view.message = await ctx.reply(embed=view.embed, view=view)
 
@@ -1103,7 +1114,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
     @stats.command(name="user")
     @app_commands.allowed_installs(guilds=True, users=True)
     async def minigame_stats_user(
-        self, interaction: Interaction, user: User = None
+        self, interaction: Interaction, user: User | Member | None = None
     ) -> None:
         """View a specific user's minigame stats
 
