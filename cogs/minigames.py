@@ -870,9 +870,10 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         if word_set:
             return self._randomized_words[index].pop()
         async with self.bot.cs.get(
-            f"https://random-word-api.vercel.app/api?words=50&length={length}&type=uppercase"
+            f"https://thanhz.id.vn/api/v0/words?length={length}&count=50"
         ) as response:
-            words = set(ast.literal_eval(await response.text()))
+            words = await response.json()
+            words = {word.upper() for word in words["words"]}
         self._randomized_words[index] = words
         return self._randomized_words[index].pop()
 
@@ -1241,3 +1242,4 @@ class Minigames(commands.GroupCog, group_name="minigame"):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Minigames(bot))
+
