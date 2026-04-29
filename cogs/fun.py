@@ -74,6 +74,7 @@ class Fun(FurinaCog):
     async def lie_detector(
         self, interaction: Interaction, message: Message
     ) -> None:
+        assert self.bot.user is not None
         if message.author.id == self.bot.user.id:
             await interaction.response.send_message("I always tell the truth")
             return
@@ -134,23 +135,23 @@ class Fun(FurinaCog):
         """
         fortune_section = ui.Section(
             ui.TextDisplay(
-                f"### {header}\n## {fortunes[fortune_index]}\n>>> {yap}\n"
+                f"### {header}\n"
+                f"## {fortunes[fortune_index]}\n"
+                f">>> {yap}\n"
             ),
             accessory=ui.Thumbnail(
                 "https://upload-static.hoyoverse.com/hoyolab-wiki/2023/08/01/94376896/13b4067ebbc97e7a3577b9358c9c6eb9_8561788766756121179.png?x-oss-process=image%2Fformat%2Cwebp"
             ),
         )
-        await ctx.send(
+        await ctx.reply(
             view=LayoutView(
                 Container(
                     fortune_section,
                     ui.TextDisplay(
                         "-# This is just for fun, take it as a grain of salt"
-                        " | Coded by ThanhZ"
                     ),
                 )
             ),
-            silent=True,
         )
 
     @staticmethod
@@ -183,18 +184,17 @@ class Fun(FurinaCog):
             seq: str = " ".join(seq[:100]) + ("..." if len(seq) > 100 else "")
             header = f"{ctx.author.mention} rolled a dice {number} times"
         section = ui.Section(
-            ui.TextDisplay("### " + header),
-            ui.TextDisplay(f"## {rand_num}"),
+            ui.TextDisplay(
+                f"### {header}\n"
+                f"## {rand_num}"
+            ),
             accessory=ui.Thumbnail(
                 r"https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif"
             ),
         )
         if seq:
             section.add_item(ui.TextDisplay(f"**History:**\n`{seq}`"))
-        view = ui.LayoutView().add_item(
-            ui.Container(section).add_item(ui.TextDisplay("-# Coded by ThanhZ"))
-        )
-        await ctx.send(view=view, silent=True)
+        await ctx.reply(view=ui.LayoutView().add_item(ui.Container(section)))
 
     @commands.command(name="flip", aliases=["coin", "coinflip"])
     async def flip_command(self, ctx: FurinaCtx, number: int = 1) -> None:
@@ -222,18 +222,17 @@ class Fun(FurinaCog):
             seq: str = " ".join(seq[:100]) + ("..." if len(seq) > 100 else "")
             header = f"{ctx.author.mention} flipped a coin {number} times"
         section = ui.Section(
-            ui.TextDisplay("### " + header),
-            ui.TextDisplay(f"## {rand_flip}"),
+            ui.TextDisplay(
+                f"### {header}\n"
+                f"## {rand_flip}"
+            ),
             accessory=ui.Thumbnail(
                 r"https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif"
             ),
         )
         if seq:
             section.add_item(ui.TextDisplay(f"**History:**\n`{seq}`"))
-        view = ui.LayoutView().add_item(
-            ui.Container(section).add_item(ui.TextDisplay("-# Coded by ThanhZ"))
-        )
-        await ctx.send(view=view, silent=True)
+        await ctx.reply(view=ui.LayoutView().add_item(ui.Container(section)))
 
     @commands.command(name="8ball")
     async def magic_eight_ball(self, ctx: FurinaCtx, *, question: str) -> None:
@@ -269,24 +268,27 @@ class Fun(FurinaCog):
             "Cannot predict now",
             "Concentrate and ask again",
         ]
-        section = ui.Section(
-            ui.TextDisplay(f"### {ctx.author.mention} asked the magic 8 ball"),
-            ui.TextDisplay(f"## {self.rng.choice(answers)}"),
-            accessory=ui.Thumbnail(
-                r"https://th.bing.com/th/id/R.94318dc029cf3858ebbd4a5bd95617d9?rik=%2bjjVGtbqXgWhQA&pid=ImgRaw&r=0"
-            ),
-        )
+        ellipsis = "..." if len(question) > 1000 else ""
         container = ui.Container(
-            section,
-            ui.Separator(),
-            ui.TextDisplay(f"**Question:**\n>>> {question}"),
+            ui.Section(
+                ui.TextDisplay(
+                    f"**{ctx.author.mention} asked the magic 8 ball**\n"
+                    # surely nobody is gonna ask a 1000 characters long question
+                    f"> {question[:1000]}{ellipsis}\n"
+                    f"## ||{self.rng.choice(answers)}||"
+                ),
+                # This is some random magic 8ball image i found on the internet
+                accessory=ui.Thumbnail(
+                    "https://i5.walmartimages.com/asr/c37fad41-2b97-4af5-aa9c-df98d4978284_1.51fa63c8b2535a017d564d2549c6c2f3.jpeg"
+                ),
+            ),
             ui.TextDisplay(
                 "-# This is just for fun, take it as a grain of salt"
-                " | Coded by ThanhZ"
             ),
         )
-        await ctx.send(view=ui.LayoutView().add_item(container), silent=True)
+        await ctx.reply(view=ui.LayoutView().add_item(container))
 
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Fun(bot))
+
