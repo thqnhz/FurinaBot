@@ -1002,7 +1002,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
     async def wordle(
         self,
         ctx: FurinaCtx,
-        letters: app_commands.Range[int, 3, 8] = 5,
+        letters: commands.Range[int, 3, 8] = 5,
         *,
         solo: bool = True,
     ) -> None:
