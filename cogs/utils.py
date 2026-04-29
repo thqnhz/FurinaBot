@@ -538,16 +538,12 @@ class Utils(FurinaCog):
                 await ctx.reply("Something went wrong")
                 return
             content: dict = await response.json()
-        part_of_speech = content["definitions"][0]["partOfSpeech"]
         container = Container(
             ui.TextDisplay(
-                f"## {content['word']} ({part_of_speech})\n"
-                f"### Definition:\n>>> {content['definitions'][0]['text']}"
-            ),
-            ui.Separator(),
-            ui.TextDisplay(
-                f"### Fun fact:\n{content['note']}\n"
-                f"-# Coded by ThanhZ | Date: `{ddmmyyyy}`"
+                f"## {content['word']}\n"
+                f"> {content['definitions'][0]['text']}\n"
+                f"Note: {content['note']}\n"
+                f"-# {ddmmyyyy}\n"
             ),
         )
         await ctx.reply(view=LayoutView(container))
@@ -611,3 +607,4 @@ class Utils(FurinaCog):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Utils(bot))
+
