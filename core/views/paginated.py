@@ -155,4 +155,5 @@ class PaginatedLayoutView(LayoutView):
             for i, container in enumerate(self.containers):
                 row = PaginateActionRow(i, self.length)
                 container.add_item(ui.Separator()).add_item(row)
-        super().__init__(containers[0], timeout=timeout)
+        super().__init__(self.containers[0], timeout=timeout)
+
