@@ -868,7 +868,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         self.bot = bot
         self.emoji_loading_attempts: int = 0
 
-        self._randomized_words: list[set[str]] = [set() for _ in range(5)]
+        self._randomized_words: list[set[str]] = [set() for _ in range(6)]
 
     async def cog_load(self) -> None:
         self.pool = self.bot.pool

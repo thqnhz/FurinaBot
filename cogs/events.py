@@ -155,6 +155,7 @@ class BotEvents(FurinaCog):
             )
 
         logging.exception(error)
+        traceback.print_exc()
 
 
 async def setup(bot: FurinaBot) -> None:
