@@ -705,7 +705,7 @@ class Letterle(WordleABC):
                 ui.ActionRow(*self.buttons[i : i + 4])
                 for i in range(0, len(self.ALPHABET), 4)
             ],
-        ).add_item(ui.TextDisplay("-# Coded by ThanhZ | v0.4.0-beta"))
+        )
         if self.is_over:
             container.accent_color = (
                 Color.green() if self._is_winning else Color.red()

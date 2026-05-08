@@ -117,9 +117,9 @@ def setup_logging() -> None:
 
 
 # Dictionary related
-async def request(cs: ClientSession, url: str, *, query: str = "") -> tuple(
+async def request(cs: ClientSession, url: str, *, query: str = "") -> tuple[
     int, list[dict] | dict
-):
+]:
     """|coro|
 
     Make a call to an api
@@ -135,7 +135,7 @@ async def request(cs: ClientSession, url: str, *, query: str = "") -> tuple(
 
     Returns
     -------
-    tuple(int, list[dict] | dict)
+    tuple[int, list[dict] | dict]
         The first value contains the return code.
         The second value contains the data
     """
@@ -278,3 +278,4 @@ async def call_urban(cs: ClientSession, word: str) -> PaginatedLayoutView:
         )
         containers.append(container)
     return PaginatedLayoutView(containers=containers)
+
