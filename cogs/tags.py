@@ -788,7 +788,7 @@ class Tags(FurinaCog):
             )
             containers.append(container)
         view = PaginatedLayoutView(containers=containers)
-        await ctx.reply(view=view)
+        view.message = await ctx.reply(view=view)
 
     @tag_group.command(name="raw")
     async def tag_raw_command(self, ctx: FurinaCtx, *, name: str) -> None:
