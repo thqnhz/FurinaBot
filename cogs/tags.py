@@ -24,9 +24,9 @@ import discord
 from discord import app_commands, ui
 from discord.ext import commands
 
-from core import FurinaCog, FurinaCtx, utils
+from core import FurinaCog, FurinaCtx, settings, utils
 from core.sql import TagSQL
-from core.views import Container, LayoutView, PaginatedView
+from core.views import Container, LayoutView, PaginatedLayoutView, PaginatedView
 
 if TYPE_CHECKING:
     import sqlite3
@@ -726,20 +726,23 @@ class Tags(FurinaCog):
         if fetched is None:
             await ctx.send(f"No tags found for query: `{name}`")
             return
-        embed = self.bot.embed
         tag = TagEntry(fetched)
         owner = self.bot.get_user(tag.owner)
-        embed.description = tag.content_preview
-        embed.add_field(name="Name", value=f"`{tag.name}`")
+        assert self.bot.user is not None
+        avatar = self.bot.user.display_avatar.url
+        info_owner = "Owner left the server"
         if owner:
-            embed.set_thumbnail(url=owner.display_avatar.url)
-            embed.add_field(name="Owner", value=owner.mention)
-        else:
-            embed.add_field(name="Owner", value="Owner left the server")
-        embed.add_field(name="Created at", value=tag.created_at)
-        embed.add_field(name="Uses", value=tag.uses)
-
-        await ctx.reply(embed=embed)
+            avatar = owner.display_avatar.url
+            info_owner = f"Owner: {owner.mention}"
+        section = ui.Section(
+            f"### {tag.name}\n",
+            f"{tag.content_preview}\n",
+            f"{info_owner}\n"
+            f"Created at: {tag.created_at}\n"
+            f"Uses: {tag.uses}\n",
+            accessory=ui.Thumbnail(avatar)
+        )
+        await ctx.reply(view=LayoutView(Container(section)))
 
     @tag_group.command(name="list")
     async def tag_list_slash(self, ctx: FurinaCtx) -> None:
@@ -763,18 +766,29 @@ class Tags(FurinaCog):
             ctx.guild.id,
         )
         if not tags:
-            await ctx.reply("This server has no tags")
-            return
-        embeds = []
-        for i in range(0, len(tags), 10):
-            embed = self.bot.embed
-            embed.title = f"Tags for server: {ctx.guild.name}"
-            embed.description = "- " + "\n- ".join(
-                tag["name"] for tag in tags[i : i + 10]
+            await ctx.reply(
+                view=LayoutView(
+                    Container(
+                        ui.TextDisplay(
+                            f"{settings.CROSS} This server has no tags"
+                        )
+                    )
+                )
             )
-            embeds.append(embed)
-        view = PaginatedView(timeout=180, embeds=embeds)
-        await ctx.reply(embed=embeds[0], view=view)
+            return
+        containers = []
+        for i in range(0, len(tags), 10):
+            container = ui.Container(
+                ui.TextDisplay(
+                    f"### Tags for server: {ctx.guild.name}\n"
+                    "- " + "\n- ".join(
+                        tag["name"] for tag in tags[i : i + 10]
+                    )
+                )
+            )
+            containers.append(container)
+        view = PaginatedLayoutView(containers=containers)
+        await ctx.reply(view=view)
 
     @tag_group.command(name="raw")
     async def tag_raw_command(self, ctx: FurinaCtx, *, name: str) -> None:
@@ -793,7 +807,9 @@ class Tags(FurinaCog):
             guild_id=ctx.guild.id, name=name
         )
         if not tag_content:
-            await ctx.send(f"No tags found for query: `{name}`")
+            await ctx.send(
+                f"{settings.CROSS} No tags found for query: `{name}`"
+            )
         else:
             await ctx.send(utils.escape_markdown(tag_content))
 
@@ -946,3 +962,4 @@ class Tags(FurinaCog):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Tags(bot))
+
