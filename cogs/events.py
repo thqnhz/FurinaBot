@@ -27,6 +27,8 @@ from core.views import Container, LayoutView
 if TYPE_CHECKING:
     from core import FurinaBot
 
+logger = logging.getLogger(__name__)
+
 
 class BotEvents(FurinaCog):
     def __init__(self, bot: FurinaBot) -> None:
@@ -38,13 +40,13 @@ class BotEvents(FurinaCog):
     async def on_guild_join(self, guild: Guild) -> None:
         """Adds the guild to the database when the bot joins a new server"""
         await self.pool.execute("INSERT INTO guilds (id) VALUES (?)", guild.id)
-        logging.info("Joined guild: %s (ID: %s)", guild.name, guild.id)
+        logger.info("Joined guild: %s (ID: %s)", guild.name, guild.id)
 
     @commands.Cog.listener()
     async def on_guild_remove(self, guild: Guild) -> None:
         """Removes the guild from the database when the bot leaves a server"""
         await self.pool.execute("DELETE FROM guilds WHERE id = ?", guild.id)
-        logging.info("Left guild: %s (ID: %s)", guild.name, guild.id)
+        logger.info("Left guild: %s (ID: %s)", guild.name, guild.id)
 
     @commands.Cog.listener()
     async def on_command_completion(self, ctx: FurinaCtx) -> None:
@@ -154,7 +156,7 @@ class BotEvents(FurinaCog):
                 delete_after=60,
             )
 
-        logging.exception(error)
+        logger.exception(error)
         traceback.print_exc()
 
 

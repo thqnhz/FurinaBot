@@ -46,6 +46,8 @@ if TYPE_CHECKING:
     from core import FurinaBot, FurinaCtx
     from core.sql import SQL
 
+logger = logging.getLogger(__name__)
+
 
 class RPSButton(ui.Button):
     LABEL_TO_NUMBER: ClassVar[dict[str, int]] = {
@@ -877,7 +879,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         )
         await self.__update_wordle_emojis()
         await self.__create_valid_guess_table()
-        logging.info("Cog %s has been loaded", self.__cog_name__)
+        logger.info("Cog %s has been loaded", self.__cog_name__)
 
     async def get_random_word(self, length: int) -> str:
         index: int = length - 3
@@ -916,7 +918,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
 
     async def __update_wordle_emojis(self) -> None:
         if self.emoji_loading_attempts >= 3:
-            logging.warning("Failed to load emojis for wordle game")
+            logger.warning("Failed to load emojis for wordle game")
             return
         Minigames.WORDLE_EMOJIS = {letter: {} for letter in WordleView.ALPHABET}
 
@@ -943,17 +945,17 @@ class Minigames(commands.GroupCog, group_name="minigame"):
 
         for letter in self.WORDLE_EMOJIS:
             if len(self.WORDLE_EMOJIS[letter]) != 4:
-                logging.warning("Missing emojis for wordle game")
+                logger.warning("Missing emojis for wordle game")
                 await self.__upload_missing_emojis()
 
     async def __upload_missing_emojis(self) -> None:
-        logging.info("Uploading missing wordle emojis...")
+        logger.info("Uploading missing wordle emojis...")
 
         wordle_letters_path = pathlib.Path() / "assets" / "wordle"
         filenames = list(wordle_letters_path.iterdir())
         total = len(filenames)
         if not total:
-            logging.error("Failed to get emoji files")
+            logger.error("Failed to get emoji files")
             return
         bar_width = 50
         for index, filename in enumerate(filenames, 1):
@@ -978,7 +980,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
                 # We don't need to care about this.
                 pass
             await asyncio.sleep(0.5)
-        logging.info("Uploaded missing wordle emojis")
+        logger.info("Uploaded missing wordle emojis")
         self.emoji_loading_attempts += 1
         await self.__update_wordle_emojis()
         return

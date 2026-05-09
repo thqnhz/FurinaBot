@@ -38,6 +38,7 @@ if typing.TYPE_CHECKING:
 
     import aiohttp
 
+logger = logging.getLogger(__name__)
 
 class FurinaCtx(commands.Context):
     """Custom Context class with some shortcuts"""
@@ -174,7 +175,7 @@ class FurinaBot(commands.Bot):
 
     async def on_ready(self) -> None:
         assert self.user is not None
-        logging.info("Logged in as %s", self.user.name)
+        logger.info("Logged in as %s", self.user.name)
         await self.pool.executemany(
             """INSERT OR REPLACE INTO guilds (id) VALUES (?)""",
             [(guild.id,) for guild in self.guilds],
@@ -193,10 +194,10 @@ class FurinaBot(commands.Bot):
         await message.delete()
 
     async def setup_hook(self) -> None:
-        logging.info("discord.py v%s", discord.__version__)
-        logging.info("Lavalink.py v%s", lavalink.__version__)
-        logging.info("Running Python %s", python_version())
-        logging.info("Fetching bot emojis...")
+        logger.info("discord.py v%s", discord.__version__)
+        logger.info("Lavalink.py v%s", lavalink.__version__)
+        logger.info("Running Python %s", python_version())
+        logger.info("Fetching bot emojis...")
         self.app_emojis = await self.fetch_application_emojis()
         db_path = Path() / "db"
         db_path.mkdir(exist_ok=True)
@@ -206,18 +207,18 @@ class FurinaBot(commands.Bot):
 
     async def __load_extensions(self) -> None:
         """Load bot extensions"""
-        logging.info("Loading extensions...")
+        logger.info("Loading extensions...")
         for extension in EXTENSIONS:
             extension_name = extension[5:]
             try:
                 await self.load_extension(extension)
             except errors.NoEntryPointError:
-                logging.exception(
+                logger.exception(
                     "Extension %s has no setup function so it cannot be loaded",
                     extension_name,
                 )
             except Exception:
-                logging.exception(
+                logger.exception(
                     "An error occured when trying to load %s", extension_name
                 )
 
@@ -241,7 +242,7 @@ class MetaCog:
         self.embed: discord.Embed = bot.embed
 
     async def cog_load(self) -> None:
-        logging.info("Cog %s has been loaded", self.__cog_name__)
+        logger.info("Cog %s has been loaded", self.__cog_name__)
 
 
 class FurinaCog(MetaCog, commands.Cog):
@@ -250,3 +251,4 @@ class FurinaCog(MetaCog, commands.Cog):
 
 class FurinaGroupCog(MetaCog, commands.GroupCog):
     """Base class for all group cogs"""
+
