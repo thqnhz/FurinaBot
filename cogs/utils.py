@@ -151,9 +151,9 @@ class Utils(FurinaCog):
                 accessory=ui.Thumbnail(bot.user.display_avatar.url),
             )
             source_section = ui.Section(
-                "### I am also open source",
+                "### A star on GitHub would be appreciated!",
                 accessory=ui.Button(
-                    label="Click me to view source code",
+                    label="View source code",
                     style=discord.ButtonStyle.link,
                     url=r"https://github.com/thqnhz/furinabot/tree/master",
                 ),
@@ -189,9 +189,10 @@ class Utils(FurinaCog):
         Get latencies of bot to Discord, to Lavalink server and to Database.
         """
         bot_latency: float = min(self.bot.latency * 1000, 999.99)
-        lavalink_latency: float = min(
-            await self.bot.lavalink.nodes[0].get_rest_latency(), 999.99
-        )
+        # Temporarily disable lavalink ping
+        # lavalink_latency: float = min(
+        #     await self.bot.lavalink.nodes[0].get_rest_latency(), 999.99
+        # )
         db_latency: float = min(await self.db_ping() * 1000, 999.99)
         container = Container(
             ui.TextDisplay("## Pong!"),
@@ -201,7 +202,7 @@ class Utils(FurinaCog):
                 f"|          | Latency (ms) |\n"
                 f"|----------|--------------|\n"
                 f"| Bot      | {self.latency_ansi(bot_latency)} |\n"
-                f"| Lavalink | {self.latency_ansi(lavalink_latency)} |\n"
+                # f"| Lavalink | {self.latency_ansi(lavalink_latency)} |\n"
                 f"| Database | {self.latency_ansi(db_latency)} |\n"
                 "```"
             ),
@@ -607,3 +608,4 @@ class Utils(FurinaCog):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Utils(bot))
+
