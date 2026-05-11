@@ -135,9 +135,7 @@ class Fun(FurinaCog):
         """
         fortune_section = ui.Section(
             ui.TextDisplay(
-                f"### {header}\n"
-                f"## {fortunes[fortune_index]}\n"
-                f">>> {yap}\n"
+                f"### {header}\n## {fortunes[fortune_index]}\n>>> {yap}\n"
             ),
             accessory=ui.Thumbnail(
                 "https://upload-static.hoyoverse.com/hoyolab-wiki/2023/08/01/94376896/13b4067ebbc97e7a3577b9358c9c6eb9_8561788766756121179.png?x-oss-process=image%2Fformat%2Cwebp"
@@ -184,10 +182,7 @@ class Fun(FurinaCog):
             seq: str = " ".join(seq[:100]) + ("..." if len(seq) > 100 else "")
             header = f"{ctx.author.mention} rolled a dice {number} times"
         section = ui.Section(
-            ui.TextDisplay(
-                f"### {header}\n"
-                f"## {rand_num}"
-            ),
+            ui.TextDisplay(f"### {header}\n## {rand_num}"),
             accessory=ui.Thumbnail(
                 r"https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif"
             ),
@@ -222,10 +217,7 @@ class Fun(FurinaCog):
             seq: str = " ".join(seq[:100]) + ("..." if len(seq) > 100 else "")
             header = f"{ctx.author.mention} flipped a coin {number} times"
         section = ui.Section(
-            ui.TextDisplay(
-                f"### {header}\n"
-                f"## {rand_flip}"
-            ),
+            ui.TextDisplay(f"### {header}\n## {rand_flip}"),
             accessory=ui.Thumbnail(
                 r"https://cdn.7tv.app/emote/6175d52effc7244d797d15bf/4x.gif"
             ),
@@ -291,4 +283,3 @@ class Fun(FurinaCog):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Fun(bot))
-

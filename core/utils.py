@@ -117,9 +117,9 @@ def setup_logging() -> None:
 
 
 # Dictionary related
-async def request(cs: ClientSession, url: str, *, query: str = "") -> tuple[
-    int, list[dict] | dict
-]:
+async def request(
+    cs: ClientSession, url: str, *, query: str = ""
+) -> tuple[int, list[dict] | dict]:
     """|coro|
 
     Make a call to an api
@@ -278,4 +278,3 @@ async def call_urban(cs: ClientSession, word: str) -> PaginatedLayoutView:
         )
         containers.append(container)
     return PaginatedLayoutView(containers=containers)
-

@@ -162,4 +162,3 @@ class BotEvents(FurinaCog):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(BotEvents(bot))
-

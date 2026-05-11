@@ -383,9 +383,7 @@ class WordleABC(LayoutView):
 
         keyboard = "### Keyboard\n"
         for tab, row in enumerate(KEYBOARD_LAYOUT):
-            keyboard += (
-                " " * tab * 2
-            )  # half space blank unicode character
+            keyboard += " " * tab * 2  # half space blank unicode character
             for letter in row:
                 letter_index = self.ALPHABET.index(letter)
                 status = self._availability[letter_index]
@@ -527,7 +525,7 @@ class WordleView(WordleABC):
         return WordleModal(
             letters=len(self.word),
             history=self.guess_display,
-            keyboard=self.letter_status_keyboard
+            keyboard=self.letter_status_keyboard,
         )
 
     @property
@@ -641,7 +639,8 @@ class WordleGuessButton(ui.Button):
         valid = await view.validate_guess(guess=guess)
         if not valid:
             await interaction.followup.send(
-                f"{settings.CROSS} `{guess}` is not in the database!", ephemeral=True
+                f"{settings.CROSS} `{guess}` is not in the database!",
+                ephemeral=True,
             )
             return
 
@@ -667,12 +666,7 @@ class WordleGuessButton(ui.Button):
 
 class Letterle(WordleABC):
     def __init__(
-        self,
-        *,
-        bot: FurinaBot,
-        letter: str,
-        owner: User | Member,
-        pool: SQL
+        self, *, bot: FurinaBot, letter: str, owner: User | Member, pool: SQL
     ) -> None:
         self.buttons: list[LetterleButton] = [
             LetterleButton(self.ALPHABET[i]) for i in range(len(self.ALPHABET))
@@ -738,11 +732,7 @@ class LetterleButton(ui.Button[Letterle]):
 
 class WordleModal(ui.Modal):
     def __init__(
-        self,
-        *,
-        letters: int,
-        history: ui.TextDisplay,
-        keyboard: ui.TextDisplay
+        self, *, letters: int, history: ui.TextDisplay, keyboard: ui.TextDisplay
     ) -> None:
         super().__init__(timeout=180, title=f"WORDLE ({letters} LETTERS)")
         self.input = ui.TextInput(
@@ -1207,4 +1197,3 @@ class Minigames(commands.GroupCog, group_name="minigame"):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Minigames(bot))
-

@@ -737,10 +737,8 @@ class Tags(FurinaCog):
         section = ui.Section(
             f"### {tag.name}\n",
             f"{tag.content_preview}\n",
-            f"{info_owner}\n"
-            f"Created at: {tag.created_at}\n"
-            f"Uses: {tag.uses}\n",
-            accessory=ui.Thumbnail(avatar)
+            f"{info_owner}\nCreated at: {tag.created_at}\nUses: {tag.uses}\n",
+            accessory=ui.Thumbnail(avatar),
         )
         await ctx.reply(view=LayoutView(Container(section)))
 
@@ -781,9 +779,7 @@ class Tags(FurinaCog):
             container = ui.Container(
                 ui.TextDisplay(
                     f"### Tags for server: {ctx.guild.name}\n"
-                    "- " + "\n- ".join(
-                        tag["name"] for tag in tags[i : i + 10]
-                    )
+                    "- " + "\n- ".join(tag["name"] for tag in tags[i : i + 10])
                 )
             )
             containers.append(container)
@@ -962,4 +958,3 @@ class Tags(FurinaCog):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Tags(bot))
-
