@@ -180,7 +180,9 @@ class Utils(FurinaCog):
                 HelpActionRow(bot=bot),
             )
             view = LayoutView(container)
-            view.message = await message.reply(view=view)
+            view.message = await message.reply(
+                view=view, allowed_mentions=discord.AllowedMentions.all()
+            )
 
     @commands.command(name="ping")
     async def ping_command(self, ctx: FurinaCtx) -> None:
@@ -608,4 +610,3 @@ class Utils(FurinaCog):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Utils(bot))
-
