@@ -40,6 +40,7 @@ if typing.TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
 class FurinaCtx(commands.Context):
     """Custom Context class with some shortcuts"""
 

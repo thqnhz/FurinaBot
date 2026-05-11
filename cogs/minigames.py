@@ -39,7 +39,7 @@ from discord import (
 )
 from discord.ext import commands
 
-from core import utils
+from core import settings, utils
 from core.views import Container, LayoutView, PaginatedLayoutView, PaginatedView
 
 if TYPE_CHECKING:
@@ -378,25 +378,25 @@ class WordleABC(LayoutView):
         return self.attempt == 0 or self._is_winning
 
     @property
-    def availabilities(self) -> str:
+    def letter_status_keyboard(self) -> ui.TextDisplay:
         KEYBOARD_LAYOUT = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"]
 
-        availabilities = ""
+        keyboard = "### Keyboard\n"
         for tab, row in enumerate(KEYBOARD_LAYOUT):
-            availabilities += (
+            keyboard += (
                 " " * tab * 2
             )  # half space blank unicode character
             for letter in row:
                 letter_index = self.ALPHABET.index(letter)
                 status = self._availability[letter_index]
-                availabilities += self.get_letter_emoji(letter, status)
-            availabilities += "\n"
-        return availabilities
+                keyboard += self.get_letter_emoji(letter, status)
+            keyboard += "\n"
+        return ui.TextDisplay(keyboard)
 
     @property
     def keyboard_section(self) -> ui.Section:
         return ui.Section(
-            self.availabilities,
+            self.letter_status_keyboard,
             accessory=WordleGuessButton(disabled=self.is_over),
         )
 
@@ -524,25 +524,10 @@ class WordleView(WordleABC):
 
     @property
     def modal(self) -> WordleModal:
-        correct_letters: list[str] = []
-        wrong_pos_letters: list[str] = []
-        incorrect_letters: list[str] = []
-        unused_letters: list[str] = []
-        for index, status in enumerate(self._availability):
-            if status == WordleLetterStatus.INCORRECT:
-                incorrect_letters.append(self.ALPHABET[index])
-            elif status == WordleLetterStatus.UNUSED:
-                unused_letters.append(self.ALPHABET[index])
-            elif status == WordleLetterStatus.WRONG_POS:
-                wrong_pos_letters.append(self.ALPHABET[index])
-            else:
-                correct_letters.append(self.ALPHABET[index])
         return WordleModal(
             letters=len(self.word),
-            unused_letters=unused_letters,
-            incorrect_letters=incorrect_letters,
-            wrong_pos_letters=wrong_pos_letters,
-            correct_letters=correct_letters,
+            history=self.guess_display,
+            keyboard=self.letter_status_keyboard
         )
 
     @property
@@ -570,9 +555,7 @@ class WordleView(WordleABC):
             container.accent_color = (
                 Color.green() if self._is_winning else Color.red()
             )
-        container.add_item(ui.Separator()).add_item(
-            ui.TextDisplay("### Keyboard")
-        ).add_item(self.keyboard_section)
+        container.add_item(ui.Separator()).add_item(self.keyboard_section)
         if self.helped_guess.options:
             container.add_item(ui.Separator()).add_item(
                 ui.ActionRow(self.helped_guess)
@@ -658,7 +641,7 @@ class WordleGuessButton(ui.Button):
         valid = await view.validate_guess(guess=guess)
         if not valid:
             await interaction.followup.send(
-                f"`{guess}` is not in the database!", ephemeral=True
+                f"{settings.CROSS} `{guess}` is not in the database!", ephemeral=True
             )
             return
 
@@ -758,10 +741,8 @@ class WordleModal(ui.Modal):
         self,
         *,
         letters: int,
-        unused_letters: list[str],
-        incorrect_letters: list[str],
-        wrong_pos_letters: list[str],
-        correct_letters: list[str],
+        history: ui.TextDisplay,
+        keyboard: ui.TextDisplay
     ) -> None:
         super().__init__(timeout=180, title=f"WORDLE ({letters} LETTERS)")
         self.input = ui.TextInput(
@@ -770,39 +751,9 @@ class WordleModal(ui.Modal):
             min_length=letters,
             max_length=letters,
         )
-        self.letter_statuses = ui.Label(
-            text="Letter Statuses",
-            description=(
-                "Open the dropdown menu to see the current game letter statuses"
-            ),
-            component=ui.Select(
-                options=[
-                    discord.SelectOption(
-                        label="Correct Letters",
-                        value="correct",
-                        description=" ".join(correct_letters),
-                    ),
-                    discord.SelectOption(
-                        label="Wrong Position Letters",
-                        value="wrong_pos",
-                        description=" ".join(wrong_pos_letters),
-                    ),
-                    discord.SelectOption(
-                        label="Incorrect Letters",
-                        value="incorrect",
-                        description=" ".join(incorrect_letters),
-                    ),
-                    discord.SelectOption(
-                        label="Unused Letters",
-                        value="unused",
-                        description=" ".join(unused_letters),
-                    ),
-                ],
-                required=False,
-            ),
-        )
+        self.add_item(history)
         self.add_item(self.input)
-        self.add_item(self.letter_statuses)
+        self.add_item(keyboard)
         self.guess: str = ""
 
     async def on_submit(self, interaction: Interaction) -> None:
@@ -1053,6 +1004,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         )
         view.message = await ctx.send(view=view)
 
+    # TODO: Remember to implement this into the minigame commands again
     stats = app_commands.Group(name="stats", description="Minigames stats")
 
     @stats.command(name="all", description="View all minigames stats")
