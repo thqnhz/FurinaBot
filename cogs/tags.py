@@ -26,7 +26,7 @@ from discord.ext import commands
 
 from core import FurinaCog, FurinaCtx, settings, utils
 from core.sql import TagSQL
-from core.views import Container, LayoutView, PaginatedLayoutView, PaginatedView
+from core.views import LayoutView, PaginatedLayoutView, PaginatedView
 
 if TYPE_CHECKING:
     import sqlite3
@@ -68,8 +68,8 @@ class TagCreateLayoutView(LayoutView):
         super().__init__(self.container, timeout=180)
 
     @property
-    def container(self) -> Container:
-        return Container(
+    def container(self) -> ui.Container:
+        return ui.Container(
             self.name_textdisplay,
             ui.Separator(),
             self.content_textdisplay,
@@ -740,7 +740,7 @@ class Tags(FurinaCog):
             f"{info_owner}\nCreated at: {tag.created_at}\nUses: {tag.uses}\n",
             accessory=ui.Thumbnail(avatar),
         )
-        await ctx.reply(view=LayoutView(Container(section)))
+        await ctx.reply(view=LayoutView(ui.Container(section)))
 
     @tag_group.command(name="list")
     async def tag_list_slash(self, ctx: FurinaCtx) -> None:
@@ -766,7 +766,7 @@ class Tags(FurinaCog):
         if not tags:
             await ctx.reply(
                 view=LayoutView(
-                    Container(
+                    ui.Container(
                         ui.TextDisplay(
                             f"{settings.CROSS} This server has no tags"
                         )
@@ -958,3 +958,4 @@ class Tags(FurinaCog):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Tags(bot))
+

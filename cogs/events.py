@@ -22,7 +22,7 @@ from discord import DMChannel, Guild, Interaction, Message, app_commands, ui
 from discord.ext import commands
 
 from core import FurinaCog, FurinaCtx, settings
-from core.views import Container, LayoutView
+from core.views import LayoutView
 
 if TYPE_CHECKING:
     from core import FurinaBot
@@ -61,6 +61,7 @@ class BotEvents(FurinaCog):
         ctx : FurinaCtx
             The invoked context
         """
+        assert ctx.command is not None
         if ctx.guild is None or "jishaku" in ctx.command.qualified_name:
             return
         if len(self.bot.command_cache[ctx.guild.id]) == 10:
@@ -110,6 +111,7 @@ class BotEvents(FurinaCog):
         if interaction.is_user_integration():
             return
 
+        assert interaction.guild is not None
         if len(self.bot.app_command_cache[interaction.guild.id]) == 10:
             self.bot.app_command_cache[interaction.guild.id].pop(0)
 
@@ -151,7 +153,7 @@ class BotEvents(FurinaCog):
             err += f"{settings.CROSS} **{error}**"
         if err:
             await ctx.reply(
-                view=LayoutView(Container(ui.TextDisplay(err))),
+                view=LayoutView(ui.Container(ui.TextDisplay(err))),
                 ephemeral=True,
                 delete_after=60,
             )
@@ -162,3 +164,4 @@ class BotEvents(FurinaCog):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(BotEvents(bot))
+

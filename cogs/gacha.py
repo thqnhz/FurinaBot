@@ -22,7 +22,7 @@ from discord import ui
 from discord.ext import commands
 
 from core import FurinaCog, FurinaCtx
-from core.views import Container, LayoutView
+from core.views import LayoutView
 
 if TYPE_CHECKING:
     from core import FurinaBot
@@ -115,7 +115,7 @@ class Gacha(FurinaCog):
             f"{p_info.abyss_floor}-{p_info.abyss_level} ({p_info.abyss_stars})"
         )
 
-        container = Container(
+        container = ui.Container(
             ui.MediaGallery(discord.MediaGalleryItem(p_info.namecard.full)),
             ui.Separator(),
             ui.Section(
@@ -129,7 +129,7 @@ class Gacha(FurinaCog):
                 ),
                 accessory=ui.Thumbnail(p_info.profile_picture_icon.circle),
             ),
-        ).add_footer()
+        )
         await ctx.reply(view=LayoutView(container))
 
     @gi_group.command(name="set")
@@ -211,3 +211,4 @@ class Gacha(FurinaCog):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Gacha(bot))
+

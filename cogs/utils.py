@@ -30,7 +30,7 @@ from discord.ext import commands
 from discord.ui import Select
 
 from core import FurinaCog, FurinaCtx, settings, utils
-from core.views import Container, LayoutView
+from core.views import LayoutView
 
 if TYPE_CHECKING:
     from core import FurinaBot
@@ -97,7 +97,7 @@ class Utils(FurinaCog):
         }
 
     @staticmethod
-    def list_cog_commands(*, cog: FurinaCog, bot_prefix: str) -> Container:
+    def list_cog_commands(*, cog: FurinaCog, bot_prefix: str) -> ui.Container:
         content: str = f"## {cog.__cog_name__} Commands\n"
         prefix: str = ""
         for command in cog.walk_commands():
@@ -131,7 +131,7 @@ class Utils(FurinaCog):
         if not prefix and not slash:
             content += "This cog has no commands to show"
 
-        return Container(ui.TextDisplay(content))
+        return ui.Container(ui.TextDisplay(content))
 
     @FurinaCog.listener("on_message")
     async def on_mention(self, message: discord.Message) -> None:
@@ -170,7 +170,7 @@ class Utils(FurinaCog):
                 f"- **Bot Latency:** `{bot_latency}`\n"
                 f"- **Database Latency:** `{db_latency}`"
             )
-            container = Container(
+            container = ui.Container(
                 header_section,
                 ui.Separator(),
                 source_section,
@@ -191,12 +191,8 @@ class Utils(FurinaCog):
         Get latencies of bot to Discord, to Lavalink server and to Database.
         """
         bot_latency: float = min(self.bot.latency * 1000, 999.99)
-        # Temporarily disable lavalink ping
-        # lavalink_latency: float = min(
-        #     await self.bot.lavalink.nodes[0].get_rest_latency(), 999.99
-        # )
         db_latency: float = min(await self.db_ping() * 1000, 999.99)
-        container = Container(
+        container = ui.Container(
             ui.TextDisplay("## Pong!"),
             ui.Separator(),
             ui.TextDisplay(
@@ -204,11 +200,10 @@ class Utils(FurinaCog):
                 f"|          | Latency (ms) |\n"
                 f"|----------|--------------|\n"
                 f"| Bot      | {self.latency_ansi(bot_latency)} |\n"
-                # f"| Lavalink | {self.latency_ansi(lavalink_latency)} |\n"
                 f"| Database | {self.latency_ansi(db_latency)} |\n"
                 "```"
             ),
-        ).add_footer()
+        )
         await ctx.reply(view=LayoutView(container))
 
     # TODO: Expand this to some support class
@@ -261,7 +256,7 @@ class Utils(FurinaCog):
         if len(prefix) > 3 or not prefix:
             await ctx.reply(
                 view=LayoutView(
-                    Container(
+                    ui.Container(
                         ui.TextDisplay(f"{settings.CROSS} **Invalid prefix**")
                     )
                 )
@@ -288,7 +283,7 @@ class Utils(FurinaCog):
         prefix = self.bot.prefixes.get(ctx.guild.id) or settings.DEFAULT_PREFIX
         await ctx.reply(
             view=LayoutView(
-                Container(
+                ui.Container(
                     ui.TextDisplay(
                         f"{settings.CHECKMARK} **Prefix set to** `{prefix}`"
                     )
@@ -365,9 +360,9 @@ class Utils(FurinaCog):
                 f"- Use `{prefix}help <command>`",
                 accessory=ui.Thumbnail(self.bot.user.display_avatar.url),
             )
-            container = Container(
+            container = ui.Container(
                 header, ui.Separator(), HelpActionRow(bot=self.bot)
-            ).add_footer()
+            )
             view = LayoutView(container)
             view.message = await ctx.reply(view=view)
             return
@@ -397,7 +392,7 @@ class Utils(FurinaCog):
             syntax = ""
             for param in doc.params:
                 # usage is
-                # command <required> [optional]  # noqa: ERA001
+                # command <required> [optional]
                 optional: bool = param.is_optional
                 symbols = "[]" if optional else "<>"
                 usage += f" {symbols[0]}{param.arg_name}{symbols[1]}"
@@ -409,10 +404,12 @@ class Utils(FurinaCog):
                     f"    - {param.description}\n"
                 )
 
-            container = Container(
-                ui.TextDisplay(f"##  {usage} \n" + doc.short_description),
+            container = ui.Container(
+                ui.TextDisplay(
+                    f"##  {usage} \n" + str(doc.short_description or "")
+                ),
                 ui.Separator(),
-                ui.TextDisplay(doc.long_description),
+                ui.TextDisplay(doc.long_description or ""),
             )
             if syntax:
                 container.add_item(ui.Separator()).add_item(
@@ -437,9 +434,10 @@ class Utils(FurinaCog):
                 """I don't recognize that command/category"""
             )
 
-    @commands.hybrid_command(name="userinfo", aliases=["uinfo", "whois"])
+    @commands.command(name="userinfo", aliases=["uinfo", "whois"])
+    @commands.guild_only()
     async def user_info_command(
-        self, ctx: FurinaCtx, member: Member | None = None
+        self, ctx: FurinaCtx, member: Member = commands.Author
     ) -> None:
         """Get the user's info
 
@@ -451,7 +449,7 @@ class Utils(FurinaCog):
         member : Member, optional
             The member to get info from
         """
-        member = ctx.guild.get_member(member.id if member else ctx.author.id)
+        assert ctx.guild is not None
         header = ui.Section(
             ui.TextDisplay(
                 f"## {member.display_name}"
@@ -462,11 +460,12 @@ class Utils(FurinaCog):
             accessory=ui.Thumbnail(member.display_avatar.url),
         )
         account_created = int(member.created_at.timestamp())
+        assert member.joined_at is not None
         server_joined = int(member.joined_at.timestamp())
         role_list = ", ".join(
             role.mention for role in member.roles if role.name != "@everyone"
         )
-        container = Container(
+        container = ui.Container(
             header,
             ui.Separator(),
             ui.TextDisplay(
@@ -610,3 +609,4 @@ class Utils(FurinaCog):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Utils(bot))
+

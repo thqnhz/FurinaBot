@@ -25,7 +25,7 @@ from discord import Interaction, Message, app_commands, ui
 from discord.ext import commands
 
 from core import FurinaCog, FurinaCtx, settings
-from core.views import Container, LayoutView
+from core.views import LayoutView
 
 if TYPE_CHECKING:
     from core import FurinaBot
@@ -143,7 +143,7 @@ class Fun(FurinaCog):
         )
         await ctx.reply(
             view=LayoutView(
-                Container(
+                ui.Container(
                     fortune_section,
                     ui.TextDisplay(
                         "-# This is just for fun, take it as a grain of salt"
@@ -283,3 +283,4 @@ class Fun(FurinaCog):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Fun(bot))
+

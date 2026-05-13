@@ -40,268 +40,13 @@ from discord import (
 from discord.ext import commands
 
 from core import settings, utils
-from core.views import Container, LayoutView, PaginatedLayoutView, PaginatedView
+from core.views import LayoutView, PaginatedLayoutView, PaginatedView
 
 if TYPE_CHECKING:
     from core import FurinaBot, FurinaCtx
     from core.sql import SQL
 
 logger = logging.getLogger(__name__)
-
-
-class RPSButton(ui.Button):
-    LABEL_TO_NUMBER: ClassVar[dict[str, int]] = {
-        "Rock": -1,
-        "Paper": 0,
-        "Scissor": 1,
-    }
-    LABELS: ClassVar[list[str]] = ["Rock", "Paper", "Scissor"]
-    EMOJIS: ClassVar[list[str]] = ["\u270a", "\u270b", "\u270c"]
-
-    def __init__(self, number: int) -> None:
-        super().__init__(
-            style=ButtonStyle.secondary,
-            label=self.LABELS[number],
-            emoji=self.EMOJIS[number],
-        )
-
-    async def add_player(
-        self, *, view: RPSView, interaction: Interaction
-    ) -> int:
-        """
-        Add the player to the view and update the embed
-
-        Returns
-        -------
-        int
-            - Number of players in the game
-        """
-        assert self.label is not None
-        view.players[interaction.user] = self.LABEL_TO_NUMBER[self.label]
-        view.embed.add_field(
-            name=f"Player {len(view.players)}", value=interaction.user.mention
-        )
-        await interaction.response.edit_message(embed=view.embed, view=view)
-        return len(view.players)
-
-    async def callback(self, interaction: Interaction) -> None:
-        assert self.view is not None
-        view: RPSView = self.view
-
-        if interaction.user in view.players:
-            await interaction.response.send_message(
-                "You can't play with yourself!\n"
-                "-# || Or can you? Hello Michael, Vsauce here||",
-                ephemeral=True,
-            )
-            return
-
-        players_count = await self.add_player(
-            view=view, interaction=interaction
-        )
-        if players_count == 2:
-            winner = view.check_winner()
-            if isinstance(winner, int):
-                view.embed.description = "### Draw!"
-            else:
-                view.embed.description = f"### {winner.mention} WON!"
-            await interaction.edit_original_response(
-                embed=view.embed, view=view
-            )
-
-
-class RPSView(ui.View):
-    def __init__(self) -> None:
-        super().__init__(timeout=300)
-        # A dict to store players and their move
-        self.players: dict[User | Member, int] = {}
-        for i in range(3):
-            self.add_item(RPSButton(i))
-        self.embed = Embed().set_author(name="Rock Paper Scissor")
-        self.message: Message | None
-
-    def check_winner(self) -> User | int:
-        """
-        Check the winner of the game
-
-        Returns
-        -------
-        User | int
-            `User` if there is a winner or 0 if it's a draw
-        """
-        self.disable_buttons()
-        players = list(self.players.keys())
-        moves = list(self.players.values())
-        # Draw
-        if moves[0] == moves[1]:
-            return 0
-        # If the result is 1, player 2 wins, else player 1 wins
-        result = (moves[1] - moves[0]) % 3
-        return players[1].id if result == 1 else players[0].id
-
-    def disable_buttons(self) -> None:
-        """Disable all the buttons in the view"""
-        self.stop()
-        for button in self.children:
-            button.disabled = True  # type: ignore ty[unresolve-attribute]
-
-    async def on_timeout(self) -> None:
-        self.disable_buttons()
-        self.embed.set_footer(
-            text="Timed out due to inactive. You have no enemies"
-        )
-        assert self.message is not None
-        await self.message.edit(embed=self.embed, view=self)
-
-
-class TicTacToeButton(ui.Button["TicTacToe"]):
-    def __init__(self, x: int, y: int) -> None:
-        super().__init__(style=ButtonStyle.secondary, label="\u200b", row=y)
-        self.x = x
-        self.y = y
-
-    async def callback(self, interaction: Interaction) -> None:
-        assert self.view is not None
-        view: TicTacToe = self.view
-        state = view.board[self.y][self.x]
-        if state in (view.X, view.O):
-            return
-
-        if interaction.user not in view.players:
-            await interaction.response.send_message(
-                "You are not in this game", ephemeral=True
-            )
-            return
-
-        if view.current_player == view.X:
-            if interaction.user == view.player_two:
-                await interaction.response.send_message(
-                    "Not your turn yet", ephemeral=True
-                )
-                return
-            if view.player_one is None:
-                view.player_one: User | Member = interaction.user
-                view.embed.add_field(
-                    name="Player 1", value=view.player_one.mention
-                )
-            self.style = ButtonStyle.danger
-            self.label = "X"
-            self.disabled = True
-            view.board[self.y][self.x] = view.X
-            view.current_player = view.O
-            view.embed.set_author(name="O's turn")
-        else:
-            if interaction.user == view.player_one:
-                await interaction.response.send_message(
-                    "Not your turn yet", ephemeral=True
-                )
-                return
-            if view.player_two is None:
-                view.player_two: User | Member = interaction.user
-                view.embed.add_field(
-                    name="Player 2", value=view.player_two.mention
-                )
-            self.style = ButtonStyle.success
-            self.label = "O"
-            self.disabled = True
-            view.board[self.y][self.x] = view.O
-            view.current_player = view.X
-            view.embed.set_author(name="X's turn")
-
-        winner = view.check_board_winner()
-        if winner is not None:
-            assert view.player_one is not None
-            assert view.player_two is not None
-            view.embed.set_author(name="")
-            if winner == view.X:
-                view.embed.description = f"### {view.player_one.mention} Won!"
-            elif winner == view.O:
-                view.embed.description = f"### {view.player_two.mention} Won!"
-            else:
-                view.embed.description = "### Draw!"
-
-            for child in view.children:
-                child.disabled = True
-
-            view.stop()
-
-        await interaction.response.edit_message(embed=view.embed, view=view)
-
-
-class TicTacToe(ui.View):
-    children: list[TicTacToeButton]
-    X: int = -1
-    O: int = 1  # noqa: E741
-    Tie: int = 2
-
-    def __init__(self) -> None:
-        super().__init__(timeout=300)
-        self.current_player = self.X
-        self.board = [
-            [0, 0, 0],
-            [0, 0, 0],
-            [0, 0, 0],
-        ]
-        self.player_one: User | None = None
-        self.player_two: User | None = None
-        self.embed: Embed = Embed().set_author(name="Tic Tac Toe")
-        self.message: Message | None
-
-        for x in range(3):
-            for y in range(3):
-                self.add_item(TicTacToeButton(x, y))
-
-    @property
-    def players(self) -> tuple[User, User]:
-        assert self.player_one is not None
-        assert self.player_two is not None
-        return self.player_one, self.player_two
-
-    def check_board_winner(self) -> int | None:
-        # Horizontal line
-        for across in self.board:
-            value = sum(across)
-            if value == 3:
-                return self.O
-            if value == -3:
-                return self.X
-
-        # Vertical line
-        for line in range(3):
-            value = (
-                self.board[0][line] + self.board[1][line] + self.board[2][line]
-            )
-            if value == 3:
-                return self.O
-            if value == -3:
-                return self.X
-
-        # Diagonal
-        diag = self.board[0][2] + self.board[1][1] + self.board[2][0]
-        if diag == 3:
-            return self.O
-        if diag == -3:
-            return self.X
-
-        diag = self.board[0][0] + self.board[1][1] + self.board[2][2]
-        if diag == 3:
-            return self.O
-        if diag == -3:
-            return self.X
-
-        # Draw
-        if all(i != 0 for row in self.board for i in row):
-            return self.Tie
-
-        return None
-
-    async def on_timeout(self) -> None:
-        for child in self.children:
-            child.disabled = True
-
-        self.embed.set_footer(text="Timed out")
-        assert self.message is not None
-        await self.message.edit(embed=self.embed, view=self)
 
 
 class WordleLetterStatus(IntEnum):
@@ -344,13 +89,11 @@ class WordleABC(LayoutView):
         super().__init__(self.container, timeout=600)
 
     @property
-    def container(self) -> Container:
-        return Container(
+    def container(self) -> ui.Container:
+        return ui.Container(
             self.header,
             ui.Separator(),
             self.keyboard_section,
-            ui.Separator(),
-            ui.TextDisplay("-# Coded by ThanhZ | v0.4.0-beta"),
         )
 
     @property
@@ -543,8 +286,8 @@ class WordleView(WordleABC):
         )
 
     @property
-    def container(self) -> Container:
-        container = Container(
+    def container(self) -> ui.Container:
+        container = ui.Container(
             self.header,
             self.guess_display,
         )
@@ -676,8 +419,8 @@ class Letterle(WordleABC):
         )
 
     @property
-    def container(self) -> Container:
-        container = Container(
+    def container(self) -> ui.Container:
+        container = ui.Container(
             self.header,
             ui.Separator(),
             *[
@@ -926,20 +669,6 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         await self.__update_wordle_emojis()
         return
 
-    @commands.hybrid_command(name="tictactoe")
-    @app_commands.allowed_installs(guilds=True, users=True)
-    async def tic_tac_toe(self, ctx: FurinaCtx) -> None:
-        """Tic Tac Toe minigame"""
-        view = TicTacToe()
-        view.message = await ctx.reply(embed=view.embed, view=view)
-
-    @commands.hybrid_command(name="rockpaperscissor")
-    @app_commands.allowed_installs(guilds=True, users=True)
-    async def rps_command(self, ctx: FurinaCtx) -> None:
-        """Rock Paper Scissors minigame"""
-        view = RPSView()
-        view.message = await ctx.reply(embed=view.embed, view=view)
-
     @commands.hybrid_command(name="wordle")
     @app_commands.allowed_installs(guilds=True, users=True)
     async def wordle(
@@ -1039,7 +768,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
                 sorted_by_minigame[minigame] = []
             sorted_by_minigame[minigame].append(user_stats)
         for minigame, user_stats_list in sorted_by_minigame.items():
-            embed = self.bot.embed
+            embed = discord.Embed()
             embed.title = minigame.capitalize()
             embed.description = ""
             for i, user_stats in enumerate(user_stats_list, 1):
@@ -1049,7 +778,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
                 )
             embeds.append(embed)
         if not embeds:
-            embeds = [self.bot.embed]
+            embeds = [discord.Embed()]
             embeds[0].title = "No Game Records"
         view = PaginatedView(timeout=180, embeds=embeds)
         await interaction.followup.send(embed=view.embeds[0], view=view)
@@ -1087,7 +816,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
             """,
             user.id,
         )
-        embed = self.bot.embed
+        embed = discord.Embed()
         embed.title = "Minigame Stats"
         embed.description = f"User: {user.mention}"
         for row in rows:
@@ -1170,7 +899,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
             """,
             minigame,
         )
-        embed = self.bot.embed
+        embed = discord.Embed()
         embed.title = f"{minigame.capitalize()} Minigame Stats"
         top_players = ""
         for index, row in enumerate(rows_top, 1):
@@ -1197,3 +926,4 @@ class Minigames(commands.GroupCog, group_name="minigame"):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Minigames(bot))
+
