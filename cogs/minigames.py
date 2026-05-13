@@ -926,4 +926,3 @@ class Minigames(commands.GroupCog, group_name="minigame"):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Minigames(bot))
-

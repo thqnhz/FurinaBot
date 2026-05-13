@@ -35,4 +35,3 @@ WORDNIK_API = os.getenv("WORDNIK_API")
 # Fun Cog
 FORTUNE_KEY = int(os.getenv("FORTUNE_KEY", "1234"))
 FORTUNE_YAPPING_KEY = int(os.getenv("FORTUNE_YAPPING_KEY", "9876"))
-

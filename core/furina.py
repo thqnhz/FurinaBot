@@ -30,7 +30,7 @@ from discord.ext.commands import errors, when_mentioned_or
 from cogs import EXTENSIONS
 from core import settings
 from core.sql import SQL
-from core.views import Container, LayoutView
+from core.views import LayoutView
 
 if typing.TYPE_CHECKING:
     from datetime import datetime
@@ -157,7 +157,7 @@ class FurinaBot(commands.Bot):
             [(guild.id,) for guild in self.guilds],
         )
         self._startup: datetime = utils.utcnow()
-        view = LayoutView(Container(ui.TextDisplay("### BOT IS READY!")))
+        view = LayoutView(ui.Container(ui.TextDisplay("### BOT IS READY!")))
         webhook = discord.Webhook.from_url(settings.DEBUG_WEBHOOK, client=self)
         message = await webhook.send(
             view=view,
@@ -227,4 +227,3 @@ class FurinaCog(MetaCog, commands.Cog):
 
 class FurinaGroupCog(MetaCog, commands.GroupCog):
     """Base class for all group cogs"""
-

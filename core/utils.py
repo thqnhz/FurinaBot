@@ -28,7 +28,7 @@ from discord import ButtonStyle, ui
 from discord.utils import *  # type: ignore[wildcardImportFromLibrary]
 
 from core.settings import CROSS
-from core.views import Container, PaginatedLayoutView
+from core.views import PaginatedLayoutView
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
@@ -259,7 +259,7 @@ async def call_urban(cs: ClientSession, word: str) -> PaginatedLayoutView:
     if status == 404:
         return PaginatedLayoutView(
             containers=[
-                Container(ui.TextDisplay(f"### {CROSS} data['message']"))
+                ui.Container(ui.TextDisplay(f"### {CROSS} data['message']"))
             ]
         )
     containers = []
@@ -279,4 +279,3 @@ async def call_urban(cs: ClientSession, word: str) -> PaginatedLayoutView:
         )
         containers.append(container)
     return PaginatedLayoutView(containers=containers)
-

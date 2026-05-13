@@ -150,18 +150,21 @@ class BotEvents(FurinaCog):
             {settings.CROSS} **Missing required argument:** `{error.param.name}`
             """
         else:
-            err += f"{settings.CROSS} **{error}**"
+            err += f"{settings.CROSS} **{error}**\n"
+            tb = "".join(
+                traceback.format_exception(
+                    type(error), error, error.__traceback__
+                )
+            )
+            err += f"```py\n{tb}\n```"
         if err:
             await ctx.reply(
                 view=LayoutView(ui.Container(ui.TextDisplay(err))),
                 ephemeral=True,
                 delete_after=60,
             )
-
-        logger.exception(error)
-        traceback.print_exc()
+        logger.error(tb)
 
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(BotEvents(bot))
-

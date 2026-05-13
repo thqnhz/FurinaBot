@@ -19,4 +19,3 @@ from .paginated import (
     PaginatedLayoutView as PaginatedLayoutView,
     PaginatedView as PaginatedView,
 )
-

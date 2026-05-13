@@ -43,9 +43,6 @@ class Gacha(FurinaCog):
         super().__init__(bot)
         self.gi = enka.GenshinClient()
         self.hsr = enka.HSRClient()
-        self.embed = self.embed.set_footer(
-            text="Coded by ThanhZ | Powered by Enka Network"
-        )
 
     async def cog_load(self) -> None:
         await self.gi.start()
@@ -174,7 +171,7 @@ class Gacha(FurinaCog):
             response = await api.fetch_showcase(uid)
             p_info = response.player
             p_stats = p_info.stats
-        embed = self.embed
+        embed = discord.Embed()
         embed.title = f"{p_info.nickname}"
         embed.set_author(name=uid, icon_url=p_info.icon)
         embed.description = (
@@ -211,4 +208,3 @@ class Gacha(FurinaCog):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Gacha(bot))
-

@@ -18,6 +18,7 @@ import datetime
 import inspect
 import io
 import re
+from itertools import groupby
 from time import perf_counter
 from typing import TYPE_CHECKING
 
@@ -540,7 +541,7 @@ class Utils(FurinaCog):
                 await ctx.reply("Something went wrong")
                 return
             content: dict = await response.json()
-        container = Container(
+        container = ui.Container(
             ui.TextDisplay(
                 f"## {content['word']}\n"
                 f"> {content['definitions'][0]['text']}\n"
@@ -562,7 +563,8 @@ class Utils(FurinaCog):
         - Number of slash commands have been completed.
         - Most recent 10 slash commands.
         """
-        container = Container(
+        assert self.bot.user is not None
+        container = ui.Container(
             ui.TextDisplay(f"## {self.bot.user.display_name} Stats"),
             ui.Separator(),
             ui.TextDisplay(
@@ -571,21 +573,33 @@ class Utils(FurinaCog):
             ),
             ui.Separator(),
         )
+        assert ctx.guild is not None
         guild_id = ctx.guild.id
-        prefix_cmds = ""
         if guild_id in self.bot.command_cache:
-            prefix_cmds = self.bot.command_cache[guild_id]
+            prefix_cmds: list[str] = self.bot.command_cache[guild_id]
+        prefix_stats = ""
         if prefix_cmds:
-            prefix_cmds = "- " + "\n- ".join(prefix_cmds)
+            for cmd, group in groupby(prefix_cmds):
+                prefix_stats += f"- {cmd}"
+                counter = len(list(group))
+                if counter > 1:
+                    prefix_stats += f" (x{counter})"
+                prefix_stats += "\n"
         else:
-            prefix_cmds = "No prefix commands history from this server"
+            prefix_stats = "No prefix commands history from this server\n"
         app_cmds = ""
         if guild_id in self.bot.app_command_cache:
-            app_cmds = self.bot.app_command_cache[guild_id]
+            app_cmds: list[str] = self.bot.app_command_cache[guild_id]
+        app_stats = ""
         if app_cmds:
-            app_cmds = "- " + "\n- ".join(app_cmds)
+            for cmd, group in groupby(app_cmds):
+                app_stats += f"- {cmd}"
+                counter = len(list(group))
+                if counter > 1:
+                    app_stats += f" (x{counter})"
+                app_stats += "\n"
         else:
-            app_cmds = "No app commands history from this server"
+            app_stats = "No app commands history from this server\n"
         total_prefix = await self.pool.fetchval(
             """SELECT COUNT(*) FROM prefix_commands"""
         )
@@ -595,12 +609,10 @@ class Utils(FurinaCog):
         container.add_item(
             ui.TextDisplay(
                 "### Most recent prefix commands\n"
-                + prefix_cmds
-                + "\n"
+                + prefix_stats
                 + f"### Total prefix commands completed: {total_prefix}\n"
                 + "### Most recent slash commands\n"
-                + app_cmds
-                + "\n"
+                + app_stats
                 + f"### Total slash commands completed: {total_slash}\n"
             )
         )
@@ -609,4 +621,3 @@ class Utils(FurinaCog):
 
 async def setup(bot: FurinaBot) -> None:
     await bot.add_cog(Utils(bot))
-
