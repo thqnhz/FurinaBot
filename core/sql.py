@@ -105,45 +105,6 @@ CUSTOM_PREFIX_SQL = """
     )
 """
 
-# Music Cog
-MUSIC_CHANNEL = """
-    CREATE TABLE IF NOT EXISTS music_channel
-    (
-        guild_id INTEGER NOT NULL,
-        channel_id INTEGER NOT NULL PRIMARY KEY,
-        FOREIGN KEY (guild_id) REFERENCES guilds (id)
-    )
-"""
-
-# Tags Cog
-TAGS_SQL = """
-    CREATE TABLE IF NOT EXISTS tags
-    (
-        guild_id INTEGER NOT NULL,
-        owner INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        content TEXT NOT NULL,
-        created_at INTEGER NOT NULL,
-        uses INTEGER DEFAULT 0,
-        PRIMARY KEY (guild_id, name)
-    )
-"""
-TAG_ALIASES_SQL = """
-    CREATE TABLE IF NOT EXISTS tag_aliases -- for tag aliases and look up table
-    (
-        guild_id INTEGER NOT NULL,
-        owner INTEGER NOT NULL, -- owner of the alias, not the tag owner
-        name TEXT NOT NULL, -- original tag name
-        alias TEXT NOT NULL,
-        created_at INTEGER NOT NULL,
-        uses INTEGER DEFAULT 0,
-        PRIMARY KEY (guild_id, name, alias),
-        FOREIGN KEY (guild_id, name)
-        REFERENCES tags (guild_id, name)
-        ON DELETE CASCADE
-    )
-"""
-
 
 class SQL:
     """A wrapper to a wrapper of asqlite"""
@@ -160,7 +121,6 @@ class SQL:
             HSR_UID_SQL,
             SINGLEPLAYER_GAMES_SQL,
             TWOPLAYER_GAMES_SQL,
-            MUSIC_CHANNEL,
         ]
 
     async def create_tables(self) -> None:
@@ -194,9 +154,40 @@ class SQL:
             return None if not row else row[0]
 
 
+# Tags Cog
+TAGS_SQL = """
+    CREATE TABLE IF NOT EXISTS tags
+    (
+        guild_id INTEGER NOT NULL,
+        owner INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        uses INTEGER DEFAULT 0,
+        PRIMARY KEY (guild_id, name)
+    )
+"""
+TAG_ALIASES_SQL = """
+    CREATE TABLE IF NOT EXISTS tag_aliases -- for tag aliases and look up table
+    (
+        guild_id INTEGER NOT NULL,
+        owner INTEGER NOT NULL, -- owner of the alias, not the tag owner
+        name TEXT NOT NULL, -- original tag name
+        alias TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        uses INTEGER DEFAULT 0,
+        PRIMARY KEY (guild_id, name, alias),
+        FOREIGN KEY (guild_id, name)
+        REFERENCES tags (guild_id, name)
+        ON DELETE CASCADE
+    )
+"""
+
+
 class TagSQL(SQL):
     """A wrapper to a wrapper of asqlite for tags"""
 
     def __init__(self, pool: asqlite.Pool) -> None:
         self.pool = pool
         self.create_table_queries = [TAGS_SQL, TAG_ALIASES_SQL]
+

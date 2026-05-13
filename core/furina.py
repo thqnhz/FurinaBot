@@ -23,7 +23,6 @@ from platform import python_version
 
 import asqlite
 import discord
-import lavalink
 from discord import app_commands, ui, utils
 from discord.ext import commands
 from discord.ext.commands import errors, when_mentioned_or
@@ -65,11 +64,6 @@ class FurinaCtx(commands.Context):
         """Shortcut for `FurinaBot.cs`"""
         return self.bot.cs
 
-    @property
-    def embed(self) -> discord.Embed:
-        """Shortcut for FurinaBot.embed"""
-        return self.bot.embed
-
 
 class FurinaBot(commands.Bot):
     r"""Customized `commands.Bot` class
@@ -97,7 +91,6 @@ class FurinaBot(commands.Bot):
             intents=discord.Intents(
                 guilds=True,
                 members=True,
-                voice_states=True,
                 messages=True,
                 message_content=True,
             ),
@@ -110,17 +103,13 @@ class FurinaBot(commands.Bot):
             ),
         )
         self.owner_id = settings.OWNER_ID
-        self._lavalink = None
         self.cs = client_session
         # custom prefixes, in `{guild_id: prefix}` format
         self.prefixes: dict[int, str] = {}
+
+        # cache the latest 10 commands for some statistics
         self.command_cache = defaultdict(list)
         self.app_command_cache = defaultdict(list)
-
-    @property
-    def embed(self) -> discord.Embed:
-        """Embed with default footer"""
-        return discord.Embed().set_footer(text="Coded by ThanhZ")
 
     @property
     def uptime(self) -> str:
@@ -130,19 +119,6 @@ class FurinaBot(commands.Bot):
             f"`{uptime_td.days}d {uptime_td.seconds // 3600}h"
             f" {(uptime_td.seconds // 60) % 60}m`"
         )
-
-    @property
-    def lavalink(self) -> lavalink.Client:  # type: ignore[unresolved-attribute] -- I don't know why ty flag this as an error
-        if not self._lavalink:
-            assert self.user is not None
-            self._lavalink = lavalink.Client(self.user.id)
-            self._lavalink.add_node(
-                host=settings.LAVA_URL,
-                region="us",
-                port=1710,
-                password=settings.LAVA_PW,
-            )
-        return self._lavalink
 
     async def get_context(
         self,
@@ -158,8 +134,7 @@ class FurinaBot(commands.Bot):
         Parameters
         ----------
         _ : FurinaBot
-            The bot instance,
-            but since this is a method in the bot class,
+            The bot instance, but since this is a method in the bot class,
             we already have `self` as bot
         message : discord.Message
             The message to get the prefix
@@ -196,10 +171,10 @@ class FurinaBot(commands.Bot):
 
     async def setup_hook(self) -> None:
         logger.info("discord.py v%s", discord.__version__)
-        logger.info("Lavalink.py v%s", lavalink.__version__)
         logger.info("Running Python %s", python_version())
         logger.info("Fetching bot emojis...")
         self.app_emojis = await self.fetch_application_emojis()
+        logger.info("Initializing database...")
         db_path = Path() / "db"
         db_path.mkdir(exist_ok=True)
         self.pool = SQL(await asqlite.create_pool(str(db_path / "furina.db")))
@@ -237,10 +212,10 @@ class MetaCog:
     """Meta class for the bot cogs"""
 
     def __init__(self, bot: FurinaBot) -> None:
+        self.__cog_name__: str
         self.bot = bot
         self.cs: aiohttp.ClientSession = bot.cs
         self.pool: SQL = bot.pool
-        self.embed: discord.Embed = bot.embed
 
     async def cog_load(self) -> None:
         logger.info("Cog %s has been loaded", self.__cog_name__)
@@ -252,3 +227,4 @@ class FurinaCog(MetaCog, commands.Cog):
 
 class FurinaGroupCog(MetaCog, commands.GroupCog):
     """Base class for all group cogs"""
+

@@ -25,24 +25,9 @@ TOKEN = os.getenv("BOT_TOKEN", "")
 DEBUG_WEBHOOK = os.getenv("DEBUG_WEBHOOK", "")
 OWNER_ID = 596886610214125598
 
-# GIF
-LOADING_GIF = "https://cdn.discordapp.com/emojis/1187957747724079144.gif?size=64&name=loading&quality=lossless"
-PLAYING_GIF = "https://cdn.discordapp.com/emojis/1174925797082017923.gif?size=64&name=playing&quality=lossless"
-
-# Emojis
-SKIP_EMOJI = "https://cdn.discordapp.com/emojis/1174966018280529931.png?size=64&name=skip&quality=lossless"
-
 # Emotes
 CHECKMARK = "<a:check:1238796460569657375>"
 CROSS = "<a:crossout:1358833476979261702>"
-LOADING_EMOJI = "<a:loading:1187957747724079144>"
-PLAYING_EMOJI = "<a:playing:1174925797082017923>"
-
-# Music Cog
-LAVA_URL = os.getenv("LAVA_URL", "localhost")
-LAVA_PW = os.getenv("LAVA_PW", "thanhz")
-BACKUP_LL = os.getenv("BACKUP_LL")
-BACKUP_LL_PW = os.getenv("BACKUP_LL_PW")
 
 # Utils Cog
 WORDNIK_API = os.getenv("WORDNIK_API")
@@ -50,3 +35,4 @@ WORDNIK_API = os.getenv("WORDNIK_API")
 # Fun Cog
 FORTUNE_KEY = int(os.getenv("FORTUNE_KEY", "1234"))
 FORTUNE_YAPPING_KEY = int(os.getenv("FORTUNE_YAPPING_KEY", "9876"))
+

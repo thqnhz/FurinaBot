@@ -169,6 +169,7 @@ async def call_dictionary(word: str, cs: ClientSession) -> PaginatedLayoutView:
     containers: list[Container] = []
     dictionary_link = f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}"
     status, data = await request(cs, dictionary_link)
+    assert type(data) is dict
     if status == 404:
         return PaginatedLayoutView(
             containers=[
@@ -278,3 +279,4 @@ async def call_urban(cs: ClientSession, word: str) -> PaginatedLayoutView:
         )
         containers.append(container)
     return PaginatedLayoutView(containers=containers)
+
