@@ -15,11 +15,10 @@ limitations under the License.
 from __future__ import annotations
 
 import asyncio
-import sys
 
 from aiohttp import ClientSession
 
-from core import FurinaBot, settings, utils
+from core import FurinaBot, utils
 
 
 async def main() -> None:
