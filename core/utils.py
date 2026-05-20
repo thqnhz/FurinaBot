@@ -166,14 +166,13 @@ async def call_dictionary(word: str, cs: ClientSession) -> PaginatedLayoutView:
     ~core.views.PaginatedLayoutView
         The paginated view with embeds of the word's definitions.
     """
-    containers: list[Container] = []
+    containers: list[ui.Container] = []
     dictionary_link = f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}"
     status, data = await request(cs, dictionary_link)
-    assert type(data) is dict
     if status == 404:
         return PaginatedLayoutView(
             containers=[
-                Container(
+                ui.Container(
                     ui.TextDisplay(
                         f"### {CROSS} {data['title']}\n{data['message']}"
                     )
@@ -205,7 +204,7 @@ async def call_dictionary(word: str, cs: ClientSession) -> PaginatedLayoutView:
                 else:
                     break
 
-            container = Container(
+            container = ui.Container(
                 ui.TextDisplay(
                     f"## {word.capitalize()} ({conjugation})\n"
                     f"### Pronunciations:\n{pronunciations[i] or 'N/A'}\n"
@@ -265,7 +264,7 @@ async def call_urban(cs: ClientSession, word: str) -> PaginatedLayoutView:
     containers = []
     definitions = data["list"]
     for definition in definitions:
-        container = Container(
+        container = ui.Container(
             ui.Section(
                 f"## {definition['word']}\n{definition['definition']}\n",
                 accessory=ui.Button(
