@@ -653,7 +653,7 @@ class Tags(FurinaCog):
         return await self.__force_delete_tag(guild_id=guild_id, name=name)
 
     @tag_group.command(name="alias")
-    async def tag_alias(self, ctx: FurinaCtx, alias: str, *, name: str) -> None:
+    async def tag_alias(self, ctx: FurinaCtx, alias: str, *, original: str) -> None:
         """Create a tag alias
 
         A tag alias points to the original tag.
@@ -664,8 +664,8 @@ class Tags(FurinaCog):
         ----------
         alias : str
             Name of the alias
-        name : str
-            Name of the tag
+        original : str
+            Name of the original tag
         """
         assert ctx.guild is not None
         check_alias_exist = await self.__check_tag_name(
@@ -674,9 +674,9 @@ class Tags(FurinaCog):
         if check_alias_exist:
             await ctx.send(f"Tag `{alias}` already exists")
             return
-        check_name_exist = await self.__check_tag_name(ctx.guild.id, name=name)
+        check_name_exist = await self.__check_tag_name(ctx.guild.id, name=original)
         if not check_name_exist:
-            await ctx.send(f"Cannot create alias for non-existent tag `{name}`")
+            await ctx.send(f"Cannot create alias for non-existent tag `{original}`")
             return
         await self.pool.execute(
             """
@@ -685,12 +685,12 @@ class Tags(FurinaCog):
             """,
             ctx.guild.id,
             ctx.author.id,
-            name,
+            original,
             alias,
             str(utils.utcnow()),
         )
         await ctx.reply(
-            f"Successfully created tag alias `{alias}` for `{name}`"
+            f"Successfully created tag alias `{alias}` for `{original}`"
         )
 
     @tag_group.command(name="info")
@@ -855,7 +855,7 @@ class Tags(FurinaCog):
             """
             UPDATE tags
             SET owner = ?
-            WHERE guild_id = ? AND name = ? 
+            WHERE guild_id = ? AND name = ?
             """,
             new_owner,
             guild_id,
@@ -869,7 +869,7 @@ class Tags(FurinaCog):
             """
             UPDATE tag_aliases
             SET owner = ?
-            WHERE guild_id = ? AND alias = ? 
+            WHERE guild_id = ? AND alias = ?
             """,
             new_owner,
             guild_id,
