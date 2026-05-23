@@ -653,7 +653,9 @@ class Tags(FurinaCog):
         return await self.__force_delete_tag(guild_id=guild_id, name=name)
 
     @tag_group.command(name="alias")
-    async def tag_alias(self, ctx: FurinaCtx, alias: str, *, original: str) -> None:
+    async def tag_alias(
+        self, ctx: FurinaCtx, alias: str, *, original: str
+    ) -> None:
         """Create a tag alias
 
         A tag alias points to the original tag.
@@ -674,9 +676,13 @@ class Tags(FurinaCog):
         if check_alias_exist:
             await ctx.send(f"Tag `{alias}` already exists")
             return
-        check_name_exist = await self.__check_tag_name(ctx.guild.id, name=original)
+        check_name_exist = await self.__check_tag_name(
+            ctx.guild.id, name=original
+        )
         if not check_name_exist:
-            await ctx.send(f"Cannot create alias for non-existent tag `{original}`")
+            await ctx.send(
+                f"Cannot create alias for non-existent tag `{original}`"
+            )
             return
         await self.pool.execute(
             """
