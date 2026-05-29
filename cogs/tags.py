@@ -749,43 +749,94 @@ class Tags(FurinaCog):
         await ctx.reply(view=LayoutView(ui.Container(section)))
 
     @tag_group.command(name="list")
-    async def tag_list_slash(self, ctx: FurinaCtx) -> None:
-        """List all tags in the server"""
-        return await self.__tag_list(ctx)
+    async def tag_list_slash(
+        self, ctx: FurinaCtx, *, author: discord.Member | None = None
+    ) -> None:
+        """List server tags
+
+        If author is specified. List only the tags from that member.
+
+        Parameters
+        ----------
+        author : Member, optional
+            The specified author
+        """
+        return await self.__tag_list(ctx, author)
 
     @commands.command(name="tags")
-    async def tag_list_prefix(self, ctx: FurinaCtx) -> None:
-        """List all tags in the server"""
-        return await self.__tag_list(ctx)
+    async def tag_list_prefix(
+        self, ctx: FurinaCtx, *, author: discord.Member | None = None
+    ) -> None:
+        """List server tags
 
-    async def __tag_list(self, ctx: FurinaCtx) -> None:
+        If author is specified. List only the tags from that member.
+
+        Parameters
+        ----------
+        author : Member, optional
+            The specified author
+        """
+        return await self.__tag_list(ctx, author)
+
+    async def __tag_list(
+        self, ctx: FurinaCtx, author: discord.Member | None
+    ) -> None:
         """List all tags in the server"""
         assert ctx.guild is not None
-        tags = await self.pool.fetchall(
-            """
-            SELECT name
-            FROM tags
-            WHERE guild_id = ?
-            """,
-            ctx.guild.id,
-        )
-        if not tags:
-            await ctx.reply(
-                view=LayoutView(
-                    ui.Container(
-                        ui.TextDisplay(
-                            f"{settings.CROSS} This server has no tags"
+        if author is None:
+            tags = await self.pool.fetchall(
+                """
+                SELECT name
+                FROM tags
+                WHERE guild_id = ?
+                """,
+                ctx.guild.id,
+            )
+            if not tags:
+                await ctx.reply(
+                    view=LayoutView(
+                        ui.Container(
+                            ui.TextDisplay(
+                                f"{settings.CROSS} This server has no tags"
+                            )
                         )
                     )
                 )
+                return
+        else:
+            tags = await self.pool.fetchall(
+                """
+                SELECT name
+                FROM tags
+                WHERE guild_id = ?
+                AND owner = ?
+                """,
+                ctx.guild.id,
+                author.id,
             )
-            return
+            if not tags:
+                await ctx.reply(
+                    view=LayoutView(
+                        ui.Container(
+                            ui.TextDisplay(
+                                f"{settings.CROSS} {author} has no tags"
+                            )
+                        )
+                    )
+                )
+                return
         containers = []
+        header = (
+            f"### Tags for server: {ctx.guild.name}"
+            if author is None
+            else f"### {author}'s tags"
+        )
         for i in range(0, len(tags), 10):
             container = ui.Container(
                 ui.TextDisplay(
-                    f"### Tags for server: {ctx.guild.name}\n"
-                    "- " + "\n- ".join(tag["name"] for tag in tags[i : i + 10])
+                    header
+                    + "\n- "
+                    + "\n- ".join(tag["name"] for tag in tags[i : i + 10])
                 )
             )
             containers.append(container)
