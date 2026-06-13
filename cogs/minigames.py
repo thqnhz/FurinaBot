@@ -104,9 +104,7 @@ class WordleABC(LayoutView):
             if len(self.word) == 1
             else f"## WORDLE ({len(self.word)} LETTERS)"
         )
-        status = (
-            ("(WIN)" if self._is_winning else "(LOST)") if self.is_over else ""
-        )
+        status = ("(WIN)" if self._is_winning else "(LOST)") if self.is_over else ""
         return ui.Section(
             ui.TextDisplay(
                 f"{game}\n"
@@ -251,10 +249,7 @@ class WordleView(WordleABC):
         owner: User | Member,
         solo: bool,
         pool: SQL,
-        word_db: asqlite.Pool,
     ) -> None:
-        self.word_db = word_db
-
         self.guesses: dict[str, str] = {}
         self.helped_guess: WordleHelpGuessSelect = WordleHelpGuessSelect()
 
@@ -294,14 +289,10 @@ class WordleView(WordleABC):
         )
         if self.is_over:
             container.add_item(self.over_section)
-            container.accent_color = (
-                Color.green() if self._is_winning else Color.red()
-            )
+            container.accent_color = Color.green() if self._is_winning else Color.red()
         container.add_item(ui.Separator()).add_item(self.keyboard_section)
         if self.helped_guess.options:
-            container.add_item(ui.Separator()).add_item(
-                ui.ActionRow(self.helped_guess)
-            )
+            container.add_item(ui.Separator()).add_item(ui.ActionRow(self.helped_guess))
         return container
 
     def update_game_status(self, guess: str) -> None:
@@ -358,12 +349,12 @@ class WordleView(WordleABC):
         """
         if guess in self.history:
             return True
-        async with self.word_db.acquire() as conn:
-            result = await conn.fetchone(
-                "SELECT COUNT(*) FROM valid_word WHERE word = ? LIMIT 1", guess
-            )
-            if result[0] == 1:
-                return True
+        result = await self.pool.fetchval(
+            "SELECT COUNT(*) FROM valid_word WHERE word = ? LIMIT 1", guess
+        )
+        assert result is not None
+        if result == 1:
+            return True
         return False
 
 
@@ -430,9 +421,7 @@ class Letterle(WordleABC):
             ],
         )
         if self.is_over:
-            container.accent_color = (
-                Color.green() if self._is_winning else Color.red()
-            )
+            container.accent_color = Color.green() if self._is_winning else Color.red()
         return container
 
 
@@ -506,9 +495,7 @@ class LookUpButton(ui.Button):
     async def callback(self, interaction: Interaction[FurinaBot]) -> None:
         await interaction.response.defer(thinking=True, ephemeral=True)
         if not self.dict:
-            self.dict = await utils.call_dictionary(
-                self.word, interaction.client.cs
-            )
+            self.dict = await utils.call_dictionary(self.word, interaction.client.cs)
         await interaction.followup.send(view=self.dict)
 
 
@@ -559,9 +546,6 @@ class Minigames(commands.GroupCog, group_name="minigame"):
 
     async def cog_load(self) -> None:
         self.pool = self.bot.pool
-        self.wordle_db = await asqlite.create_pool(
-            str(pathlib.Path() / "db" / "wordle.db")
-        )
         await self.__update_wordle_emojis()
         await self.__insert_valid_guesses()
         logger.info("Cog %s has been loaded", self.__cog_name__)
@@ -617,9 +601,9 @@ class Minigames(commands.GroupCog, group_name="minigame"):
             name = emoji.name
             id_ = emoji.id
             if "_BLACK" in name:
-                Minigames.WORDLE_EMOJIS[name[0]][
-                    WordleLetterStatus.INCORRECT
-                ] = f"<:{name}:{id_}>"
+                Minigames.WORDLE_EMOJIS[name[0]][WordleLetterStatus.INCORRECT] = (
+                    f"<:{name}:{id_}>"
+                )
             elif "_GREEN" in name:
                 Minigames.WORDLE_EMOJIS[name[0]][WordleLetterStatus.CORRECT] = (
                     f"<:{name}:{id_}>"
@@ -629,9 +613,9 @@ class Minigames(commands.GroupCog, group_name="minigame"):
                     f"<:{name}:{id_}>"
                 )
             elif "_YELLOW" in name:
-                Minigames.WORDLE_EMOJIS[name[0]][
-                    WordleLetterStatus.WRONG_POS
-                ] = f"<:{name}:{id_}>"
+                Minigames.WORDLE_EMOJIS[name[0]][WordleLetterStatus.WRONG_POS] = (
+                    f"<:{name}:{id_}>"
+                )
 
         for letter in self.WORDLE_EMOJIS:
             if len(self.WORDLE_EMOJIS[letter]) != 4:
@@ -652,18 +636,14 @@ class Minigames(commands.GroupCog, group_name="minigame"):
             percentage = index / total
             filled = int(bar_width * percentage)
             bar = "#" * filled + "-" * (bar_width - filled)
-            sys.stdout.write(
-                f"\r[{bar}] {index}/{total} ({percentage * 100:.2f}%)"
-            )
+            sys.stdout.write(f"\r[{bar}] {index}/{total} ({percentage * 100:.2f}%)")
             sys.stdout.flush()
             if index == total:
                 sys.stdout.write("\n")
                 sys.stdout.flush()
             file = filename.read_bytes()
             try:
-                await self.bot.create_application_emoji(
-                    name=filename.stem, image=file
-                )
+                await self.bot.create_application_emoji(name=filename.stem, image=file)
             except discord.HTTPException:
                 # This is when the emoji failed to upload
                 # because the emoji name already exists.
@@ -709,7 +689,6 @@ class Minigames(commands.GroupCog, group_name="minigame"):
             owner=ctx.author,
             solo=solo,
             pool=self.pool,
-            word_db=self.wordle_db,
         )
         view.message = await ctx.send(view=view)
 
@@ -724,9 +703,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         await ctx.defer()
         rng = np.random.default_rng()
         letter = Letterle.ALPHABET[rng.integers(0, 26)]
-        view = Letterle(
-            bot=self.bot, letter=letter, owner=ctx.author, pool=self.pool
-        )
+        view = Letterle(bot=self.bot, letter=letter, owner=ctx.author, pool=self.pool)
         view.message = await ctx.send(view=view)
 
     # TODO: Remember to implement this into the minigame commands again
@@ -778,7 +755,9 @@ class Minigames(commands.GroupCog, group_name="minigame"):
             embed.title = minigame.capitalize()
             embed.description = ""
             for i, user_stats in enumerate(user_stats_list, 1):
-                embed.description += f"{i}. <@{user_stats['user_id']}>: {user_stats['wins']} wins\n"
+                embed.description += (
+                    f"{i}. <@{user_stats['user_id']}>: {user_stats['wins']} wins\n"
+                )
             embeds.append(embed)
         if not embeds:
             embeds = [discord.Embed()]
@@ -845,9 +824,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         """View letterle minigame stats"""
         await self.get_minigame_stats(interaction, "letterle")
 
-    async def get_minigame_stats(
-        self, interaction: Interaction, minigame: str
-    ) -> None:
+    async def get_minigame_stats(self, interaction: Interaction, minigame: str) -> None:
         await interaction.response.defer()
         rows_top = await self.pool.fetchall(
             """
@@ -906,9 +883,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         embed.title = f"{minigame.capitalize()} Minigame Stats"
         top_players = ""
         for index, row in enumerate(rows_top, 1):
-            top_players += (
-                f"{index}. <@{row['user_id']}>: `{row['wins']:04d}` wins\n"
-            )
+            top_players += f"{index}. <@{row['user_id']}>: `{row['wins']:04d}` wins\n"
         if not top_players:
             top_players = "There is no one here"
         embed.add_field(name=f"Top 3 {minigame} players\n", value=top_players)
