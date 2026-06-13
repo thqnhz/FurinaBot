@@ -23,6 +23,7 @@ from collections import Counter
 from enum import IntEnum
 from typing import TYPE_CHECKING, ClassVar
 
+import aiofiles
 import asqlite
 import discord
 import numpy as np
@@ -562,7 +563,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
             str(pathlib.Path() / "db" / "wordle.db")
         )
         await self.__update_wordle_emojis()
-        await self.__create_valid_guess_table()
+        await self.__insert_valid_guesses()
         logger.info("Cog %s has been loaded", self.__cog_name__)
 
     async def get_random_word(self, length: int) -> str:
@@ -578,27 +579,32 @@ class Minigames(commands.GroupCog, group_name="minigame"):
         self._randomized_words[index] = words
         return self._randomized_words[index].pop()
 
-    async def __create_valid_guess_table(self) -> None:
-        async with self.wordle_db.acquire() as conn, conn.transaction():
-            await conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS valid_word
-                (
-                    word TEXT NOT NULL PRIMARY KEY
-                )
-                """
-            )
-            test = await conn.fetchone("SELECT COUNT(*) FROM valid_word")
-            if test[0] != 0:
-                return
-            path = pathlib.Path() / "assets" / "valid_guess"
-            files = path.iterdir()
-            for f in files:
-                words = f.open("r").read().split()
-                await conn.executemany(
-                    "INSERT INTO valid_word (word) VALUES (?)",
+    async def __insert_valid_guesses(self) -> None:
+        """Insert valid guesses into the valid_word table"""
+        path = pathlib.Path() / "assets" / "valid_guess"
+
+        # Cursed check by only checking if there is any data in the table
+        count = await self.pool.fetchval(
+            """
+            SELECT COUNT(*) FROM valid_word
+            """
+        )
+        assert count is not None
+        if count > 0:
+            logger.info("Found %d words in valid word table", count)
+            return
+        logger.info("Inserting valid guesses into database...")
+        for f in path.iterdir():
+            async with aiofiles.open(f) as file:
+                content: str = await file.read()
+                words = content.split()
+                await self.pool.executemany(
+                    """
+                    INSERT OR REPLACE INTO valid_word (word) VALUES (?)
+                    """,
                     [(word,) for word in words],
                 )
+        logger.info("Successfully inserting valid guesses into the database")
 
     async def __update_wordle_emojis(self) -> None:
         if self.emoji_loading_attempts >= 3:
@@ -772,10 +778,7 @@ class Minigames(commands.GroupCog, group_name="minigame"):
             embed.title = minigame.capitalize()
             embed.description = ""
             for i, user_stats in enumerate(user_stats_list, 1):
-                embed.description += (
-                    f"{i}. <@{user_stats['user_id']}>:"
-                    f" {user_stats['wins']} wins\n"
-                )
+                embed.description += f"{i}. <@{user_stats['user_id']}>: {user_stats['wins']} wins\n"
             embeds.append(embed)
         if not embeds:
             embeds = [discord.Embed()]

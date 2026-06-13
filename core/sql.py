@@ -74,6 +74,12 @@ HSR_UID_SQL = """
     )
 """
 # Minigames Cog
+VALID_WORDLE_GUESSES_SQL = """
+    CREATE TABLE IF NOT EXISTS valid_word
+    (
+        word TEXT NOT NULL PRIMARY KEY
+    )
+"""
 SINGLEPLAYER_GAMES_SQL = """
     CREATE TABLE IF NOT EXISTS singleplayer_games
     (
@@ -84,7 +90,7 @@ SINGLEPLAYER_GAMES_SQL = """
         win BOOLEAN DEFAULT NULL
     )
 """
-TWOPLAYER_GAMES_SQL = """
+TWOPLAYERS_GAMES_SQL = """
     CREATE TABLE IF NOT EXISTS twoplayers_games
     (
         game_id INTEGER NOT NULL PRIMARY KEY,
@@ -119,8 +125,9 @@ class SQL:
             APP_COMMANDS_SQL,
             GI_UID_SQL,
             HSR_UID_SQL,
+            VALID_WORDLE_GUESSES_SQL,
             SINGLEPLAYER_GAMES_SQL,
-            TWOPLAYER_GAMES_SQL,
+            TWOPLAYERS_GAMES_SQL,
         ]
 
     async def create_tables(self) -> None:

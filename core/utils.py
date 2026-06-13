@@ -51,25 +51,25 @@ class LogFormatter(logging.Formatter):
         super().__init__()
         self.FORMATS = {
             logging.DEBUG: self.GREY
-            + "%(asctime)s | %(levelname)8s"
+            + "%(asctime)s ┃ %(levelname)8s"
             + self.RESET
-            + " | %(name)20s : %(message)s",
+            + " ┃ %(name)20s : %(message)s",
             logging.WARNING: self.YELLOW
-            + "%(asctime)s | %(levelname)8s"
+            + "%(asctime)s ┃ %(levelname)8s"
             + self.RESET
-            + " | %(name)20s : %(message)s",
+            + " ┃ %(name)20s : %(message)s",
             logging.ERROR: self.RED
-            + "%(asctime)s | %(levelname)8s"
+            + "%(asctime)s ┃ %(levelname)8s"
             + self.RESET
-            + " | %(name)20s : %(message)s",
+            + " ┃ %(name)20s : %(message)s",
             logging.INFO: self.BLUE
-            + "%(asctime)s | %(levelname)8s"
+            + "%(asctime)s ┃ %(levelname)8s"
             + self.RESET
-            + " | %(name)20s : %(message)s",
+            + " ┃ %(name)20s : %(message)s",
             logging.CRITICAL: self.BOLD_RED
-            + "%(asctime)s | %(levelname)8s"
+            + "%(asctime)s ┃ %(levelname)8s"
             + self.RESET
-            + " | %(name)20s : %(message)s",
+            + " ┃ %(name)20s : %(message)s",
         }
 
     def format(self, record: logging.LogRecord) -> str:
