@@ -63,7 +63,7 @@ select = [
     "PTH",
     "PYI",
     "Q",
-    "Q003",
+    "avoidable-escaped-quote",
     "RET",
     "RSE",
     "RUF",
@@ -78,31 +78,31 @@ select = [
     "YTT"
 ]
 ignore = [
-    "ERA001",   # Ignore commented-out code
-    "ANN401",
-    "ASYNC109", # dpy commonly uses this parameter
-    "COM812",
-    "EM101",    # in this case this is okay
-    "F401",
-    "F402",
-    "F403",
-    "F405",
-    "INP001",   # due to how I load modules this results in annoyances
-    "PD011",    # this is not a numpy codebase
-    "PERF203",
-    "PLC0414",  # pyright ruling for `as` imports needed
-    "Q000",
-    "RUF001",
-    "RUF009",
-    "S101",     # assert is used for type checking in this codebase
-    "SIM105",
-    "TRY003",   # over-eager rule
-    "TRY301",   # unrealistic rule
-    "UP034",
-    "RUF067",   # it's back :skull:
+    "commented-out-code",   # Ignore commented-out code
+    "any-type",
+    "async-function-with-timeout", # dpy commonly uses this parameter
+    "missing-trailing-comma",
+    "raw-string-in-exception",    # in this case this is okay
+    "unused-import",
+    "import-shadowed-by-loop-var",
+    "undefined-local-with-import-star",
+    "undefined-local-with-import-star-usage",
+    "implicit-namespace-package",   # due to how I load modules this results in annoyances
+    "pandas-use-of-dot-values",    # this is not a numpy codebase
+    "try-except-in-loop",
+    "useless-import-alias",  # pyright ruling for `as` imports needed
+    "bad-quotes-inline-string",
+    "ambiguous-unicode-character-string",
+    "function-call-in-dataclass-default-argument",
+    "assert",     # assert is used for type checking in this codebase
+    "suppressible-exception",
+    "raise-vanilla-args",   # over-eager rule
+    "raise-within-try",   # unrealistic rule
+    "extraneous-parentheses",
+    "non-empty-init-module",   # it's back :skull:
 ]
 unfixable = [
-    "E501", # line length handled in other ways by ruff format
+    "line-too-long", # line length handled in other ways by ruff format
     "ERA",  # Don't delete commented out code
 ]
 
